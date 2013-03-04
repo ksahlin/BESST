@@ -2,6 +2,11 @@
 DEPENDENCIES:
 Nonstandard python module dependencies: pysam 0.6, networkx-(1.4 or later) 
 
+INSTALLATION:
+In BESST directory, run:
+
+python setup.py install
+
 INPUT:
 Requierd arguments:
 
@@ -13,7 +18,7 @@ Requierd arguments:
 
 EXAMPLE RUN:
 
-python Main.py -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output 
+runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output 
 
 Optional arguments:
 
