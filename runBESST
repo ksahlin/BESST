@@ -1,0 +1,142 @@
+#!/usr/bin/env python
+
+import sys
+import warnings
+from optparse import OptionParser
+from BESST import Main
+
+def vararg_callback(option, opt_str, value, parser):
+    assert value is None
+    value = []
+    
+    def floatable(str):
+        try:
+            float(str)
+            return True
+        except ValueError:
+            return False
+    
+    for arg in parser.rargs:
+        # stop on --foo like options
+        if arg[:2] == "--" and len(arg) > 2:
+            break
+        # stop on -a, but not on -3 or -3.0
+        if arg[:1] == "-" and len(arg) > 1 and not floatable(arg):
+            break
+        try:
+            value.append(int(arg))
+        except ValueError:
+            value.append(arg)
+    
+    del parser.rargs[:len(value)]
+    setattr(parser.values, option.dest, value)
+
+
+
+
+parser = OptionParser()
+
+## required
+parser.add_option("-c", dest="contigfile", 
+                  help="file of contigs",type="string")
+
+parser.add_option("-o", "--output", dest="output", default='.',
+                  help="The output location", type="string")
+
+parser.add_option("-f", "--bamfile", dest="bamfiles", action="callback", callback=vararg_callback,
+                  help="Name of bamfile")
+
+## optional
+parser.add_option("-r",dest="readlen", action="callback", callback=vararg_callback, 
+                  help="Mean read length ")
+
+parser.add_option("-m",dest="mean", action="callback", callback=vararg_callback, 
+                  help="mean of insert library")
+
+parser.add_option("-s", "--stddev", dest="stddev", action="callback", callback=vararg_callback, 
+                  help="estimated standard deviation of libraries")
+    
+parser.add_option("-w",dest="relweight", default=3,
+                  help="treshold value for the relative weight of an edge",type="int")
+
+parser.add_option("-T",dest="threshold", action="callback", callback=vararg_callback,
+                  help="treshold value ")
+
+
+parser.add_option("-e",dest="edgesupport", action="callback", callback=vararg_callback,
+                  help="treshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
+parser.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
+              help="contig size threshold for the library (all contigs below this size is discarded from the scaffolding). Default: Set to same as -T parameter")
+
+parser.add_option("-z", "--covcutoff", dest="covcutoff",  action="callback", callback=vararg_callback,
+                  help="User specified coverage cutoff")
+
+parser.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
+                  help="Maximum length ratio for merging of haplotypic regions", type="float")
+
+parser.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
+                  help="Nr of standard deviations over mean/2 of coverage to allow for clasification of haplotype", type="int")          
+
+parser.add_option("-g", "--haplotype", dest="haplotype", default = 0,
+                  help="Haplotype detection function, default = off",type ="int")  
+
+parser.add_option("-d", "--duplicate", dest="duplicate", default = 1,
+                  help="Sequencing duplicates detection, default = off",type ="int")  
+
+parser.add_option("-y", "--extendpaths", dest="extendpaths", default = 1,
+                  help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. This function should be pretty conservative so it's recommended to have the default value, default = on. To turn of, specify -y 0.",type ="int") 
+parser.add_option("-q", "--multiprocess", dest="multiprocess", default = 0,
+                  help="parallellize work load in case of multiple processes available.",type ="int")  
+
+parser.add_option("-D","--devel", dest="development",
+                  help="run in development mode (bug schecking and memoru usage etc.)",type="int", default = 0)      
+#TEMPORARY parameters here, remove after spruce assembly
+parser.add_option("-t", dest="transcriptalignfile",
+                  help="file of contigs",type="string")  
+  
+parser.add_option("-p", dest="fosmidpool", default = None,
+                  help="""Specify that data comes from a fosmid pool. This parameter is sets the number of
+                  links that the second strongest link must have in order to not do any scaffolding
+                  with the region.""",type="int")  
+(options, args) = parser.parse_args()  
+
+if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff,options.threshold, options.minsize]]):  
+    parser.error("Same number of arguments are required")
+        
+if (options.mean and not options.stddev) or (not options.mean and options.stddev):
+    parser.error("either both or none of -m and -s is required") 
+if (options.threshold and not options.minsize) or (not options.threshold and options.minsize):
+    parser.error("either both or none of -T and -k is required")                 
+if not options.contigfile:
+    parser.error("parameter -c (a fasta contig file) is required") 
+if not options.bamfiles:
+    parser.error("parameter -f (BAM files) is required")
+#if not options.haplotype and (options.haplratio or options.haplthreshold):
+#    warnings.warn('parameter -g (treating haplotypic regions) inactivated, parameters -a and -b will not have any effect if specified. ')        
+    
+#check that bam files exists
+for file_ in options.bamfiles:
+    try:
+        open(file_)
+    except IOError as e:
+        sys.exit("couldn't find BAM file: "+ file_ + " check that the path is correct and that the file exists")
+    try:
+        open(file_+'.bai')
+    except IOError as e:
+        print "couldn't find index file: ", file_ +'.bai', " check that the path is correct and that the file exists"
+        sys.exit(0)            
+#check that contig files exists
+try:
+    open(options.contigfile)
+except IOError as e:
+    sys.exit("couldn't open contig file " + options.contigfile + " check that the path is correct and that the file exists") 
+
+if options.development:
+    import guppy
+
+Main.main(options)
+
+if options.development:
+    h = guppy.hpy()
+    print h.heap()     
+

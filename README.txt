@@ -1,11 +1,9 @@
 
 DEPENDENCIES:
-Nonstandard python module dependencies: pysam0.6, networkx-(1.4 or later) 
+Nonstandard python module dependencies: pysam 0.6, networkx-(1.4 or later) 
 
 INPUT:
 Requierd arguments:
-
-* An integer number of how many different libraries you want to scaffold with (no prefix for this argument, see example input below)
 
 * -c <a contig file> (path to) 
 
@@ -15,9 +13,7 @@ Requierd arguments:
 
 EXAMPLE RUN:
 
-python Main.py  2 -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output 
-
-##with non default options:  -m insertmean1(smaller) insertmean2(larger) -T threshold1 threshold2 -e 10 5 -r <read_len1> <read_len2> -s <std_dev1> <std_dev2> 
+python Main.py -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output 
 
 Optional arguments:
 
@@ -64,18 +60,6 @@ from s to t, that is, insertsize = readlen1 + gap + readlen2. So when mean and/o
 VERSIONS
 
 Some versions are only included for history purposes (within () ).
-
-(V0.1 
-Some crappy initial stuff. Is not longer existing.)
-
-(V0.2
-Created scaffolds correctly wit the nice regions but (splitted up and) discarded all strange regions (nodes with more than two edges). Used a filtering option -e to remove all low support edges.)
-
-(V0.3
-Instead of removing all complicated regions, this version look att the relative support for these edges. If the edge with the maximum support supp(e') >= 3*supp(e_i) for all other edges e_i, we discard the other edges and deal with only the strong supported edge.)
-
-(V0.4
-BWA gives strange output information some times if a read overlaps two contigs (maps to one end of a contig and is "sticking out a bit", BWA concatenates the contains before mapping) we do not wand to create incorrect edges from this. Thus instead of certain key values we used for read1 before, we use the mates (read2's) info.)
 
 (V0.5
  * Added parameter prefix -o <path> that gives the user ability to choose his own output directory
