@@ -134,6 +134,7 @@ except IOError as e:
 if options.development:
     import guppy
 
+print options.output
 Main.main(options)
 
 if options.development:

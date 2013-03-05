@@ -1,13 +1,26 @@
-
-DEPENDENCIES:
-Nonstandard python module dependencies: pysam 0.6, networkx-(1.4 or later) 
-
+BESST
+======
+ 
 INSTALLATION:
-In BESST directory, run:
+--------------
+In case you don't have the installer "pip" installed, type (in terminal):
 
-python setup.py install
+easy_install pip
+
+Then do:
+
+sudo pip install BESST
+
+Now you should be able to run:
+
+runBESST -h
+
+to view user instructions.
+
+(This installation will install the two nonstandard python module dependencies: pysam 0.6, networkx-1.6 automatically for you.)
 
 INPUT:
+-------
 Requierd arguments:
 
 * -c <a contig file> (path to) 
