@@ -54,10 +54,6 @@ def ReadInContigseqs(contigfile):
 
 def main(options):
     Parameter.MemoryUsage()
-
-    #time.sleep(10)
-    #sys.exit()
-    #from copy import deepcopy
     tot_start=time()
     Contigs={} # contig dict that stores contig objects 
     Scaffolds={}     #scaffold dict with contig objects for easy fetching of all contigs in a scaffold
@@ -127,9 +123,7 @@ def main(options):
             S_obj=Scaffolds[scaffold_]
             list_of_contigs=S_obj.contigs   #list of contig objects contained in scaffold object
             F = GO.WriteToF(F,Contigs,list_of_contigs)
-          
-            #del Scaffolds_copy[scaffold_]
-        #print F
+            
         GO.PrintOutput(F,Information,param.output_directory,param,i+1)
         Parameter.MemoryUsage()
       
@@ -140,17 +134,7 @@ def main(options):
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)  
     NG50,LG50 = CG.CalculateStats(sorted_lengths,sorted_lengths_small, param)
     param.current_LG50 = LG50
-    param.current_NG50 = NG50         
-#    ### Call a print scaffolds function here for remaining scaffolds that has "passed" all library levels
-#    for scaffold_ in Scaffolds.keys(): #iterate over keys in hash, so that we can remove keys while iterating over it
-#        ###  Go to function and print to F
-#        ### Remove Scaf_obj from Scaffolds and Contig_obj from contigs
-#        S_obj=Scaffolds[scaffold_]
-#        list_of_contigs=S_obj.contigs   #list of contig objects contained in scaffold object
-#        Contigs, F = GO.WriteToF(F,Contigs,list_of_contigs)
-#        del Scaffolds[scaffold_]
-#    #print F
-#    GO.PrintOutput(F,C_dict,Information,output_dest)
+    param.current_NG50 = NG50
     
     elapsed=time()-tot_start
     print >>Information, 'Total time for scaffolding: '+str(elapsed)+'\n'    

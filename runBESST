@@ -1,9 +1,28 @@
 #!/usr/bin/env python
+print '''
+    BESST - Scaffolder for genomic assemblies 
+    Copyright (C) 2013  Kristoffer Sahlin
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+'''
 
 import sys
 import warnings
 from optparse import OptionParser
 from BESST import Main
+import os
 
 def vararg_callback(option, opt_str, value, parser):
     assert value is None
@@ -30,6 +49,7 @@ def vararg_callback(option, opt_str, value, parser):
     
     del parser.rargs[:len(value)]
     setattr(parser.values, option.dest, value)
+
 
 
 
@@ -98,7 +118,12 @@ parser.add_option("-p", dest="fosmidpool", default = None,
                   help="""Specify that data comes from a fosmid pool. This parameter is sets the number of
                   links that the second strongest link must have in order to not do any scaffolding
                   with the region.""",type="int")  
+
+
+if len(sys.argv) == 1:
+    sys.argv.append('-h')
 (options, args) = parser.parse_args()  
+
 
 if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff,options.threshold, options.minsize]]):  
     parser.error("Same number of arguments are required")
@@ -111,9 +136,7 @@ if not options.contigfile:
     parser.error("parameter -c (a fasta contig file) is required") 
 if not options.bamfiles:
     parser.error("parameter -f (BAM files) is required")
-#if not options.haplotype and (options.haplratio or options.haplthreshold):
-#    warnings.warn('parameter -g (treating haplotypic regions) inactivated, parameters -a and -b will not have any effect if specified. ')        
-    
+  
 #check that bam files exists
 for file_ in options.bamfiles:
     try:
@@ -134,7 +157,6 @@ except IOError as e:
 if options.development:
     import guppy
 
-print options.output
 Main.main(options)
 
 if options.development:

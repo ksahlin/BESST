@@ -1,47 +1,50 @@
 '''
     Created on Sep 29, 2011
-    
+
     @author: ksahlin
-    
+
     This file is part of BESST.
-    
+
     BESST is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-    
+
     BESST is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
-import pysam
+
 import sys
-import Contig, Scaffold
-from Parameter import counters
 from collections import defaultdict
+from math import pi
+from time import time
+
+import networkx as nx
+import pysam
+
+import Contig
+import Scaffold
+from Parameter import counters
+from Norm import normcdf, normpdf, erf
 import GenerateOutput as GO
 import GapCalculator as GC
-import networkx as nx
-from Norm import normcdf,normpdf,erf
-from math import pi
 
-try: 
+try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-    
-from time import time
 
-def PE(Contigs,Scaffolds,Information,output_dest,C_dict,param,small_contigs,small_scaffolds):
-    G=nx.Graph()
-    G_prime = nx.Graph() # If we want to do path extension with small contigs
+def PE(Contigs, Scaffolds, Information, output_dest, C_dict,param, small_contigs, small_scaffolds):
+    G = nx.Graph()
+    G_prime = nx.Graph()  # If we want to do path extension with small contigs
     print 'Parsing BAM file...'
 
     with pysam.Samfile(param.bamfile, 'rb') as bam_file:    

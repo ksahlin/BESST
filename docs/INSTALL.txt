@@ -1,0 +1,23 @@
+INSTALLATION:
+--------------
+
+Using one of the the package installers pip or easy_install for python, type (in terminal):
+
+sudo pip install BESST
+
+or 
+
+sudo easy_install BESST
+
+If you do not have pip or easy install for python, you can get e.g. pip as follows:
+
+curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+python get-pip.py
+
+With proper installation of BESST, you should be able to run:
+
+runBESST -h
+
+to view user instructions.
+
+(This installation will install the two nonstandard python module dependencies: pysam 0.6, networkx-1.6 automatically for you.)
