@@ -19,28 +19,29 @@
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
+
 import networkx as nx
 from itertools import combinations
 import random
 import multiprocessing , Queue
 import time
 import ExtendLargeScaffolds as ELS
- 
- 
+
+
 class Worker(multiprocessing.Process):
- 
+
     def __init__(self, work_queue, result_queue):
- 
+
         # base class initialization
         multiprocessing.Process.__init__(self)
- 
+
         # job management stuff
         self.work_queue = work_queue
         self.result_queue = result_queue
         self.kill_received = False
     def run(self):
         #while not self.kill_received:
- 
+
             # get a task
             #job = self.work_queue.get_nowait()
         #try:
@@ -50,19 +51,19 @@ class Worker(multiprocessing.Process):
         #small_scaffolds = job[2]
         end = job[2]
             #all_paths_sorted_wrt_score = [(1,[]),(2,[])]
-            
+
             # except Queue.Empty:
             #    print 'Noeee! empty!!', multiprocessing.current_process().name
             #    break
 
-        print 'Enter ',multiprocessing.current_process().name
+        print 'Enter ', multiprocessing.current_process().name
             # the actual processing
-        all_paths_sorted_wrt_score = ELS.BetweenScaffolds( G_prime, end, start_nodes)
+        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, start_nodes)
         #all_paths_sorted_wrt_score = [(1,[]),(2,[])]
             #nr_paths = find_all_paths(graph, start_node, end_node)
             # store the result
         self.result_queue.put(all_paths_sorted_wrt_score)
-        print 'Exit',  multiprocessing.current_process().name
+        print 'Exit', multiprocessing.current_process().name
 
 
-    
+

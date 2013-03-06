@@ -19,38 +19,36 @@
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
+
 import multiprocessing, Queue
 import ExtendLargeScaffolds as ELS
 class Worker(multiprocessing.Process):
- 
+
     def __init__(self, work_queue, result_queue):
- 
+
         # base class initialization
         multiprocessing.Process.__init__(self)
- 
+
         # job management stuff
         self.work_queue = work_queue
         self.result_queue = result_queue
         self.kill_received = False
     def run(self):
         while not self.kill_received:
-     
+
                 # get a task
                 #job = self.work_queue.get_nowait()
             worker_name = multiprocessing.current_process().name
             try:
                 jobs, G, G_prime, small_scaffolds, end = self.work_queue.get_nowait()
-                print 'Time to work', worker_name
             except Queue.Empty:
-                print 'lol no work'
-                #self.exit.set()
                 break
-            
+
             # the actual processing
-            all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G,G_prime,small_scaffolds,end,jobs)
+            all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G, G_prime, small_scaffolds, end, jobs)
             self.result_queue.put(all_paths_sorted_wrt_score)
             print 'Exited from ', worker_name
-        
+
         #return()
 
 #            for job in jobs:
@@ -71,39 +69,39 @@ def log_result(result):
     # This is called whenever foo_pool(i) returns a result.
     # result_list is modified only by the main process, not the pool workers.
     print 'Going in here'
-    result_list.append(result) 
+    result_list.append(result)
 def worker(jobs, G, G_prime, small_scaffolds, end):
     worker_name = multiprocessing.current_process().name
     # the actual processing
-    all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G,G_prime,small_scaffolds,end,jobs)
+    all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G, G_prime, small_scaffolds, end, jobs)
     print 'Exited from ', worker_name
     return(all_paths_sorted_wrt_score)
 
-def BetweenScaffoldsParallellized(G,G_prime,small_scaffolds, num_processes,end):
+def BetweenScaffoldsParallellized(G, G_prime, small_scaffolds, num_processes, end):
     import multiprocessing , Queue
     #import worker #(multi processing)
     import heapq
-    
+
     #import random
 #    end = set()
 #    for node in G:
 #        end.add(node)
-        
+
     # load up work queue
     work_queue = multiprocessing.Queue()
     nodes = G.nodes()
     #random.shuffle(nodes)
     nr_jobs = len(nodes)
-    chunk = nr_jobs/num_processes
+    chunk = nr_jobs / num_processes
     #print jobs, nr_jobs, chunk
     counter = 0
 
     # partition equally many nodes in G to each core
     while counter < nr_jobs:
-        work_queue.put((set(nodes[counter:counter+chunk]), G,G_prime,small_scaffolds,end) )
-        print 'node nr', counter, 'to',counter+chunk-1, 'added'
-        counter +=chunk
-   
+        work_queue.put((set(nodes[counter:counter + chunk]), G, G_prime, small_scaffolds, end))
+        print 'node nr', counter, 'to', counter + chunk - 1, 'added'
+        counter += chunk
+
     # create a queue to pass to workers to store the results
     #result_queue = multiprocessing.Queue()    
 
@@ -112,11 +110,11 @@ def BetweenScaffoldsParallellized(G,G_prime,small_scaffolds, num_processes,end):
     #for i in range(0,num_processes):
     while not work_queue.empty():
         nodes, G, G_prime, small_scaffolds, end = work_queue.get_nowait()
-        pool.apply_async(worker, args = (nodes, G, G_prime, small_scaffolds, end), callback = log_result)
+        pool.apply_async(worker, args=(nodes, G, G_prime, small_scaffolds, end), callback=log_result)
     pool.close()
     pool.join()
     #print(result_list)
-    
+
 #
 #    jobs = []
 #    for i in range(num_processes):
@@ -129,7 +127,7 @@ def BetweenScaffoldsParallellized(G,G_prime,small_scaffolds, num_processes,end):
 #        jobs.append(p)
 #        print 'job nr ',i, 'start'
 #        p.start()
-        
+
 #    
 #    # spawn workers (equally many as available cores)
 #    workers =[]
@@ -143,7 +141,7 @@ def BetweenScaffoldsParallellized(G,G_prime,small_scaffolds, num_processes,end):
 #        jobs[i].join()
 #        print "I'm waiting..."
 #        #workers[i].join()
-        
+
     # collect the results off the queue
     def wrapper(func, args):
         return(func(*args))
@@ -153,6 +151,6 @@ def BetweenScaffoldsParallellized(G,G_prime,small_scaffolds, num_processes,end):
     #    tot_result.append(result_queue.get())
     #print  'tot result', tot_result
     #Merge the scored paths from each of the subprocesses into one consensus path
-    itr = wrapper(heapq.merge, result_list ) #tot_result)
-  
+    itr = wrapper(heapq.merge, result_list) #tot_result)
+
     return(itr)

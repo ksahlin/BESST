@@ -20,25 +20,26 @@
     '''
 import subprocess
 
+
 class parameter(object):
     '''
     classdocs
     '''
     def __init__(self, parameter_mean_coverage=None, parameter_std_dev_coverage=None,
-                 parameter_mean_ins_size=None , parameter_std_dev_ins_size=None, 
+                 parameter_mean_ins_size=None , parameter_std_dev_ins_size=None,
                  parameter_output_directory=None, parameter_bamfile=None,
                  parameter_read_len=None, parameter_rel_weight=None,
                  parameter_ins_size_threshold=None, parameter_contigfile=None,
                  parameter_edgesupport=None, parameter_contig_threshold=None,
                  parameter_scaffold_indexer=0, parameter_first_lib=None,
                  parameter_cov_cutoff=None, parameter_tot_assembly_length=None,
-                 parameter_current_NG50 = None, parameter_current_LG50 = None,
-                 parameter_hapl_ratio=None, parameter_hapl_threshold=None, 
+                 parameter_current_NG50=None, parameter_current_LG50=None,
+                 parameter_hapl_ratio=None, parameter_hapl_threshold=None,
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
                  parameter_development=None):
-        
+
         self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
         self.mean_ins_size = parameter_mean_ins_size
@@ -72,7 +73,7 @@ class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,
                  param_nr_of_duplicates=None, param_prev_obs1=None, param_prev_obs2=None,
                  param_reads_with_too_long_insert=None):
-        
+
         self.count = param_count
         self.non_unique = param_non_unique
         self.non_unique_for_scaf = param_non_unique_for_scaf
@@ -84,7 +85,7 @@ class counters(object):
 
 def MemoryUsage():
     percent_usage = subprocess.Popen("ps -v | grep 'python Main.py' | awk '{sum+=$12} END {print sum}'",
-                                     shell = True, 
+                                     shell=True,
                                      stdout=subprocess.PIPE,
                                      )
     stdout_list = percent_usage.communicate()[0]
@@ -93,4 +94,3 @@ def MemoryUsage():
 
 
 
-        

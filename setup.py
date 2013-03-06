@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-#from distutils.core import setup
+
 setup(
     name='BESST',
     version='1.0',

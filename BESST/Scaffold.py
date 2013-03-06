@@ -27,9 +27,9 @@ class scaffold(object):
 
     __slots__ = ('name', 'contigs', 's_length', 'lower_left_nbrs_obs',
                  'lower_right_nbrs_obs', 'upper_left_nbrs_obs', 'upper_right_nbrs_obs')
-    def __init__(self, scaffold_name, scaffold_contigs,scaffold_length,
+    def __init__(self, scaffold_name, scaffold_contigs, scaffold_length,
                  scaffold_lower_left_nbrs, scaffold_lower_right_nbrs,
-                 scaffold_upper_left_nbrs,scaffold_upper_right_nbrs):
+                 scaffold_upper_left_nbrs, scaffold_upper_right_nbrs):
         '''
         Constructor
         '''
@@ -40,4 +40,3 @@ class scaffold(object):
         self.lower_right_nbrs_obs = scaffold_lower_right_nbrs
         self.upper_left_nbrs_obs = scaffold_upper_left_nbrs
         self.upper_right_nbrs_obs = scaffold_upper_right_nbrs
-        
