@@ -29,8 +29,8 @@ import multiprocessing
 
 import Contig, Scaffold, Parameter
 import GenerateOutput as GO
-import GapCalculator as GC
-from Norm import normpdf, normcdf
+from mathstats.normaldist.truncatedskewed import param_est as GC
+from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 
 
@@ -507,6 +507,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
             sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
             nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
             data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
+            mean_obs = sum_obs / float(nr_links)
             #try:
             c1_len = Scaffolds[scaf].s_length
             #except KeyError:
@@ -523,7 +524,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                     try:
                         avg_gap = dValuesTable[int(round(data_observation, 0))]
                     except KeyError:
-                        avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
+                        avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
                         print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
                         #print 'Gap estimate was outside the boundary of the precalculated table'
                         #print 'Boundaries were [' ,-2*param.std_dev_ins_size, ' , ',param.mean_ins_size+2*param.std_dev_ins_size, ' ]. Observation were: ', data_observation
@@ -535,7 +536,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                         #    print 'Setting gap estimate to max value:', avg_gap,'number of links: ' , nr_links
                 #Do binary search for ML estimate of gap
                 else:
-                    avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
+                    avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
                     #print avg_gap
             #do naive gap estimation
             else:
