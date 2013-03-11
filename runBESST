@@ -22,6 +22,7 @@ import sys
 import os
 from time import time
 from optparse import OptionParser
+import optparse
 
 import pysam
 
@@ -109,7 +110,7 @@ def main(options):
         start = time()
 
         Parameter.MemoryUsage()
-        print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. ',
+        print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
 
@@ -181,70 +182,81 @@ def vararg_callback(option, opt_str, value, parser):
 
 
 parser = OptionParser()
+libstats = optparse.OptionGroup(parser, 'Options for library statistics such as read length, insert size mean and std_dev, coverage etc.')
+haplotypes = optparse.OptionGroup(parser, 'Options involving haplotype detection.')
+required = optparse.OptionGroup(parser, 'Required input.')
+parameters = optparse.OptionGroup(parser, 'Parameters for algorithm.')
+other = optparse.OptionGroup(parser, 'Various other options.')
+
 
 ## required
-parser.add_option("-c", dest="contigfile",
-                  help="file of contigs", type="string")
+required.add_option("-c", dest="contigfile",
+                  help="Fasta file containing contigs.", type="string")
 
-parser.add_option("-o", "--output", dest="output", default='.',
-                  help="The output location", type="string")
-
-parser.add_option("-f", "--bamfile", dest="bamfiles", action="callback", callback=vararg_callback,
-                  help="Name of bamfile")
+required.add_option("-f", "--bamfile", dest="bamfiles", action="callback", callback=vararg_callback,
+                  help="Path(s) to bamfile(s).")
 
 ## optional
-parser.add_option("-r", dest="readlen", action="callback", callback=vararg_callback,
-                  help="Mean read length ")
+other.add_option("-o", "--output", dest="output", default='.',
+                  help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.", type="string")
 
-parser.add_option("-m", dest="mean", action="callback", callback=vararg_callback,
-                  help="mean of insert library")
+libstats.add_option("-r", dest="readlen", action="callback", callback=vararg_callback,
+                  help="Mean read length of libraries. ")
 
-parser.add_option("-s", "--stddev", dest="stddev", action="callback", callback=vararg_callback,
-                  help="estimated standard deviation of libraries")
+libstats.add_option("-m", dest="mean", action="callback", callback=vararg_callback,
+                  help="Mean insert size of libraries.")
 
-parser.add_option("-w", dest="relweight", default=3,
-                  help="treshold value for the relative weight of an edge", type="int")
+libstats.add_option("-s", "--stddev", dest="stddev", action="callback", callback=vararg_callback,
+                  help="Estimated standard deviation of libraries.")
 
-parser.add_option("-T", dest="threshold", action="callback", callback=vararg_callback,
-                  help="treshold value ")
+parameters.add_option("-w", dest="relweight", default=3,
+                  help="Threshold value for the relative weight of an edge (deprecated)", type="int")
+
+parameters.add_option("-T", dest="threshold", action="callback", callback=vararg_callback,
+                  help="Threshold value separating 'large' and 'small' contigs for library. Should not be set unless needed, i.e. Besst terminates and require this to be set. ")
 
 
-parser.add_option("-e", dest="edgesupport", action="callback", callback=vararg_callback,
-                  help="treshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
-parser.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
-              help="contig size threshold for the library (all contigs below this size is discarded from the scaffolding). Default: Set to same as -T parameter")
+parameters.add_option("-e", dest="edgesupport", action="callback", callback=vararg_callback,
+                  help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
+parameters.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
+              help="Contig size threshold for the library (all contigs below this size is discarded from the 'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
-parser.add_option("-z", "--covcutoff", dest="covcutoff", action="callback", callback=vararg_callback,
-                  help="User specified coverage cutoff")
+libstats.add_option("-z", "--covcutoff", dest="covcutoff", action="callback", callback=vararg_callback,
+                  help="User specified coverage cutoff. (Manually filter out contigs with coverage over this value)")
 
-parser.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
-                  help="Maximum length ratio for merging of haplotypic regions", type="float")
+haplotypes.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
+                  help="Maximum length ratio for merging of haplotypic regions.", type="float")
 
-parser.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
-                  help="Nr of standard deviations over mean/2 of coverage to allow for clasification of haplotype", type="int")
+haplotypes.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
+                  help="Number of standard deviations over mean/2 of coverage to allow for clasification of haplotype. Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) if -b 3", type="int")
 
-parser.add_option("-g", "--haplotype", dest="haplotype", default=0,
+haplotypes.add_option("-g", "--haplotype", dest="haplotype", default=0,
                   help="Haplotype detection function, default = off", type="int")
 
-parser.add_option("-d", "--duplicate", dest="duplicate", default=1,
+other.add_option("-d", "--duplicate", dest="duplicate", default=1,
                   help="Sequencing duplicates detection, default = off", type="int")
 
-parser.add_option("-y", "--extendpaths", dest="extendpaths", default=1,
+other.add_option("-y", "--extendpaths", dest="extendpaths", default=1,
                   help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. This function should be pretty conservative so it's recommended to have the default value, default = on. To turn of, specify -y 0.", type="int")
-parser.add_option("-q", "--multiprocess", dest="multiprocess", default=0,
-                  help="parallellize work load in case of multiple processes available.", type="int")
+other.add_option("-q", "--multiprocess", dest="multiprocess", default=0,
+                  help="Parallellize work load of path finder module in case of multiple processors available.", type="int")
 
-parser.add_option("-D", "--devel", dest="development",
-                  help="run in development mode (bug schecking and memoru usage etc.)", type="int", default=0)
+other.add_option("-D", "--devel", dest="development",
+                  help="Run in development mode (bug checking and memory usage etc.)", type="int", default=0)
 #TEMPORARY parameters here, remove after spruce assembly
-parser.add_option("-t", dest="transcriptalignfile",
+other.add_option("-t", dest="transcriptalignfile",
                   help="file of contigs", type="string")
 
-parser.add_option("-p", dest="fosmidpool", default=None,
+other.add_option("-p", dest="fosmidpool", default=None,
                   help="""Specify that data comes from a fosmid pool. This parameter is sets the number of
                   links that the second strongest link must have in order to not do any scaffolding
                   with the region.""", type="int")
 
+parser.add_option_group(required)
+parser.add_option_group(libstats)
+parser.add_option_group(parameters)
+parser.add_option_group(haplotypes)
+parser.add_option_group(other)
 
 if len(sys.argv) == 1:
     sys.argv.append('-h')

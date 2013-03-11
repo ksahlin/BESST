@@ -1,20 +1,20 @@
 '''
     Created on Sep 29, 2011
-    
+
     @author: ksahlin
-    
+
     This file is part of BESST.
     
     BESST is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-    
+
     BESST is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
@@ -32,10 +32,12 @@ import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est as GC
 from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
+import haplotypes as HR
 
 
 def constant_large():
     return 2 ** 32
+
 def constant_small():
     return -1
 
@@ -48,11 +50,11 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
             nr_edges += 1
 
     print >> Information, str(nr_edges) + ' link edges created.'
-    print 'Perform inference on scaffold graph...'
+    print >> Information, 'Perform inference on scaffold graph...'
     #VizualizeGraph(G,param,Information)
 
     if param.detect_haplotype:
-        HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param)
+        HR.HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param)
     #save graph in dot format to file here
 
     ##If sigma specified. Pre calculate a look up table for every possible gap estimate in the common case
@@ -78,12 +80,9 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
     ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
 
     if param.extend_paths:
-        print '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
-        #TODO: Whenever we have removed an edge in G in algm above (deduced it as spurious), we should remove the same edge in G_prime. 
-        #Also: we must update G_prime and G with the new scaffold objects created in this step. The isolated nodes removed here should not
-        #be removed from G_prime
-        PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable)
-        print 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
+        print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
+        PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
+        print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
         for node in G_prime.nodes():
             nbrs = G_prime.neighbors(node)
             for nbr in nbrs:
@@ -126,18 +125,8 @@ def VizualizeGraph(G, param, Information):
 
         G_copy = copy.deepcopy(G)
         RemoveIsolatedContigs(G_copy, Information)
-        #        nx.draw(G_copy)
-        #        matplotlib.pyplot.savefig(param.output_directory +'graph_regions'+str(int(param.mean_ins_size))+'/'+str(counter)+'.png')
-#        CB = nx.cycle_basis(G)
-#        print 'NR of SubG: ' ,len(CB)
         CB = nx.connected_component_subgraphs(G_copy)
-        print G_copy.edges()
         for cycle in CB:
-#            if len(cycle) >= 6: # at leats 6 nodes if proper cycle (haplotypic region)
-            #print 'CYCLE:',cycle.edges()
-            #subgraph = nx.Graph()
-            #subgraph.add_edges_from(cycle)
-            #print 'Hej',subgraph.edges()
             nx.draw(cycle)
             matplotlib.pyplot.savefig(param.output_directory + 'graph_regions' + str(int(param.mean_ins_size)) + '/' + str(counter) + '.png')
             matplotlib.pyplot.clf()
@@ -147,7 +136,7 @@ def VizualizeGraph(G, param, Information):
     return()
 
 def RemoveIsolatedContigs(G, Information):
-    print 'Remove isolated nodes.'
+    print >> Information, 'Remove isolated nodes.'
     counter = 0
     for node in G.nodes():
         if node in G:
@@ -159,124 +148,8 @@ def RemoveIsolatedContigs(G, Information):
     return(G)
 
 
-def HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param):
-    CB = nx.cycle_basis(G)
-    print 'NR of cycles bases: ' , len(CB)
-    cb_6 = 0
-    cb_6_true = 0
-    cb_else_true = 0
-    potentially_merged = 0
-    tot_nr_contigs_merged = 0
-    strange_cases = 0
-
-    for cycle in CB:
-        str_case_abort = False
-        contigs = [node[0] for node in cycle]
-        d = {}
-
-####### Very temporary implementation of dealing with haplotypes!!! #########            
-        if len(cycle) >= 6:
-            for i in contigs: d[i] = d.has_key(i)
-            singles = [k for k in d.keys() if not d[k]]
-            if len(singles) == 2:
-                cb_else_true += 1
-                #find length of the two paths between the source and sink
-                haplotype_region = True
-                #first path
-                #get sink and source
-                try:
-                    cycle.index((singles[0], 'L'))
-                    source_node = (singles[0], 'L')
-                except ValueError:
-                    source_node = (singles[0], 'R')
-                try:
-                    cycle.index((singles[1], 'L'))
-                    sink_node = (singles[1], 'L')
-                except ValueError:
-                    sink_node = (singles[1], 'R')
-
-                #check if region has been removed in some previuos step: this suggests some strange region
-                for scaf in cycle:
-                    if not scaf[0] in Scaffolds:
-                        strange_cases += 1
-                        #print 'STRANGE!'
-                        str_case_abort = True
-                if str_case_abort:
-                    continue
-
-                sub_G = nx.subgraph(G, cycle)
-                path = nx.algorithms.shortest_path(sub_G, source=source_node, target=sink_node)
-
-
-                ## Get length of path (OBS: gaps not implemented yet!!) ##
-                #print 'First path' ,path
-                length_path1 = 0
-                nr_contigs_path1 = 0
-                for scaffold_ in path:
-                    scaffold = scaffold_[0]
-                    if sink_node != scaffold_ and source_node != scaffold_:
-                        length_path1 += Scaffolds[scaffold].s_length
-                        nr_contigs = len(Scaffolds[scaffold].contigs)
-                        #if nr_contigs > 1:
-                        #    print 'More than one contig in scaffold, contigs are:'
-                        for cont_obj in Scaffolds[scaffold].contigs:
-                            nr_contigs_path1 += 1
-                            #print 'Haplotype: ', cont_obj.is_haplotype, cont_obj.coverage
-                            if not cont_obj.is_haplotype:
-                        #        print 'Not haplotype'
-                                haplotype_region = False
-
-
-
-                #print 'Total length of path 1: ', length_path1/2.0
-
-                set_of_nodes = set(path)
-                start_end = set([source_node, sink_node])
-                tot_set = set(cycle)
-                nodes_to_remove = set_of_nodes.symmetric_difference(start_end)
-                remaining_path = tot_set.symmetric_difference(nodes_to_remove)
-                #print 'Secont path', remaining_path
-                length_path2 = 0
-                nr_contigs_path2 = 0
-                for scaffold_ in remaining_path:
-                    scaffold = scaffold_[0]
-                    if sink_node != scaffold_ and source_node != scaffold_:
-                        length_path2 += Scaffolds[scaffold].s_length
-                        nr_contigs = len(Scaffolds[scaffold].contigs)
-                        #if nr_contigs > 1:
-                        #    print 'More than one contig in scaffold'
-                        for cont_obj in Scaffolds[scaffold].contigs:
-                            nr_contigs_path2 += 1
-                            #print 'Haplotype: ', cont_obj.is_haplotype, cont_obj.coverage
-                            if not cont_obj.is_haplotype:
-                                haplotype_region = False
-
-                try:
-                    if length_path2 / float(length_path1) < param.hapl_ratio or length_path1 / float(length_path2) > 1 / param.hapl_ratio and haplotype_region:
-                        potentially_merged += 1
-                        tot_nr_contigs_merged += nr_contigs_path2 / 2.0
-                        #Remove all contigs from path 2
-                        to_remove = remaining_path.symmetric_difference(start_end)
-                        G.remove_nodes_from(to_remove)
-                        G_prime.remove_nodes_from(to_remove)
-                        for node in to_remove:
-                            try: #remove scaffold with all contigs
-                                for contig_obj in Scaffolds[node[0]].contigs:
-                                    del Contigs[contig_obj.name]
-                                del Scaffolds[node[0]]
-                            except KeyError: #scaffold and all contigs has already been removed since to_revove-path contains two nodes for each scaffold
-                                pass
-                except ZeroDivisionError:
-                    pass
-
-    print 'NR of other interesting cycles: ', cb_else_true
-    print 'Potential hapl regions treated: ', potentially_merged
-    print 'Potential hapl contigs "removed": ', tot_nr_contigs_merged
-    print 'Nr of strange cases (contigs occurring in multiple regions): ', strange_cases
-    return()
-
 def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param):
-    print 'Remove edges from node if more than two edges'
+    print >> Information, 'Remove edges from node if more than two edges'
     counter1 = 0
     for node in G:
         nbrs = G.neighbors(node)
@@ -338,8 +211,8 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param):
 
 def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 #### After the proceure above, we hope that the graph is almost perfectly linear but we can still be encountering cycles (because of repeats or haplotypic contigs that has slipped through our conditions). Thus we finally search for loops
-    print 'Contigs/scaffolds left:', len(G.nodes()) / 2
-    print 'Remove remaining cycles...'
+    print >> Information, 'Contigs/scaffolds left:', len(G.nodes()) / 2
+    print >> Information, 'Remove remaining cycles...'
     graphs = nx.connected_component_subgraphs(G)
     #print 'Nr connected components',len(graphs)
     counter = 0
@@ -347,7 +220,7 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
         list_of_cycles = algorithms.cycles.cycle_basis(graph)
         for cycle in list_of_cycles:
             print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
-            print 'A cycle in the scaffold graph: ' + str(cycle), graph.edges()
+            print >> Information, 'A cycle in the scaffold graph: ' + str(cycle), graph.edges()
             counter += 1
             for node in cycle:
                 if node in G:
@@ -366,7 +239,7 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited):
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
     new_scaffolds_ = nx.connected_component_subgraphs(G)
-    print 'Nr of new scaffolds created: ' + str(len(new_scaffolds_))
+    print >> Information, 'Nr of new scaffolds created: ' + str(len(new_scaffolds_))
     print >> Information, 'Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_))
     for new_scaffold_ in new_scaffolds_:
         param.scaffold_indexer += 1
@@ -525,15 +398,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                         avg_gap = dValuesTable[int(round(data_observation, 0))]
                     except KeyError:
                         avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
-                        print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
-                        #print 'Gap estimate was outside the boundary of the precalculated table'
-                        #print 'Boundaries were [' ,-2*param.std_dev_ins_size, ' , ',param.mean_ins_size+2*param.std_dev_ins_size, ' ]. Observation were: ', data_observation
-                        #if data_observation < -2*param.std_dev_ins_size:                            
-                        #    avg_gap=int(-2*param.std_dev_ins_size)
-                        #    print 'Setting gap estimate to min value:', avg_gap,'number of links: ' , nr_links
-                        #else:
-                        #    avg_gap=int(param.mean_ins_size+2*param.std_dev_ins_size-2*param.read_len)
-                        #    print 'Setting gap estimate to max value:', avg_gap,'number of links: ' , nr_links
+                        #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
                 #Do binary search for ML estimate of gap
                 else:
                     avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
@@ -570,7 +435,6 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
 
             high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold)
             if len(high_score_path) > 1:
-                #print 'Start scaf:',start, 'End scaf:', end, 'Avg gap between big:', avg_gap,'Path:',high_score_path, 'nr bad links path:',bad_links, 'Score:',score,'path length:', path_len
                 if score >= 0.0:
                     #loc_count += 1
                     #remove edge in G to fill in the small scaffolds
@@ -604,7 +468,7 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
 
 
 
-def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable):
+def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information):
     start_scaf_index = param.scaffold_indexer
     G = nx.Graph()
     for node in G_prime:
@@ -614,7 +478,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
     # Filtering and heuristic here to reduce computation if needed O(n^2) in contigs on pathfinder
 
     #remove all solated contigs
-    print 'Remove isolated nodes.'
     for node in G.nodes():
         if node in G:
             nbr = G_prime.neighbors(node)[0]
@@ -626,7 +489,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         # Too few short contigs compared to long (ratio set to 0.1) or lib ins size + 2*std_dev - 2*read_len < 200 ) and too many large contigs (> 10 000) do not enter path extension algm since to low payoff:
 
         if len(small_scaffolds) / float(len(Scaffolds)) < 0.1:
-            print "Did not enter path seartching algorithm between scaffolds due to too small fraction of small scaffolds, fraction were: ", len(small_scaffolds) / float(len(Scaffolds))
+            print >> Information, "Did not enter path seartching algorithm between scaffolds due to too small fraction of small scaffolds, fraction were: ", len(small_scaffolds) / float(len(Scaffolds))
             return(start_scaf_index)
 
     ########### Find paths between scaffolds here ###############
@@ -637,7 +500,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
     if param.multiprocess and num_cores > 1:
         import workerprocess
         import heapq
-        print 'Entering ELS.BetweenScaffolds parallellized with ', num_cores, ' cores.'
+        print >> Information, 'Entering ELS.BetweenScaffolds parallelized with ', num_cores, ' cores.'
         start = time.time()
         # load up work queue
         work_queue = multiprocessing.Queue()
@@ -653,7 +516,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         while counter < nr_jobs:
             work_queue.put((set(nodes[counter:counter + chunk]), G_prime, end))
             nr_processes += 1
-            print 'node nr', counter, 'to', counter + chunk - 1, 'added'
+            print >> Information, 'node nr', counter, 'to', counter + chunk - 1, 'added'
             #print work_queue.get()
             counter += chunk
 
@@ -676,7 +539,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         all_paths_sorted_wrt_score_itr = wrapper(heapq.merge, results) #tot_result
         all_paths_sorted_wrt_score = [i for i in all_paths_sorted_wrt_score_itr]
         elapsed = time.time() - start
-        print "Elapsed time multiprocessing: ", elapsed
+        print >> Information, "Elapsed time multiprocessing: ", elapsed
 
     else:
         start = time.time()
@@ -684,10 +547,10 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         for node in G:
             end.add(node)
         iter_nodes = end.copy()
-        print 'Entering ELS.BetweenScaffolds single core'
+        print >> Information, 'Entering ELS.BetweenScaffolds single core'
         all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes)
         elapsed = time.time() - start
-        print "Elapsed time single core pathfinder: ", elapsed
+        print >> Information, "Elapsed time single core pathfinder: ", elapsed
 
     ################################################################
 
@@ -698,7 +561,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
-        #print 'nr bad links path:',bad_links, 'Score:',score,'path length:', path_len #'Path:',path, 
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -720,7 +582,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
                 strt = start_end_node_update_storage[path[0]][0]
                 nd = start_end_node_update_storage[path[-1]][0]
                 if strt[0] == nd[0]:
-                    print 'Rare case (circular paths) detected and treated. '
+                    print >> Information, 'Rare case (circular paths) detected and treated. '
                     continue
             except KeyError:
                 pass
@@ -732,14 +594,14 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             if path[0] in start_end_node_update_storage:
                 case1 = 1
             else:
-                print 'Beginning is already in path'
+                print >> Information, 'Beginning is already in path'
                 continue
 
         if path[-1][0] not in Scaffolds:
             if path[-1] in start_end_node_update_storage:
                 case2 = 1
             else:
-                print 'End is already in path'
+                print >> Information, 'End is already in path'
                 continue
 
 
@@ -827,41 +689,41 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             try:
                 G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
             except KeyError:
-                print path
+                print >> Information, path
                 try:
                     Scaffolds[edge[0][0]]
-                    print edge[0][0] , 'is in Scaffolds'
+                    print >> Information, edge[0][0] , 'is in Scaffolds'
                 except KeyError:
-                    print edge[0][0] , 'is not in Scaffolds'
+                    print >> Information, edge[0][0] , 'is not in Scaffolds'
                 try:
                     Scaffolds[edge[1][0]]
-                    print edge[1][0] , 'is in Scaffolds'
+                    print >> Information, edge[1][0] , 'is in Scaffolds'
                 except KeyError:
-                    print edge[1][0] , 'is not in Scaffolds'
+                    print >> Information, edge[1][0] , 'is not in Scaffolds'
 
                 try:
                     small_scaffolds[edge[0][0]]
-                    print edge[0][0] , 'is in small_scaffolds'
+                    print >> Information, edge[0][0] , 'is in small_scaffolds'
                 except KeyError:
-                    print edge[0][0] , 'is not in small_scaffolds'
+                    print >> Information, edge[0][0] , 'is not in small_scaffolds'
                 try:
                     small_scaffolds[edge[1][0]]
-                    print edge[1][0] , 'is in small_scaffolds'
+                    print >> Information, edge[1][0] , 'is in small_scaffolds'
                 except KeyError:
-                    print edge[1][0] , 'is not in small_scaffolds'
+                    print >> Information, edge[1][0] , 'is not in small_scaffolds'
 
                 try:
                     G_prime[edge[0]]
-                    print edge[0] , 'is in G_prime'
-                    print G_prime[edge[0]]
+                    print >> Information, edge[0] , 'is in G_prime'
+                    print >> Information, G_prime[edge[0]]
                 except KeyError:
-                    print edge[0] , 'is not in G_prime'
+                    print >> Information, edge[0] , 'is not in G_prime'
                 try:
                     G_prime[edge[1]]
-                    print edge[1] , 'is in G_prime'
-                    print G_prime[edge[1]]
+                    print >> Information, edge[1] , 'is in G_prime'
+                    print >> Information, G_prime[edge[1]]
                 except KeyError:
-                    print edge[1] , 'is not in G_prime'
+                    print >> Information, edge[1] , 'is not in G_prime'
                 G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
                 sys.exit()
 

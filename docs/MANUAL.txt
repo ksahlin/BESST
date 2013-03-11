@@ -5,11 +5,11 @@ INPUT:
 -------
 Requierd arguments:
 
-* -c <a contig file> (path to) 
+* -c <path to a contig file>  
 
-*  -f <the bamfiles>  (paths to)
+*  -f < path to bamfiles>  (increasing order of insert size)
 
-* -o <path to the location to where you want the output>
+* -o <path to location for the output>
 
 EXAMPLE RUN:
 

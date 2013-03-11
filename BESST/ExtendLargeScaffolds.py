@@ -181,7 +181,7 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
             longest_path = 0
             if len(paths) > 0:
                 longest_path = len(paths[-1][0])
-            print 'Stopping at', counter, 'iterations..', 'longest path added so far (nr_of_contigs/2 incl in path):', longest_path
+            #print 'Stopping at', counter, 'iterations..', 'longest path added so far (nr_of_contigs/2 incl in path):', longest_path
             break
         start, end, path, path_len = queue.pop() #start, end, path, sum_path = queue.pop()  
         try:

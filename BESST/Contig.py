@@ -23,9 +23,10 @@ Created on Sep 29, 2011
 class contig(object):
     __slots__ = ('name', 'scaffold', 'direction', 'position', 'length',
                   'coverage', 'repeat', 'is_haplotype', 'sequence')
-    def __init__(self, contig_name, contig_scaffold=None ,contig_direction =None,
-                  contig_position=None, contig_length=None, contig_coverage=None, 
-                  contig_repeat=False,contig_haplotype=False, contig_sequence=None):
+
+    def __init__(self, contig_name, contig_scaffold=None , contig_direction=None,
+                  contig_position=None, contig_length=None, contig_coverage=None,
+                  contig_repeat=False, contig_haplotype=False, contig_sequence=None):
         self.name = contig_name
         self.scaffold = contig_scaffold
         self.direction = contig_direction
@@ -35,4 +36,3 @@ class contig(object):
         self.coverage = contig_coverage
         self.repeat = contig_repeat
         self.is_haplotype = contig_haplotype
-        
