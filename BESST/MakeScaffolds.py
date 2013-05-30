@@ -54,7 +54,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
     #VizualizeGraph(G,param,Information)
 
     if param.detect_haplotype:
-        HR.HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param)
+        HR.HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param, Information)
     #save graph in dot format to file here
 
     ##If sigma specified. Pre calculate a look up table for every possible gap estimate in the common case

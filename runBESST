@@ -248,7 +248,7 @@ other.add_option("-t", dest="transcriptalignfile",
                   help="file of contigs", type="string")
 
 other.add_option("-p", dest="fosmidpool", default=None,
-                  help="""Specify that data comes from a fosmid pool. This parameter is sets the number of
+                  help="""Specify that data comes from a fosmid pool. This parameter sets the number of
                   links that the second strongest link must have in order to not do any scaffolding
                   with the region.""", type="int")
 
