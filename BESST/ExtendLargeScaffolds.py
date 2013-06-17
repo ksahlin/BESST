@@ -177,7 +177,7 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         counter += 1
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
-        if counter > 1000 or len(path) > 100:
+        if counter > 100000 or len(path) > 100:
             longest_path = 0
             if len(paths) > 0:
                 longest_path = len(paths[-1][0])

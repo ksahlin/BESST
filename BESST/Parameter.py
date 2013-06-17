@@ -40,6 +40,12 @@ class parameter(object):
                  parameter_fosmidpool=None, parameter_extend_paths=None,
                  parameter_development=None):
 
+        # Library information
+        # Contig information
+        # Algorithm parameters
+        # Assembly information
+        # Algorithm information
+        # Output information
         self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
         self.mean_ins_size = parameter_mean_ins_size

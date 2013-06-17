@@ -399,16 +399,21 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                     except KeyError:
                         avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
                         #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
-                #Do binary search for ML estimate of gap
-                else:
+                #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
+                elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
                     avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
-                    #print avg_gap
+                else:
+                    #print 'now', 2 * param.std_dev_ins_size + param.read_len
+                    avg_gap = int(data_observation)
+                print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
+                #contigs contained in other contigs
             #do naive gap estimation
             else:
                 avg_gap = int(data_observation)
             if avg_gap < 0:
                 #TODO: Eventually implement SW algm to find ML overlap
-                avg_gap = 0
+                avg_gap = 1
             pos += int(avg_gap)
             G.remove_node((scaf, side))
             prev_node = node

@@ -28,6 +28,7 @@ def get_metrics(bam_file, param, Information):
     indexes = [i for i in range(0, len(cont_lengths_list))]
     largest_contigs_indexes = nlargest(1000, indexes, key=lambda i: cont_lengths_list[i]) #get indexes of the 1000 longest contigs
 
+
     if not param.read_len: # user has not specified read len  
         #get read length
         try:

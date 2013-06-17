@@ -30,15 +30,15 @@ import networkx as nx
 import Contig
 import Scaffold
 from Parameter import counters
-from mathstats.normaldist import normal #normal.normpdf, erf, MaxObsDistr
+from mathstats.normaldist import normal
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
-#from statfcns import normal
+
 
 
 try:
-    import matplotlib
-    matplotlib.use('Agg')
+    #import matplotlib
+    #matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 except ImportError:
     pass
@@ -197,17 +197,38 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     sum_x = 0
     sum_x_sq = 0
     n = 0
+    cov = []
+    leng = []
     for contig in cont_aligned_len:
         cont_coverage = cont_aligned_len[contig][0] / float(cont_aligned_len[contig][1])
         try:
             Contigs[contig].coverage = cont_coverage
+            cov.append(cont_coverage)
+            leng.append(Contigs[contig].length)
         except KeyError:
             small_contigs[contig].coverage = cont_coverage
-#            else:
-#                try:
-#                    Contigs[contig].coverage=cont_coverage
-#                except KeyError:
-#                    pass
+            cov.append(cont_coverage)
+            leng.append(small_contigs[contig].length)
+
+
+    try:
+        import matplotlib.pyplot as plt
+        plt.xlabel('Contig length')
+        plt.ylabel('Coverage')
+        plt.title('Abyss assembly')
+        plt.plot(leng, cov, '.')
+        plt.savefig(output_dest + "/BESST_cov_all.png")
+        plt.clf()
+
+        plt.xlabel('Contig length')
+        plt.ylabel('Frequency')
+        plt.hist(leng, bins=500)
+        #plt.axis([0, 100, 0, 70])
+        plt.savefig(output_dest + "/all_lengths.png")
+
+    except ImportError:
+        pass
+
         sum_x += cont_coverage
         sum_x_sq += cont_coverage ** 2
         n += 1
@@ -566,7 +587,7 @@ def CalculateMeanCoverage(Contigs, first_lib, output_dest, bamfile, Information)
     print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
 
     try:
-        import matplotlib
+        import matplotlib.pyplot as plt
         plt.hist(cov_of_longest_contigs, bins=50)
         library = bamfile.split('/')[-1]
         plt.savefig(output_dest + "/BESST_cov_1000_longest_cont" + library + ".png")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-print '''
+'''
     BESST - Scaffolder for genomic assemblies 
     Copyright (C) 2013  Kristoffer Sahlin
 
@@ -31,6 +31,7 @@ from BESST import CreateGraph as CG
 from BESST import MakeScaffolds as MS
 from BESST import GenerateOutput as GO
 from BESST import libmetrics
+from BESST.diploid import get_haplotype_regions
 
 def ReadInContigseqs(contigfile):
     cont_dict = {}
@@ -72,6 +73,7 @@ def main(options):
     #Read in the sequences of the contigs in memory
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
 
+    #get_haplotype_regions.main(C_dict, 25, 24)
     #iterate over libraries
     param.first_lib = True
     for i in xrange(len(options.bamfiles)):
