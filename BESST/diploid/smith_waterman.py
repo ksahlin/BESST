@@ -83,12 +83,14 @@ def SW(seq1, seq2, gap_penalty, mismatch_penalty):
             max_i = i
             max_j = m - 1
             max_score = score_matrix[i][m - 1]
+
     #if in last row
     for j in range(0, m):
         if score_matrix[n - 1][j] >= max_score:
                 max_i = n - 1
                 max_j = j
                 max_score = score_matrix[n - 1][j]
+
 
     #Returnera score har
 
