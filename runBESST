@@ -73,7 +73,7 @@ def main(options):
     #Read in the sequences of the contigs in memory
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
 
-    get_haplotype_regions.main(C_dict, 25, 24, 0.7)
+    get_haplotype_regions.main(options.output, C_dict, 25, 24, 0.7)
     #iterate over libraries
     param.first_lib = True
     for i in xrange(len(options.bamfiles)):
