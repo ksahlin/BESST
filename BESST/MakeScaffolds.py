@@ -246,15 +246,6 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
         #scaf_size=len(new_scaffold_)
         scaffold_length = 0
         contig_list = []
-        #Store nr_of links between contigs before "destroying" the graph
-#        for edge in new_scaffold_.edges_iter():
-#            nr_links=G[edge[0]][edge[1]]['nr_links']
-#            side1=edge[0][1]
-#            side2=edge[1][1]
-#            if nr_links:
-#                contig_objects1=Scaffolds[edge[0][0]].contigs
-#                contig_objects2=Scaffolds[edge[1][0]].contigs
-#                GiveLinkConnection(Contigs,contig_objects1,contig_objects2,side1,side2,nr_links) 
 
         ##### Here PathExtension algorithm is called if PRO is activated #####
         if param.extend_paths:

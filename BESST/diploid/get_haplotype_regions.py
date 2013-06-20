@@ -94,10 +94,10 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
         else:
             contig2 = contigs[pair[1][0]]
 
-        score, max_i, max_j, traceback_matrix = smith_waterman.SW(contig1, contig2, -1, -1)
+        score, max_i, max_j, traceback_matrix = smith_waterman.SW(contig1, contig2, 0, 0)
         #print score, max_i, max_j
         procent_similarity = score / float(min(max_i, max_j, len_ctg1, len_ctg2))
-        #print 'Score', procent_similarity
+        print 'Score', procent_similarity, 'length alignment:', float(min(max_i, max_j, len_ctg1, len_ctg2))
         if procent_similarity > similarity_threshold:
             nr_matching += 1
 
@@ -193,8 +193,8 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
                 visited_nodes.update(nodes_rev_comp)
                 cntr += 1
                 print cntr
-                if cntr > 20:
-                    break
+                #if cntr > 20:
+                #    break
                 haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, remove_nodes)
 
 
@@ -225,7 +225,7 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
 def main(output_dir, contigs, k, m, similarity_threshold):
     k_mer_hash = get_kmer_index(contigs, k, m)
     connectedness_graph = search_regions(k_mer_hash, contigs, similarity_threshold)
-    output_contigs.generate_fasta(connectedness_graph, contigs, output_dir)
+    output_contigs.generate_fasta(connectedness_graph, contigs, output_dir, k)
     return()
 
 if __name__ == '__main__':
