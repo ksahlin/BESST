@@ -127,8 +127,8 @@ def graph_updater(connectedness_graph, contigs, nodes, remove_nodes):
 def haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, remove_nodes):
 
     ## check to see that node has not been merged previously
-    if not all([ctg[0] in contigs for ctg in nodes]):
-        return(0)
+    #if not all([ctg[0] in contigs for ctg in nodes]):
+    #    return(0)
 
     ctg_left, ctg_right = None, None
     before_kmer = filter(lambda x: (x[1] + x[2]) % 2 == 1, nodes)
@@ -142,6 +142,12 @@ def haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, 
         ctg_right = graph_updater(connectedness_graph, contigs, after_kmer, remove_nodes)
 
     if ctg_left and ctg_right:
+        for nbr in connectedness_graph.neighbors(ctg_left):
+            if nbr in nodes:
+                connectedness_graph[ctg_left][nbr]['a'] = 1
+        for nbr in connectedness_graph.neighbors(ctg_right):
+            if nbr in nodes:
+                connectedness_graph[ctg_right][nbr]['a'] = 1
         #print connectedness_graph[ctg_left]
         #print connectedness_graph[ctg_right]
         #print ctg_left, ctg_right
@@ -198,7 +204,24 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
                 haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, remove_nodes)
 
 
+    print 'REMOVED:', len(remove_nodes)
+
+    # Remove all reverse complement nodes to regions that have been clasified as haplotypic regions
     connectedness_graph.remove_nodes_from(remove_nodes)
+
+    # Remove all connections that did not pass as haplotyic regions 
+    # They should have no key attributes
+    rmv_edges = []
+    for edge in connectedness_graph.edges_iter():
+        if not connectedness_graph[edge[0]][edge[1]]:
+            rmv_edges.append(edge)
+    connectedness_graph.remove_edges_from(rmv_edges)
+
+    rmv_nodes = []
+    for node in connectedness_graph:
+        if connectedness_graph.neighbors(node) == 0:
+            rmv_nodes.append(node)
+    connectedness_graph.remove_nodes_from(rmv_nodes)
 
     for node in connectedness_graph:
         try:
@@ -209,15 +232,6 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
 
     print 'nr nodes left:', len(connectedness_graph.nodes())
     print 'nr edges left:', len(connectedness_graph.edges())
-
-
-    #triangle_connections = nx.algorithms.triangles(connectedness_graph)
-#    for node, nr_triangles in triangle_connections.iteritems():
-#        if nr_triangles == 1 or nr_triangles == 10:
-#            print node, connectedness_graph.neighbors(node)
-#            max_score, max_i, max_j, traceback_matrix = smith_waterman.SW(contigs[node[0]], contigs[connectedness_graph.neighbors(node)[0][0]], -1, -1)
-
-
 
     return(connectedness_graph)
 

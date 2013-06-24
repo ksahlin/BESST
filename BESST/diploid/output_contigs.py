@@ -19,7 +19,7 @@ def reverse_complement(string):
     rev_comp = ''.join([rev_nuc[nucl] for nucl in reversed(string)])
     return(rev_comp)
 
-def k_mer_graph_to_scaffold_graph(graph):
+def k_mer_graph_to_scaffold_graph(graph, removed):
     ''' We want to make new contigs of the haplotypic regions that we have solved.
         The regions that we have solved are the ones where a node has precisely 
         one neighbor in the overlapping k-mer graph.
@@ -35,27 +35,60 @@ def k_mer_graph_to_scaffold_graph(graph):
             nbr = edge[1]
         except KeyError:
             continue
+        if node[0] == '1862' and nbr[0] == '875' or node[0] == '875' and nbr[0] == '1862':
+            print edge
+            print node
+            print nbr
+        if node[0] == '1862' and nbr[0] == '1202' or node[0] == '1202' and nbr[0] == '1862':
+            print edge
+            print node
+            print nbr
         ##
         # Modulo 2 operator to see what contig end we should map to
         # Beginning and forward of contig, or end and reverse compl. -> "Left" side of contig
         # Othervise right side
 
-        new_node1 = (node[0], 'L') if (node[1] + node[2]) % 2 == 0 else (node[0], 'R')
-        new_node2 = (nbr[0], 'L') if (nbr[1] + nbr[2]) % 2 == 0 else (nbr[0], 'R')
+        if node[1] == 0:
+            new_node1 = (node[0], 'L')
+            other_side1 = (node[0], 'R')
+        else:
+            new_node1 = (node[0], 'R')
+            other_side1 = (node[0], 'L')
+
+        if nbr[1] == 0:
+            new_node2 = (nbr[0], 'L')
+            other_side2 = (nbr[0], 'R')
+        else:
+            new_node2 = (nbr[0], 'R')
+            other_side2 = (nbr[0], 'L')
         new_contigs.add_edge(new_node1, new_node2)
-        other_side1 = (node[0], 'R') if (node[1] + node[2]) % 2 == 0 else (node[0], 'L')
-        other_side2 = (nbr[0], 'R') if (nbr[1] + nbr[2]) % 2 == 0 else (nbr[0], 'L')
         new_contigs.add_edge(new_node1 , other_side1)
         new_contigs.add_edge(new_node2 , other_side2)
 
-    print len(new_contigs.nodes())
-    return(new_contigs)
+    print new_contigs[('1862', 'L')]
+    print new_contigs[('1862', 'R')]
+    new_removed = {}
+    for rem, used in removed.items():
+        if rem[1] == used[1] :
+            new_removed[(rem[0], 'L')] = (used[0], 'L')
+            new_removed[(rem[0], 'R')] = (used[0], 'R')
+        else:
+            new_removed[(rem[0], 'L')] = (used[0], 'R')
+            new_removed[(rem[0], 'R')] = (used[0], 'L')
 
-def get_joined_sequence(contigs, sub_graph, start, end, k_mer_size):
+    print len(new_contigs.nodes())
+    return(new_contigs, new_removed)
+
+def get_joined_sequence(contigs, sub_graph, start, end, k_mer_size, removed):
     sequence = ''
+    print 'Nr nodes subgraph:', len(sub_graph.nodes())
+    for node in sub_graph:
+        if len(sub_graph.neighbors(node)) > 2:
+            print 'yes:', node, sub_graph.neighbors(node)
     path = nx.algorithms.shortest_path(sub_graph, start, end)
     path_len = len(path)
     print 'Nr contigs in path:', path_len / 2.0
+    #print path
 
     index_to_remove = []
     for i, node in enumerate(path):
@@ -71,7 +104,8 @@ def get_joined_sequence(contigs, sub_graph, start, end, k_mer_size):
                 else:
                     return()
     for index in sorted(index_to_remove, reverse=True):
-        del path[index]
+        path[index] = removed[path[index]]
+        #del path[index]
     for i, node in enumerate(path):
         if i % 2 == 1 and i < path_len - 2:
             ctg1 = contigs[node[0]] if node[1] == 'R' else reverse_complement(contigs[node[0]])
@@ -90,10 +124,12 @@ def get_joined_sequence(contigs, sub_graph, start, end, k_mer_size):
 
     return(sequence)
 
-def print_out_contigs(contigs, new_contigs, output_dir, k_mer_size):
+def print_out_contigs(contigs, new_contigs, output_dir, k_mer_size, removed):
     contigs_out = open(os.path.join(output_dir, 'BESST_contigs.fa'), 'w')
 
     contig_index = 0
+    for comp in nx.connected_component_subgraphs(new_contigs):
+        print len(comp.nodes()) / 2.0
 
     for component in nx.connected_component_subgraphs(new_contigs):
         contig_index += 1
@@ -107,7 +143,7 @@ def print_out_contigs(contigs, new_contigs, output_dir, k_mer_size):
             if len(new_contigs.neighbors(node)) == 1 and node != start:
                 end = node
                 break
-        ctg_seq = get_joined_sequence(contigs, component, start, end, k_mer_size)
+        ctg_seq = get_joined_sequence(contigs, component, start, end, k_mer_size, removed)
         if ctg_seq:
             print >> contigs_out, accession + '\n' + ctg_seq
 
@@ -130,10 +166,17 @@ def generate_fasta(graph, contigs, output_dir, k_mer_size):
     haplotypes = open(os.path.join(output_dir, 'haplotypes.fa'), 'w')
     nodes_to_remove = set()
     haplotype_count = 0
+    removed = {}
     for node in graph:
         if graph.node[node]['r']:
             nodes_to_remove.add(node)
             print 'remove'
+            nbrs = graph.neighbors(node)
+            for nbr in nbrs:
+                if graph.edge[node][nbr].keys() == ['a']:
+                    print node
+                    print 'nbr!!:', nbr
+                    removed[node] = nbr
 
     graph.remove_nodes_from(nodes_to_remove)
     for node in nodes_to_remove:
@@ -147,9 +190,9 @@ def generate_fasta(graph, contigs, output_dir, k_mer_size):
             pass
 
     print 'Number of haplotypes removed:', haplotype_count
-
-    new_contigs = k_mer_graph_to_scaffold_graph(graph)
-    print_out_contigs(contigs, new_contigs, output_dir, k_mer_size)
+    print 'Nr allele nodes removed:', len(removed)
+    new_contigs, removed = k_mer_graph_to_scaffold_graph(graph, removed)
+    print_out_contigs(contigs, new_contigs, output_dir, k_mer_size, removed)
 
     #print len(nx.connected_components(graph))
 
