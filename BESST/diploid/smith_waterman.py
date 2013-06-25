@@ -94,7 +94,7 @@ def SW(seq1, seq2, gap_penalty, mismatch_penalty):
 
     #Returnera score har
 
-    return max_score, max_i, max_j, traceback_matrix #score_matrix,traceback_matrix
+    return max_score, max_i, max_j
 
 
 if __name__ == '__main__':

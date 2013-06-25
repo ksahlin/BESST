@@ -9,6 +9,7 @@ Created on Mar 15, 2013
 @author: ksahlin
 '''
 
+import os
 import sys
 import time
 from collections import defaultdict
@@ -18,6 +19,7 @@ from operator import itemgetter
 import networkx as nx
 
 import smith_waterman
+import sw
 import output_contigs
 
 
@@ -94,10 +96,11 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
         else:
             contig2 = contigs[pair[1][0]]
 
-        score, max_i, max_j, traceback_matrix = smith_waterman.SW(contig1, contig2, 0, 0)
+        score, max_i, max_j = smith_waterman.SW(contig1, contig2, 0, 0)
+
         #print score, max_i, max_j
         procent_similarity = score / float(min(max_i, max_j, len_ctg1, len_ctg2))
-        print 'Score', procent_similarity, 'length alignment:', float(min(max_i, max_j, len_ctg1, len_ctg2))
+        #print 'Score', procent_similarity, 'length alignment:', float(min(max_i, max_j, len_ctg1, len_ctg2))
         if procent_similarity > similarity_threshold:
             nr_matching += 1
 
@@ -114,11 +117,48 @@ def graph_updater(connectedness_graph, contigs, nodes, remove_nodes):
     remove_nodes.update(nodes_rev_comp)
 
     longest_contig_index = argmax_index([len(contigs[ctg[0]]) for ctg in nodes])
+    hapl_lengths = map(lambda x: len(contigs[x[0]]), nodes)
+
+    # Need to pick the longest haplotype. This is a corner case where
+    # there are at least two longest contigs. We then need to stick to one consistently
+    if hapl_lengths.count(max(hapl_lengths)) > 1:
+        print 'OMGGGGG Same length of haplotypes (need to choose one):'
+        #print nodes
+
+        index_ = 0
+        for hapl in nodes:
+            if len(contigs[hapl[0]]) == max(hapl_lengths):
+                try:
+                    connectedness_graph.node[hapl]['r']
+                except KeyError:
+                    longest_contig_index = index_
+            index_ += 1
+
+
+    #print 'INDEX:', longest_contig_index
     for index, ctg in enumerate(nodes):
         if index != longest_contig_index:
             connectedness_graph.node[ctg]['r'] = 1
+
+            # need to update other end of contig as well
+            # if it was added to the k-mer connection graph
+            # note: not all k-mers of contig ends need to have
+            # multiple hits. If only one hit, it is not added.
+            # therefore, not all contig ends might be represented in 
+            # connectedness_graph
+            try:
+                connectedness_graph.node[(ctg[0], 1 - ctg[1], 1)]['r'] = 1
+            except KeyError:
+                pass
+            try:
+                connectedness_graph.node[(ctg[0], 1 - ctg[1], 0)]['r'] = 1
+            except KeyError:
+                pass
+
         else:
             ctg_to_join = ctg
+
+
 
 
     return(ctg_to_join)
@@ -198,16 +238,18 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
                 visited_nodes.update(nodes)
                 visited_nodes.update(nodes_rev_comp)
                 cntr += 1
-                print cntr
+                #print cntr
                 #if cntr > 20:
                 #    break
                 haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, remove_nodes)
 
 
+
     print 'REMOVED:', len(remove_nodes)
 
-    # Remove all reverse complement nodes to regions that have been clasified as haplotypic regions
+    # Remove all reverse complement nodes to regions that have been classified as haplotypic regions
     connectedness_graph.remove_nodes_from(remove_nodes)
+
 
     # Remove all connections that did not pass as haplotyic regions 
     # They should have no key attributes
@@ -237,9 +279,15 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
 
 
 def main(output_dir, contigs, k, m, similarity_threshold):
+    # start timing
+    start_time = time.time()
     k_mer_hash = get_kmer_index(contigs, k, m)
     connectedness_graph = search_regions(k_mer_hash, contigs, similarity_threshold)
     output_contigs.generate_fasta(connectedness_graph, contigs, output_dir, k)
+    # stop timing
+    end_time = time.time()
+    # print timing
+    print "time:", end_time - start_time
     return()
 
 if __name__ == '__main__':
