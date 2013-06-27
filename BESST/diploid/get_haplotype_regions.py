@@ -19,7 +19,7 @@ from operator import itemgetter
 import networkx as nx
 
 import smith_waterman
-import sw
+import wrapper_sw
 import output_contigs
 
 
@@ -76,6 +76,7 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
 
     # Check if only one contig on this side, it should then be merged if
     # the other region is haplotypic. We therefore return True
+
     if len(haplotypes) == 1:
         return(1)
     seqs = itertools.combinations(haplotypes, 2)
@@ -96,7 +97,7 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
         else:
             contig2 = contigs[pair[1][0]]
 
-        score, max_i, max_j = smith_waterman.SW(contig1, contig2, 0, 0)
+        score, max_i, max_j = wrapper_sw.wrap_sw(contig1, contig2, 0, 0)
 
         #print score, max_i, max_j
         procent_similarity = score / float(min(max_i, max_j, len_ctg1, len_ctg2))
@@ -122,8 +123,9 @@ def graph_updater(connectedness_graph, contigs, nodes, remove_nodes):
     # Need to pick the longest haplotype. This is a corner case where
     # there are at least two longest contigs. We then need to stick to one consistently
     if hapl_lengths.count(max(hapl_lengths)) > 1:
-        print 'OMGGGGG Same length of haplotypes (need to choose one):'
+        #print 'OMGGGGG Same length of haplotypes (need to choose one):'
         #print nodes
+        pass
 
         index_ = 0
         for hapl in nodes:

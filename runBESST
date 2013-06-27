@@ -72,8 +72,9 @@ def main(options):
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
-
-    get_haplotype_regions.main(options.output, C_dict, 25, 24, 0.7)
+    if options.haplotype:
+        get_haplotype_regions.main(options.output, C_dict, 25, 24, 0.7)
+        sys.exit()
     #iterate over libraries
     param.first_lib = True
     for i in xrange(len(options.bamfiles)):
