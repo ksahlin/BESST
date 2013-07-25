@@ -43,6 +43,8 @@ The following arguments are computed internally by BESST. It is however good to 
 
 17 -y < 0 or 1 > Extend scaffolds with smaller contains (default on).
 
+18 -q <optinal flag> Parallellize work load of path finder module in case of multiple processors available using multiprocessing library for pyhton.
+
 
 NOTE:
 -------

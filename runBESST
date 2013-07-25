@@ -23,15 +23,10 @@ import os
 from time import time
 from optparse import OptionParser
 import optparse
+#import gc
+#gc.disable()
 
-import pysam
 
-from BESST import Parameter
-from BESST import CreateGraph as CG
-from BESST import MakeScaffolds as MS
-from BESST import GenerateOutput as GO
-from BESST import libmetrics
-from BESST.diploid import get_haplotype_regions
 
 def ReadInContigseqs(contigfile):
     cont_dict = {}
@@ -53,6 +48,15 @@ def ReadInContigseqs(contigfile):
     return(cont_dict)
 
 def main(options):
+    import pysam
+
+    from BESST import Parameter
+    from BESST import CreateGraph as CG
+    from BESST import MakeScaffolds as MS
+    from BESST import GenerateOutput as GO
+    from BESST import libmetrics
+    from BESST.diploid import get_haplotype_regions
+
     Parameter.MemoryUsage()
     tot_start = time()
     Contigs = {} # contig dict that stores contig objects 
@@ -72,8 +76,9 @@ def main(options):
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
+    print 'Number of initial contigs:', len(C_dict)
     if options.haplotype:
-        get_haplotype_regions.main(options.output, C_dict, 25, 24, 0.7)
+        get_haplotype_regions.main(options.output, C_dict, options.kmer, options.mmer, 0.8)
         sys.exit()
     #iterate over libraries
     param.first_lib = True
@@ -216,13 +221,14 @@ parameters.add_option("-w", dest="relweight", default=3,
                   help="Threshold value for the relative weight of an edge (deprecated)", type="int")
 
 parameters.add_option("-T", dest="threshold", action="callback", callback=vararg_callback,
-                  help="Threshold value separating 'large' and 'small' contigs for library. Should not be set unless needed, i.e. Besst terminates and require this to be set. ")
+                  help="Threshold value filter out reads that are mapped too far apart given insert size. ")
 
 
 parameters.add_option("-e", dest="edgesupport", action="callback", callback=vararg_callback,
                   help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
 parameters.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
-              help="Contig size threshold for the library (all contigs below this size is discarded from the 'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
+                    help="Contig size threshold for the library (all contigs below this size is discarded from the \
+                    'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
 libstats.add_option("-z", "--covcutoff", dest="covcutoff", action="callback", callback=vararg_callback,
                   help="User specified coverage cutoff. (Manually filter out contigs with coverage over this value)")
@@ -231,7 +237,9 @@ haplotypes.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
                   help="Maximum length ratio for merging of haplotypic regions.", type="float")
 
 haplotypes.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
-                  help="Number of standard deviations over mean/2 of coverage to allow for clasification of haplotype. Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) if -b 3", type="int")
+                  help="Number of standard deviations over mean/2 of coverage to allow for clasification of haplotype.\
+                   Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
+                   if -b 3", type="int")
 
 haplotypes.add_option("-g", "--haplotype", dest="haplotype", default=0,
                   help="Haplotype detection function, default = off", type="int")
@@ -239,10 +247,21 @@ haplotypes.add_option("-g", "--haplotype", dest="haplotype", default=0,
 other.add_option("-d", "--duplicate", dest="duplicate", default=1,
                   help="Sequencing duplicates detection, default = off", type="int")
 
+other.add_option("-K", "--kmer", dest="kmer", default=50,
+                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50", type="int")
+
+other.add_option("-M", "--mmer", dest="mmer", default=40,
+                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ", type="int")
+
+
 other.add_option("-y", "--extendpaths", dest="extendpaths", default=1,
-                  help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. This function should be pretty conservative so it's recommended to have the default value, default = on. To turn of, specify -y 0.", type="int")
-other.add_option("-q", "--multiprocess", dest="multiprocess", default=0,
-                  help="Parallellize work load of path finder module in case of multiple processors available.", type="int")
+                  help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. \
+                   This function should be pretty conservative so it's recommended to have the default value,\
+                    default = on. To turn of, specify -y 0.", type="int")
+
+other.add_option("-q", action="store_true", dest="multiprocess",
+                help="Parallellize work load of path finder module in case of multiple processors available.\
+                  ",)
 
 other.add_option("-D", "--devel", dest="development",
                   help="Run in development mode (bug checking and memory usage etc.)", type="int", default=0)
