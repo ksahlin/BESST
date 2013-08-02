@@ -1,0 +1,60 @@
+VERSIONS
+----------
+
+Some versions are only included for history purposes (within () ).
+
+(V0.5
+ * Added parameter prefix -o <path> that gives the user ability to choose his own output directory
+ * Added required parameter -r that is integers denoting the mean read length
+ * Added optional parameter -s that lets you specify the standard deviation of the library (one for each library). If specified, the gap size is calculated with a sophisticated formula. Else, it's calculated naively.
+ * Added output of a gff version 3 file
+ * Added so -t parameter chan take different values for diff. libraries)
+ 
+
+V0.6
+ BUG FIXES
+ * fixed bug in -e parameter, before some special cases when e < parameter_value could still be included in graph and final scaffolding step. Now, no such edge will be included.
+ * fixed bug in positions of contains within scaffolds 
+ * Fixed +1bp index bug in GFF file output 
+ OTHER STUFF
+ * Implemented gap estimation tool. With a narrowed down interval to gap in [-2*std_dev, mean+2*std_dev]
+ * Fixed so that negative gaps are set to 0 in gap estimate.
+ * Fixed so that scaffolds are written out properly in scaffolds.fa (no abutting contigs when we have negative gaps).
+ * Outputs number of links between contigs to the GFF file (that gave rise to the edge in the graph).
+ * -e parameter is now set independently set for each library e.g. -e 5 5 10 5 3
+ * non-naive gap estimation is only active if nr of links is  >=  5, independent of what -e is set to.
+ * Gap fragments added to GFF file
+ * Scaffolds are printed out with 60 characters per line
+ * More information is printed to stdout: all parameters specified for each library
+
+V0.7
+
+* Fixed various minor bugs.
+* Changed way to create edges from BAM file, more paired-reads are now used.
+* Removed some reads that are not unique by looking at tags specified by BWA (mapping quality > 10)
+* Implemented coverage attribute for each contig.
+* Implemented repeat removal based on the coverage information for a contig.
+* Restructured code when passing function arguments between functions. Now, we have a new object caller Parameter that stores this to make the code more readable.
+* Haplotype detector
+* Removed required parameter -m (made optional). If not specified, it is calculated from the BAM file.
+* Removed required parameter -s (made optional). If not specified, it is calculated from the BAM file.
+* Removed required parameter -T (made optional). Set by program default -T = mean + 4*std_dev 
+* Removed required parameter -t.
+* Added optional parameter -k. Consider contigs larger than -k at each step. Default set to: mean + (std_dev/mean)*std_dev
+* Added optional parameter -g.  Detect and treat haplotypes, default value of g is 1 , i.e. function is on. To switch off, set -g 0
+* Added optional parameter -d Detect and remove duplicates,  default value of g is 1 , i.e. removing duplicates. To switch off, set -g 0. Removeing dupl. based on identical mapping positions for both reads in pair (this will give some false positives)
+* Removed matplotlib dependency
+* Removed scipy,numpy dependency by using closed formula approximation for erf(x)
+* Print out scaffolds created for each pass in the algorithm
+
+V1.0
+* Various bug fixes
+* Implemented scaffolding with smaller contigs by searching for coherent paths
+* New score on edges in scaffold graph
+* a beta version of parallelization of the small contains connection finder. specified by option -q 1 (default 0).
+
+
+V1.0.1
+* Fixed bug in libmetrics.py line, MaxObsDist was only called with 1 argument here when 2 args are required. Thanks Anthony Bretaudeau.
+* Added a package for fixing split allele contigs before scaffolding in high heterozyosity diploid assemblies. (preliminary implementation)
+* Added a python script to map reads to contigs (or a genome) with BWA. It outputs a sorted .bam and a .bai file, i.e. what is needed for BESST. The script requires that bwa is installed and in the path.
