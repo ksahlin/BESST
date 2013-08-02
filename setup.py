@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.0',
+    version='1.0.1',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -15,18 +15,14 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering :: Bio-Informatics"
       ],
-    #py_modules=['BESST.py'],
-    #packages=['BESST',],
-    scripts=['runBESST', 'docs/INSTALL.txt', 'docs/MANUAL.txt'],
+    scripts=['runBESST', 'docs/INSTALL.txt', 'docs/MANUAL.txt', 'scripts/reads_to_ctg_map.py'],
     description='Scaffolder for genomic assemblies.',
     author='Kristoffer Sahlin',
     author_email='kristoffer.sahlin@scilifelab.se',
     url='https://github.com/ksahlin/BESST',
     license='GPLv3',
     long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
-    #requires=['pysam (>=0.6)','networkx (>=1.4)'],
-    install_requires=['pysam==0.6',
+    install_requires=['pysam==0.7',
                       'networkx>=1.4',
                       'mathstats'],
-    #platforms=['Unix', 'Linux', 'Mac OS']
 )
