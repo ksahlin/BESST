@@ -30,27 +30,27 @@ def check_module(module):
 
 
 
-def parse_check(parser, options):
+def parse_check(parser, arg):
 
     ##
     # Error handling when parsing arguments
 
-    if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff, options.threshold, options.minsize]]):
+    if not all([x == None or len(x) == len(arg.bamfiles) for x in [arg.stddev , arg.mean , arg.readlen, arg.edgesupport, arg.covcutoff, arg.threshold, arg.minsize]]):
         parser.error("Same number of arguments are required")
 
-    if (options.mean and not options.stddev) or (not options.mean and options.stddev):
+    if (arg.mean and not arg.stddev) or (not arg.mean and arg.stddev):
         parser.error("either both or none of -m and -s is required")
-    if (options.threshold and not options.minsize) or (not options.threshold and options.minsize):
+    if (arg.threshold and not arg.minsize) or (not arg.threshold and arg.minsize):
         parser.error("either both or none of -T and -k is required")
-    if not options.contigfile:
+    if not arg.contigfile:
         parser.error("parameter -c (a fasta contig file) is required")
-    if not options.bamfiles:
+    if not arg.bamfiles:
         parser.error("parameter -f (BAM files) is required")
 
     ##
     # Error handling for files
 
-    for file_ in options.bamfiles:
+    for file_ in arg.bamfiles:
         try:
             open(file_)
         except IOError as e:
@@ -62,9 +62,9 @@ def parse_check(parser, options):
             sys.exit(0)
 
     try:
-        open(options.contigfile)
+        open(arg.contigfile)
     except IOError as e:
-        sys.exit("couldn't open contig file " + options.contigfile + " check that the path is correct and that the file exists")
+        sys.exit("couldn't open contig file " + arg.contigfile + " check that the path is correct and that the file exists")
 
     return()
 

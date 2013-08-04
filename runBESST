@@ -67,7 +67,7 @@ def main(options):
     param.scaffold_indexer = 1 # global indicator for scaffolds, used to index scaffolds when they are created
     param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
-    param.development = options.development
+    param.development = options.devel
     options.output = options.output + '/BESST_output'
     os.popen('mkdir -p ' + options.output)
     param.information_file = open(options.output + '/Statistics.txt', 'w')
@@ -156,147 +156,126 @@ def main(options):
     print 'Finished\n\n '
     Parameter.MemoryUsage()
 
-
-
-def vararg_callback(option, opt_str, value, parser):
-    assert value is None
-    value = []
-
-    def floatable(str):
-        try:
-            float(str)
-            return True
-        except ValueError:
-            return False
-
-    for arg in parser.rargs:
-        # stop on --foo like options
-        if arg[:2] == "--" and len(arg) > 2:
-            break
-        # stop on -a, but not on -3 or -3.0
-        if arg[:1] == "-" and len(arg) > 1 and not floatable(arg):
-            break
-        try:
-            value.append(int(arg))
-        except ValueError:
-            value.append(arg)
-
-    del parser.rargs[:len(value)]
-    setattr(parser.values, option.dest, value)
+    return()
 
 
 
+parser = argparse.ArgumentParser(prog='BESST', description="BESST - scaffolder for genomic assemblies.")
 
-
-parser = OptionParser()
-libstats = optparse.OptionGroup(parser, 'Options for library statistics such as read length, insert size mean and std_dev, coverage etc.')
-haplotypes = optparse.OptionGroup(parser, 'Options involving haplotype detection.')
-required = optparse.OptionGroup(parser, 'Required input.')
-parameters = optparse.OptionGroup(parser, 'Parameters for algorithm.')
-other = optparse.OptionGroup(parser, 'Various other options.')
-
+required = parser.add_argument_group('required', 'Required arguments')
+libstats = parser.add_argument_group('read_library', 'Library parameters that can be set, e.g., read length, insert size mean/std_dev, coverage etc.')
+haplotypes = parser.add_argument_group('diploid', 'Options involving detection of split allele contigs in diploid assemblies.')
+parameters = parser.add_argument_group('parameters', 'Parameters/variables/threshold involved in BESST.')
+other = parser.add_argument_group('other', 'Various other parameters')
 
 ## required
-required.add_option("-c", dest="contigfile",
-                  help="Fasta file containing contigs.", type="string")
+required.add_argument("-c", dest="contigfile", type=str,
+                      help="Fasta file containing contigs.")
 
-required.add_option("-f", "--bamfile", dest="bamfiles", action="callback", callback=vararg_callback,
-                  help="Path(s) to bamfile(s).")
+required.add_argument("-f", dest="bamfiles", type=str, nargs='+',
+                      help="Path(s) to bamfile(s).")
 
-## optional
-other.add_option("-o", "--output", dest="output", default='.',
-                  help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.", type="string")
+## libstats
 
-libstats.add_option("-r", dest="readlen", action="callback", callback=vararg_callback,
+libstats.add_argument("-r", dest="readlen", type=int, nargs='+',
                   help="Mean read length of libraries. ")
 
-libstats.add_option("-m", dest="mean", action="callback", callback=vararg_callback,
+libstats.add_argument("-m", dest="mean", type=int, nargs='+',
                   help="Mean insert size of libraries.")
 
-libstats.add_option("-s", "--stddev", dest="stddev", action="callback", callback=vararg_callback,
+libstats.add_argument("-s", dest="stddev", type=int, nargs='+',
                   help="Estimated standard deviation of libraries.")
 
-parameters.add_option("-w", dest="relweight", default=3,
-                  help="Threshold value for the relative weight of an edge (deprecated)", type="int")
+libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',
+                  help="User specified coverage cutoff. (Manually filter \
+                  out contigs with coverage over this value)")
 
-parameters.add_option("-T", dest="threshold", action="callback", callback=vararg_callback,
+
+## parameters
+
+parameters.add_argument("-w", dest="relweight", type=int, default=3,
+                  help="Threshold value for the relative weight of an edge (deprecated)")
+
+parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
                   help="Threshold value filter out reads that are mapped too far apart given insert size. ")
 
-
-parameters.add_option("-e", dest="edgesupport", action="callback", callback=vararg_callback,
+parameters.add_argument("-e", dest="edgesupport", type=int, nargs='+',
                   help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
-parameters.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
+
+parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
-libstats.add_option("-z", "--covcutoff", dest="covcutoff", action="callback", callback=vararg_callback,
-                  help="User specified coverage cutoff. (Manually filter out contigs with coverage over this value)")
+## haplotypes
 
-haplotypes.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
-                  help="Maximum length ratio for merging of haplotypic regions.", type="float")
+haplotypes.add_argument("-a", dest="haplratio", type=float, default=1.3,
+                  help="Maximum length ratio for merging of haplotypic regions.")
 
-haplotypes.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
+haplotypes.add_argument("-b", dest="haplthreshold", type=int, default=3,
                   help="Number of standard deviations over mean/2 of coverage to allow for clasification of haplotype.\
                    Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
-                   if -b 3", type="int")
+                   if -b 3")
 
-haplotypes.add_option("-g", "--haplotype", dest="haplotype", default=0,
-                  help="Haplotype detection function, default = off", type="int")
+haplotypes.add_argument("-g", dest="haplotype", type=int , default=0,
+                  help="Haplotype detection function, default = off")
 
-other.add_option("-d", "--duplicate", dest="duplicate", default=1,
-                  help="Sequencing duplicates detection, default = off", type="int")
+## other 
 
-other.add_option("-K", "--kmer", dest="kmer", default=50,
-                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50", type="int")
+other.add_argument("-o", dest="output", type=str, default='.',
+                  help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")
 
-other.add_option("-M", "--mmer", dest="mmer", default=40,
-                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ", type="int")
+other.add_argument("-d", dest='duplicate' , action="store_false",
+                  help="Deactivate sequencing duplicates detection")
 
+other.add_argument("-K", dest="kmer", type=int, default=50,
+                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50")
 
-other.add_option("-y", "--extendpaths", dest="extendpaths", default=1,
-                  help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. \
-                   This function should be pretty conservative so it's recommended to have the default value,\
-                    default = on. To turn of, specify -y 0.", type="int")
+other.add_argument("-M", dest="mmer", type=int, default=40,
+                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
 
-other.add_option("-q", action="store_true", dest="multiprocess",
+other.add_argument("-y", dest='extendpaths', action="store_false",
+                  help="Deactivate pathfinder module for including smaller contigs.")
+
+other.add_argument("-q", dest="multiprocess", action="store_true",
                 help="Parallellize work load of path finder module in case of multiple processors available.\
                   ",)
 
-other.add_option("-D", "--devel", dest="development",
-                  help="Run in development mode (bug checking and memory usage etc.)", type="int", default=0)
-#TEMPORARY parameters here, remove after spruce assembly
-other.add_option("-t", dest="transcriptalignfile",
-                  help="file of contigs", type="string")
+other.add_argument("-devel", action="store_true",
+                  help="Run in development mode (bug checking and memory usage etc.)")
 
-other.add_option("-p", dest="fosmidpool", default=None,
+other.add_argument('--version', action='version', version='%(prog)s 1.0.1')
+
+
+
+#TEMPORARY parameters here, remove after spruce assembly
+other.add_argument("-t", dest="transcriptalignfile",
+                  help="file of contigs", type=str)
+
+other.add_argument("-p", dest="fosmidpool", default=None,
                   help="""Specify that data comes from a fosmid pool. This parameter sets the number of
                   links that the second strongest link must have in order to not do any scaffolding
-                  with the region.""", type="int")
+                  with the region.""", type=int)
 
-parser.add_option_group(required)
-parser.add_option_group(libstats)
-parser.add_option_group(parameters)
-parser.add_option_group(haplotypes)
-parser.add_option_group(other)
 
 if len(sys.argv) == 1:
     sys.argv.append('-h')
 
+args = parser.parse_args()
 
-(options, args) = parser.parse_args()
 errorhandle.check_module('mathstats')
-errorhandle.parse_check(parser, options)
+#errorhandle.parse_check(args)
 
 
-if options.development:
+print args
+if args.devel:
     import guppy
 
 ##
 # Call BESST algorithm
 
-main(options)
+main(args)
 
-if options.development:
+if args.devel:
     h = guppy.hpy()
     print h.heap()
 
