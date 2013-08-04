@@ -58,3 +58,8 @@ V1.0.1
 * Fixed bug in libmetrics.py line, MaxObsDist was only called with 1 argument here when 2 args are required. Thanks Anthony Bretaudeau.
 * Added a package for fixing split allele contigs before scaffolding in high heterozyosity diploid assemblies. (preliminary implementation)
 * Added a python script to map reads to contigs (or a genome) with BWA. It outputs a sorted .bam and a .bai file, i.e. what is needed for BESST. The script requires that bwa is installed and in the path.
+
+V1.0.2
+* Better errorwarning handling with searate module "errorhandle" for throwing exceptions/warnings.
+* Updated pysam dependency to pysam0.7
+*
