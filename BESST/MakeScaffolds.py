@@ -726,7 +726,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             try:
                 G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
             except KeyError:
-                #may be the two different sides of a cotig (has no gap dist)
+                #may be the two different sides of a contig (has no gap dist)
                 pass
 
         start = path[0]

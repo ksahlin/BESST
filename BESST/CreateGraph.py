@@ -33,7 +33,7 @@ from Parameter import counters
 from mathstats.normaldist import normal
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
-
+import errorhandle
 
 
 try:
@@ -47,9 +47,6 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     G = nx.Graph()
     G_prime = nx.Graph()  # If we want to do path extension with small contigs
     print >> Information, 'Parsing BAM file...'
-
-    #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
-
 
     ##### Initialize contig and scaffold objects ######
 
@@ -382,8 +379,6 @@ def InitializeGraph(dict_with_scaffolds, graph, Information):
         graph.add_edge((scaffold_, 'L'), (scaffold_, 'R'), nr_links=None)    #this is a scaffold object but can be both a single contig or a scaffold.
         graph.node[(scaffold_, 'L')]['length'] = dict_with_scaffolds[scaffold_].s_length
         graph.node[(scaffold_, 'R')]['length'] = dict_with_scaffolds[scaffold_].s_length
-        #dict_with_scaffolds[ scaffold_ ].scaffold_left_nbrs = {}
-        #dict_with_scaffolds[ scaffold_ ].scaffold_right_nbrs  = {}  
         if cnt % 100000 == 0 and cnt > 0:
             elapsed = time() - start1
             print >> Information, 'Total nr of keys added: ', cnt, 'Time for adding last 100 000 keys: ', elapsed
@@ -417,6 +412,10 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
         if counter % 100000 == 0:
             print >> Information, 'Time adding 100k keys', time() - start
             start = time()
+        if cont_names[i] not in  C_dict:
+            errorhandle.unknown_contig(cont_names[i])
+            continue
+
         if cont_lengths[i] >= contig_threshold:
             C = Contig.contig(cont_names[i])   # Create object contig
             C.length = cont_lengths[i]

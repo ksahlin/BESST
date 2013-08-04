@@ -23,10 +23,8 @@ import os
 from time import time
 from optparse import OptionParser
 import optparse
-#import gc
-#gc.disable()
 
-
+from BESST import errorhandle
 
 def ReadInContigseqs(contigfile):
     cont_dict = {}
@@ -282,40 +280,18 @@ parser.add_option_group(other)
 
 if len(sys.argv) == 1:
     sys.argv.append('-h')
+
+
 (options, args) = parser.parse_args()
+errorhandle.check_module('mathstats')
+errorhandle.parse_check(parser, options)
 
-
-if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff, options.threshold, options.minsize]]):
-    parser.error("Same number of arguments are required")
-
-if (options.mean and not options.stddev) or (not options.mean and options.stddev):
-    parser.error("either both or none of -m and -s is required")
-if (options.threshold and not options.minsize) or (not options.threshold and options.minsize):
-    parser.error("either both or none of -T and -k is required")
-if not options.contigfile:
-    parser.error("parameter -c (a fasta contig file) is required")
-if not options.bamfiles:
-    parser.error("parameter -f (BAM files) is required")
-
-#check that bam files exists
-for file_ in options.bamfiles:
-    try:
-        open(file_)
-    except IOError as e:
-        sys.exit("couldn't find BAM file: " + file_ + " check that the path is correct and that the file exists")
-    try:
-        open(file_ + '.bai')
-    except IOError as e:
-        print "couldn't find index file: ", file_ + '.bai', " check that the path is correct and that the file exists"
-        sys.exit(0)
-#check that contig files exists
-try:
-    open(options.contigfile)
-except IOError as e:
-    sys.exit("couldn't open contig file " + options.contigfile + " check that the path is correct and that the file exists")
 
 if options.development:
     import guppy
+
+##
+# Call BESST algorithm
 
 main(options)
 
