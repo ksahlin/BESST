@@ -5,6 +5,7 @@ Created on Aug 4, 2013
 '''
 
 import sys
+#from argparse import ArgumentError
 
 
 def module_exists(module_name):
@@ -30,27 +31,12 @@ def check_module(module):
 
 
 
-def parse_check(parser, options):
-
-    ##
-    # Error handling when parsing arguments
-
-    if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff, options.threshold, options.minsize]]):
-        parser.error("Same number of arguments are required")
-
-    if (options.mean and not options.stddev) or (not options.mean and options.stddev):
-        parser.error("either both or none of -m and -s is required")
-    if (options.threshold and not options.minsize) or (not options.threshold and options.minsize):
-        parser.error("either both or none of -T and -k is required")
-    if not options.contigfile:
-        parser.error("parameter -c (a fasta contig file) is required")
-    if not options.bamfiles:
-        parser.error("parameter -f (BAM files) is required")
+def parse_check(arg, parser):
 
     ##
     # Error handling for files
 
-    for file_ in options.bamfiles:
+    for file_ in arg.bamfiles:
         try:
             open(file_)
         except IOError as e:
@@ -62,9 +48,26 @@ def parse_check(parser, options):
             sys.exit(0)
 
     try:
-        open(options.contigfile)
+        open(arg.contigfile)
     except IOError as e:
-        sys.exit("couldn't open contig file " + options.contigfile + " check that the path is correct and that the file exists")
+        sys.exit("couldn't open contig file " + arg.contigfile + " check that the path is correct and that the file exists")
+
+
+    ##
+    # Error handling when parsing arguments
+
+    if not all([x == None or len(x) == len(arg.bamfiles) for x in [arg.stddev , arg.mean , arg.readlen, arg.edgesupport, arg.covcutoff, arg.threshold, arg.minsize]]):
+        parser.error("If any of the below following options are specified, they should have the same number of arguments as the number of BAM files.\n {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7} ".format("bamfiles", "mean", "stddev", "readlen", "edgesupport",
+                          "covcutoff", "threshold", "minsize"))
+
+    if (arg.mean and not arg.stddev) or (not arg.mean and arg.stddev):
+        parser.error("either both or none of -m and -s is required")
+    if (arg.threshold and not arg.minsize) or (not arg.threshold and arg.minsize):
+        parser.error("either both or none of -T and -k is required")
+    if not arg.contigfile:
+        parser.error("parameter -c (a fasta contig file) is required")
+    if not arg.bamfiles:
+        parser.error("parameter -f (BAM files) is required")
 
     return()
 

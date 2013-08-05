@@ -37,8 +37,8 @@ import errorhandle
 
 
 try:
-    #import matplotlib
-    #matplotlib.use('Agg')
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 except ImportError:
     pass
@@ -207,24 +207,6 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
             cov.append(cont_coverage)
             leng.append(small_contigs[contig].length)
 
-
-    try:
-        import matplotlib.pyplot as plt
-        plt.xlabel('Contig length')
-        plt.ylabel('Coverage')
-        plt.title('Abyss assembly')
-        plt.plot(leng, cov, '.')
-        plt.savefig(output_dest + "/BESST_cov_all.png")
-        plt.clf()
-
-        plt.xlabel('Contig length')
-        plt.ylabel('Frequency')
-        plt.hist(leng, bins=500)
-        #plt.axis([0, 100, 0, 70])
-        plt.savefig(output_dest + "/all_lengths.png")
-
-    except ImportError:
-        pass
 
         sum_x += cont_coverage
         sum_x_sq += cont_coverage ** 2
