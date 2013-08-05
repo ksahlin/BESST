@@ -62,4 +62,4 @@ V1.0.1
 V1.0.2
 * Better errorwarning handling with searate module "errorhandle" for throwing exceptions/warnings.
 * Updated pysam dependency to pysam0.7
-*
+* Changed module for parsing arguments in python. From the deprecated "optparse" to "argparse".

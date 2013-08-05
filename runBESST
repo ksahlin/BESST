@@ -169,11 +169,12 @@ parameters = parser.add_argument_group('parameters', 'Parameters/variables/thres
 other = parser.add_argument_group('other', 'Various other parameters')
 
 ## required
-required.add_argument("-c", dest="contigfile", type=str,
+required.add_argument("-c", dest="contigfile", type=str, required=True,
                       help="Fasta file containing contigs.")
 
-required.add_argument("-f", dest="bamfiles", type=str, nargs='+',
+required.add_argument("-f", dest="bamfiles", type=str, nargs='+', required=True,
                       help="Path(s) to bamfile(s).")
+
 
 ## libstats
 
@@ -263,10 +264,8 @@ if len(sys.argv) == 1:
 args = parser.parse_args()
 
 errorhandle.check_module('mathstats')
-#errorhandle.parse_check(args)
+errorhandle.parse_check(args, parser)
 
-
-print args
 if args.devel:
     import guppy
 
