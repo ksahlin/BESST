@@ -33,6 +33,7 @@ from mathstats.normaldist.truncatedskewed import param_est as GC
 from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 import haplotypes as HR
+import plots
 
 
 def constant_large():
@@ -51,6 +52,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     print >> Information, str(nr_edges) + ' link edges created.'
     print >> Information, 'Perform inference on scaffold graph...'
+
     #VizualizeGraph(G,param,Information)
 
     if param.detect_haplotype:
@@ -109,31 +111,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     return()
 
-def VizualizeGraph(G, param, Information):
-    import os
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
 
-        try:
-            os.mkdir(param.output_directory + '/graph_regions' + str(int(param.mean_ins_size)))
-        except OSError:
-            #directory is already created
-            pass
-        counter = 1
-        import copy
-
-        G_copy = copy.deepcopy(G)
-        RemoveIsolatedContigs(G_copy, Information)
-        CB = nx.connected_component_subgraphs(G_copy)
-        for cycle in CB:
-            nx.draw(cycle)
-            matplotlib.pyplot.savefig(param.output_directory + 'graph_regions' + str(int(param.mean_ins_size)) + '/' + str(counter) + '.png')
-            matplotlib.pyplot.clf()
-            counter += 1
-    except ImportError:
-        pass
-    return()
 
 def RemoveIsolatedContigs(G, Information):
     print >> Information, 'Remove isolated nodes.'
@@ -149,6 +127,8 @@ def RemoveIsolatedContigs(G, Information):
 
 
 def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param):
+    if param.plots:
+        pass
     print >> Information, 'Remove edges from node if more than two edges'
     counter1 = 0
     for node in G:
@@ -396,7 +376,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 else:
                     #print 'now', 2 * param.std_dev_ins_size + param.read_len
                     avg_gap = int(data_observation)
-                print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
                 #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
                 #contigs contained in other contigs
             #do naive gap estimation
@@ -551,12 +531,13 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
     ################################################################
 
     start_end_node_update_storage = {}
-    #print 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
+    print >> Information, 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
     for sublist in reversed(all_paths_sorted_wrt_score):
         path = sublist[2]
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
+        print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -648,7 +629,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
 
         small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
-        #print small_scafs
         for item in small_scafs:
             scaf_obj = small_scaffolds[item[0]]
             Scaffolds[item[0]] = scaf_obj

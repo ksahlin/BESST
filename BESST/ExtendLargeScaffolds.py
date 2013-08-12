@@ -189,6 +189,7 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         except IndexError:
             prev_node = start
         path = path + [start]
+        path_len = len(path)
         #print 'PATH', path ,'end', end 
         if path_len > max_path_length_allowed: #All possible paths can be exponential!! need something to stop algorithm in time
             continue

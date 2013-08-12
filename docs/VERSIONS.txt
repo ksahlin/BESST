@@ -63,3 +63,9 @@ V1.0.2
 * Better errorwarning handling with searate module "errorhandle" for throwing exceptions/warnings.
 * Updated pysam dependency to pysam0.7
 * Changed module for parsing arguments in python. From the deprecated "optparse" to "argparse".
+* Not giving an exception if finding contigs present in BAM file but not in fasta file. Just throw a warning.
+
+V1.0.3
+* More information of scaffolding run given to "Statistics.txt".
+* Added flag -plots for plotting various histograms such as coverage of library onto contigs, score distribution of links e.t.c.
+*  

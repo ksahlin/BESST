@@ -38,7 +38,7 @@ class parameter(object):
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
-                 parameter_development=None):
+                 parameter_development=None, parameter_plots=None):
 
         # Library information
         # Contig information
@@ -73,6 +73,7 @@ class parameter(object):
         self.fosmidpool = parameter_fosmidpool
         self.extend_paths = parameter_extend_paths
         self.development = parameter_development
+        self.plots = parameter_plots
 
 
 class counters(object):

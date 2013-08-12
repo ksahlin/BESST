@@ -20,12 +20,22 @@
 
 import sys
 import os
+import errno
 from time import time
 from optparse import OptionParser
 import optparse
 import argparse
 
 from BESST import errorhandle
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 def ReadInContigseqs(contigfile):
     cont_dict = {}
@@ -69,8 +79,13 @@ def main(options):
     param.multiprocess = options.multiprocess
     param.development = options.devel
     options.output = options.output + '/BESST_output'
-    os.popen('mkdir -p ' + options.output)
+
+    mkdir_p(options.output)
+    if options.plots:
+        mkdir_p(os.path.join(options.output, 'plots'))
+
     param.information_file = open(options.output + '/Statistics.txt', 'w')
+    param.plots = options.plots
     Information = param.information_file
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
@@ -106,7 +121,7 @@ def main(options):
             libmetrics.get_metrics(bam_file, param, Information)
 
             #create graph
-            (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, param.output_directory, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
+            (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
 
         param.first_lib = False   #not the first lib any more
         if G == None:
@@ -244,7 +259,10 @@ other.add_argument("-q", dest="multiprocess", action="store_true",
 other.add_argument("-devel", action="store_true",
                   help="Run in development mode (bug checking and memory usage etc.)")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.0.1')
+other.add_argument("-plots", action="store_true",
+                  help="Plot coverage, histograms of scores e.t.c.")
+
+other.add_argument('--version', action='version', version='%(prog)s 1.0.3')
 
 
 
@@ -268,6 +286,17 @@ errorhandle.parse_check(args, parser)
 
 if args.devel:
     import guppy
+
+
+
+if args.plots:
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        args.plots = False
+
 
 ##
 # Call BESST algorithm
