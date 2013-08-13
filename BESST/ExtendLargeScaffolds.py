@@ -122,6 +122,12 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
             if weight < 2.0:
                 return 0, 0
 
+        try:
+            score = good_link_weight / float(bad_link_weight)
+        except ZeroDivisionError:
+            score = good_link_weight
+
+        #return score, bad_link_weight
         return good_link_weight - bad_link_weight, bad_link_weight
         #return good_edges_count - bad_edges_count, bad_link_weight
 
@@ -189,6 +195,7 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         except IndexError:
             prev_node = start
         path = path + [start]
+        path_len = len(path)
         #print 'PATH', path ,'end', end 
         if path_len > max_path_length_allowed: #All possible paths can be exponential!! need something to stop algorithm in time
             continue

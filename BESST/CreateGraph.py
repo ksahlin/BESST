@@ -34,16 +34,12 @@ from mathstats.normaldist import normal
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
 import errorhandle
+import plots
 
 
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
-def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contigs, small_scaffolds, bam_file):
+
+def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file):
     G = nx.Graph()
     G_prime = nx.Graph()  # If we want to do path extension with small contigs
     print >> Information, 'Parsing BAM file...'
@@ -179,11 +175,10 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
 ########################Use to validate scaffold in previous step here ############
                 pass
     print >> Information, 'ELAPSED reading file:', time() - staart
-    print >> Information, 'NR OF FISHY READ LINKS: ', ctr #,len(fishy_edges)/2.0, fishy_edges
+    print >> Information, 'NR OF FISHY READ LINKS: ', ctr
 
-    print >> Information, 'USEFUL READS (reads mapping to different contigs): ', counter.count
-    print >> Information, 'Non unique portion out of "USEFUL READS"  (filtered out from scaffolding): ', counter.non_unique
-    #print 'Non unique used for scaf: ', non_unique_for_scaf
+    print >> Information, 'Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count
+    print >> Information, 'Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique
     print >> Information, 'Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert
     if param.detect_duplicate:
         print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
@@ -212,7 +207,7 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
         sum_x_sq += cont_coverage ** 2
         n += 1
 
-    mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, param.first_lib, output_dest, param.bamfile, Information)
+    mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
     if param.first_lib:
@@ -223,10 +218,12 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
 
-    #### temp check mean and std_dev and sign value of all links of all edges ###
-    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
+    ## Score edges in graph
+    plot = 'G'
+    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
-    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information)
+    plot = 'G_prime'
+    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
 
     #Remove all edges with link support less than 3 to be able to compute statistics: 
@@ -243,8 +240,11 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     return(G, G_prime)
 
 
-def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information):
+def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
 
+    span_score_obs = []
+    std_dev_score_obs = []
+    gap_obs = []
     cnt_sign = 0
 
     for edge in G.edges():
@@ -272,10 +272,13 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
             if -gap > len1 or -gap > len2:
                 G[edge[0]][edge[1]]['score'] = 0
                 continue
-            if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
-                std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
-            else:
-                std_dev_d_eq_0 = 2 ** 32
+
+            std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+
+#            if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
+#                std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+#            else:
+#                std_dev_d_eq_0 = 2 ** 32
             try:
                 std_dev = ((obs_squ - n * mean_ ** 2) / (n - 1)) ** 0.5
                 #chi_sq = (n - 1) * (std_dev ** 2 / std_dev_d_eq_0 ** 2)
@@ -312,6 +315,18 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
                 sys.stderr.write(str(std_dev) + ' ' + str(std_dev_d_eq_0) + ' ' + str(span_score) + '\n')
 
             G[edge[0]][edge[1]]['score'] = std_dev_score + span_score if std_dev_score > 0.5 and span_score > 0.5 else 0
+            if param.plots:
+                span_score_obs.append(span_score)
+                std_dev_score_obs.append(std_dev_score)
+                gap_obs.append(gap)
+
+
+    if param.plots:
+        plots.histogram(span_score_obs, param, bins=20, x_label='score', y_label='frequency', title='Dispersity_score_distribuion' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.histogram(std_dev_score_obs, param, bins=20, x_label='score', y_label='frequency', title='Standard_deviation_score_distribuion' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(std_dev_score_obs, span_score_obs, param, x_label='std_dev_score_obs', y_label='span_score_obs', title='Score_correlation' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(std_dev_score_obs, gap_obs, param, x_label='std_dev_score_obs', y_label='estimated gap size', title='Gap_to_sigma' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(span_score_obs, gap_obs, param, x_label='span_score_obs', y_label='estimated gap size', title='Gap_to_span' + plot + '.' + param.bamfile.split('/')[-1])
 
     for edge in G.edges():
         if G[edge[0]][edge[1]]['nr_links'] != None:
@@ -535,7 +550,7 @@ def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, In
     print >> Information, 'LG50: ', LG50, 'NG50: ', NG50, 'Initial contig assembly length: ', param.tot_assembly_length
     return(NG50, LG50)
 
-def CalculateMeanCoverage(Contigs, first_lib, output_dest, bamfile, Information):
+def CalculateMeanCoverage(Contigs, Information, param):
     # tuples like (cont lenght, contig name)
     list_of_cont_tuples = [(Contigs[contig].length, contig) for contig in Contigs]
     #sorted as longest first
@@ -567,14 +582,10 @@ def CalculateMeanCoverage(Contigs, first_lib, output_dest, bamfile, Information)
     print >> Information, 'Length of longest contig in calc of coverage: ', longest_contigs[0][0]
     print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
 
-    try:
-        import matplotlib.pyplot as plt
-        plt.hist(cov_of_longest_contigs, bins=50)
-        library = bamfile.split('/')[-1]
-        plt.savefig(output_dest + "/BESST_cov_1000_longest_cont" + library + ".png")
-        plt.clf()
-    except ImportError:
-        pass
+
+    if param.plots:
+        plots.histogram(cov_of_longest_contigs, param, bins=50, x_label='coverage' , y_label='frequency' , title='BESST_cov_1000_longest_cont' + param.bamfile.split('/')[-1])
+
     return(mean_cov, std_dev)
 
 def RemoveOutliers(mean_cov, std_dev, cov_list):
@@ -586,7 +597,7 @@ def RemoveOutliers(mean_cov, std_dev, cov_list):
         return(False, filtered_list)
 
 def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
-    output_dest = param.output_directory
+    param.output_directory
     mean_cov = param.mean_coverage
     std_dev = param.std_dev_coverage
     cov_cutoff = param.cov_cutoff
@@ -632,7 +643,7 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
             small_contigs[contig].is_haplotype = True
 
 
-    GO.PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs)
+    GO.PrintOutRepeats(Repeats, Contigs, param.output_directory, small_contigs)
     print >> Information, 'Removed a total of: ', count_repeats, ' repeats.'
     if param.detect_haplotype:
         print >> Information, 'Marked a total of: ', count_hapl, ' potential haplotypes.'
