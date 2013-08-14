@@ -68,4 +68,7 @@ V1.0.2
 V1.0.3
 * More information of scaffolding run given to "Statistics.txt".
 * Added flag -plots for plotting various histograms such as coverage of library onto contigs, score distribution of links e.t.c.
-* Fixed bug in score choosing function 
+* Fixed bug in score choosing function
+
+V1.0.3.1
+*Module plots has max number of observations 10000 due to time issues of plotting if large number of contigs or edges. 
