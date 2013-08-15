@@ -72,3 +72,8 @@ V1.0.3
 
 V1.0.3.1
 *Module plots has max number of observations 10000 due to time issues of plotting if large number of contigs or edges. 
+
+V1.0.3.2
+* Made number of iterations performed in breadth first search a parameter instead of fixed to 1000.
+* Changed dispersity score of links. (explained in manual)
+*fixed bug in plotting. 

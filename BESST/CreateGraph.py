@@ -89,12 +89,14 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     # Create the link edges in the graph by fetching info from bam file  
     print >> Information, 'Reading bam file and creating scaffold graph...'
     staart = time()
+
     for alignedread in bam_file:
         try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
             contig1 = bam_file.getrname(alignedread.rname)
             contig2 = bam_file.getrname(alignedread.mrnm)
         except ValueError:
             continue
+
         #TODO:Repeats (and haplotypes) may have been singled out, we need this statement (or a smarter version of it)
         if (contig1 in Contigs or contig1 in small_contigs) and (contig2 in Contigs or contig2 in small_contigs):
             pass
@@ -129,14 +131,13 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 ctr += 1
 
         ## add to coverage computation if contig is still in the list of considered contigs
-
+        #print contig1, contig2, alignedread.is_read2
         cont_aligned_len[contig1][0] += alignedread.rlen
-
         if contig1 != contig2 and alignedread.mapq == 0:
-            counter.non_unique += 1
+            counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
+
         if contig1 != contig2 and alignedread.is_read2 and not alignedread.is_unmapped and alignedread.mapq > 10:
-            #check how many non unique reads out of the useful ones (mapping to two different contigs)
-            if contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold: # and alignedread.tags[0][1] == 'U':
+            if contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
                 cont_obj1 = Contigs[contig1]
                 cont_obj2 = Contigs[contig2]
                 scaf_obj1 = Scaffolds[cont_obj1.scaffold]
@@ -287,25 +288,60 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 #chi_sq = 0
 
 
-            k = normal.MaxObsDistr(n, 0.95)
-            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
-                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
-                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
-                try:
-                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-                except KeyError:
-                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-                try:
-                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-                except KeyError:
-                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+            try:
+                l1 = G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
+            except KeyError:
+                l1 = G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
+            try:
+                l2 = G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
+            except KeyError:
+                l2 = G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
 
-
-                span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
-                span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
-                span_score = min(span_score1, span_score2)
-            else:
+            max_obs1 = max(l1)
+            min_obs1 = min(l1)
+            max_obs2 = max(l2)
+            min_obs2 = min(l2)
+            diff = map(lambda x: abs(x[1] - x[0]), zip(sorted(l1), sorted(l2)))
+            sc = sum(diff) / len(diff)
+            try:
+                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
+            except ZeroDivisionError:
                 span_score = 0
+                #print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
+
+            #print sc, (max_obs1 - min_obs1), (max_obs2 - min_obs2), span_score, gap, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
+            #print  span_score
+
+#
+#            k = normal.MaxObsDistr(n, 0.95)
+#            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
+#                #span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
+#                #span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
+#
+#                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len1 + max(0, gap))
+#                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len2 + max(0, gap))
+#
+#                try:
+#                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
+#                except KeyError:
+#                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
+#                try:
+#                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+#                except KeyError:
+#                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+#
+#
+#                #span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
+#                #span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
+#
+#                span_score1 = min((max(0, gap) + param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + param.read_len + span_obs1)) if span_obs1 > 0 else 0
+#                span_score2 = min((max(0, gap) + param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + param.read_len + span_obs2)) if span_obs2 > 0 else 0
+#
+#                span_score = min(span_score1, span_score2)
+#
+#                #span_score = (max(0, gap) + param.read_len + span_obs1) / float(span_max1)
+#            else:
+#                span_score = 0
 
 
             try:
@@ -496,7 +532,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if param.detect_duplicate:
             return(1)
 
-    if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:# 2**32: #param.ins_size_threshold: 
+    if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:
         if scaf_side1 == 'R':
             scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
             scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
@@ -512,10 +548,13 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
         else:
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
-            #G.edge[(scaf_obj1.name,scaf_side1)][(scaf_obj2.name,scaf_side2)]['obs'] += obs1+obs2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name].append(obs1)
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name].append(obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
     else:
         counter.reads_with_too_long_insert += 1

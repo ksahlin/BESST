@@ -151,7 +151,7 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
     #print 'This is the stats for the best path: ',all_paths_sorted_wrt_score[-1]
     return ()
 
-def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, already_visited, is_withing_scaf, max_path_length_allowed):
+def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, already_visited, is_withing_scaf, max_path_length_allowed, param):
     path = []
     paths = []
     if start[1] == 'L':
@@ -183,7 +183,7 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         counter += 1
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
-        if counter > 1000 or len(path) > 100:
+        if counter > param.path_threshold or len(path) > 100:
             longest_path = 0
             if len(paths) > 0:
                 longest_path = len(paths[-1][0])
@@ -249,7 +249,7 @@ def ExtendScaffolds(all_paths_sorted_wrt_score):
 
 
 import Parameter
-def BetweenScaffolds(G_prime, end, iter_nodes):
+def BetweenScaffolds(G_prime, end, iter_nodes, param):
     Parameter.MemoryUsage()
     # here we should have a for loop looping over all start nodes. Start nodes already examined should be removed in a nice way to skip over counting
     already_visited = set()
@@ -265,7 +265,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes):
         cnter += 1
         if cnter % 100 == 0:
             print 'enter Betwween scaf node: ', cnter
-        paths = find_all_paths_for_start_node(G_prime, start_node, end.difference(set([start_node])), nodes_present_in_path, already_visited, 0, 2 ** 32)
+        paths = find_all_paths_for_start_node(G_prime, start_node, end.difference(set([start_node])), nodes_present_in_path, already_visited, 0, 2 ** 32, param)
         already_visited.add(start_node)
         #print 'START NODE: ', start_node, 'Tot nr of paths for this start node: ', len(paths)
         ScorePaths(G_prime, nodes_present_in_path, paths, all_paths_sorted_wrt_score)
@@ -278,13 +278,13 @@ def BetweenScaffolds(G_prime, end, iter_nodes):
     Parameter.MemoryUsage()
     return(all_paths_sorted_wrt_score)
 
-def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_length):
+def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_length, param):
     end = set()
     end.add(end_node)
     nodes_present_in_path = {}
     all_paths_sorted_wrt_score = []
     already_visited.difference_update(set([start, end_node]))
-    paths = find_all_paths_for_start_node(G_prime, start, end, nodes_present_in_path, already_visited, 1, max_path_length)
+    paths = find_all_paths_for_start_node(G_prime, start, end, nodes_present_in_path, already_visited, 1, max_path_length, param)
     already_visited.add(start)
     already_visited.add(end_node)
     #print paths

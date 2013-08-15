@@ -93,6 +93,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
                     G_prime.remove_edge(node, nbr)
 
         plot = 'G_prime'
+        #print 'GOING IN:', len(G_prime.edges()), len(G_prime.nodes())
         RemoveAmbiguousRegionsUsingScore(G_prime, G_prime, Information, param, plot)
         G_prime, Contigs, Scaffolds = RemoveLoops(G_prime, G_prime, Scaffolds, Contigs, Information, param)
         for node in G_prime:
@@ -232,10 +233,9 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
     return()
 
 def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
-    if param.plots:
-        score_chosen_obs = []
-        non_zero_score_removed_obs = []
-        edge_score_to_zero = []
+    score_chosen_obs = []
+    non_zero_score_removed_obs = []
+    edge_score_to_zero = []
 
     nr_edges_before = len(G.edges())
     print >> Information, 'Remove edges from node if more than two edges'
@@ -259,10 +259,10 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
     print >> Information, ' Number of edges in G after:', nr_edges_after
     print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
 
-    print len(score_chosen_obs)
-    list_of_datasets = [edge_score_to_zero, score_chosen_obs , non_zero_score_removed_obs]
-
-    plots.multiple_histogram(list_of_datasets, param, 'score', 'frequency', title='Besst_decision_scores' + plot + '.' + param.bamfile.split('/')[-1])
+    if param.plots:
+        print len(score_chosen_obs)
+        list_of_datasets = [edge_score_to_zero, score_chosen_obs , non_zero_score_removed_obs]
+        plots.multiple_histogram(list_of_datasets, param, 'score', 'frequency', title='Besst_decision_scores' + plot + '.' + param.bamfile.split('/')[-1])
 
     return()
 
@@ -490,7 +490,7 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             data_observation = (nr_links_ * param.mean_ins_size - sum_obs) / float(nr_links_)
             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
-            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold)
+            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
             if len(high_score_path) > 1:
                 if score >= 0.0:
                     #loc_count += 1
@@ -605,7 +605,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             end.add(node)
         iter_nodes = end.copy()
         print >> Information, 'Entering ELS.BetweenScaffolds single core'
-        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes)
+        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes, param)
         elapsed = time.time() - start
         print >> Information, "Elapsed time single core pathfinder: ", elapsed
 

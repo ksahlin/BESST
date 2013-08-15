@@ -96,6 +96,7 @@ def main(options):
         sys.exit()
     #iterate over libraries
     param.first_lib = True
+    param.path_threshold = options.path_threshold
     for i in xrange(len(options.bamfiles)):
         start = time()
         param.bamfile = options.bamfiles[i]
@@ -222,6 +223,10 @@ parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
+parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
+                  help="The number of iterations performed in breadth first search for placing smaller contigs. ")
+
+
 ## haplotypes
 
 haplotypes.add_argument("-a", dest="haplratio", type=float, default=1.3,
@@ -263,6 +268,7 @@ other.add_argument("-plots", action="store_true",
                   help="Plot coverage, histograms of scores e.t.c.")
 
 other.add_argument('--version', action='version', version='%(prog)s 1.0.3')
+
 
 
 
