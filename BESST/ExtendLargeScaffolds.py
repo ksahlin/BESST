@@ -248,9 +248,8 @@ def ExtendScaffolds(all_paths_sorted_wrt_score):
 
 
 
-import Parameter
+
 def BetweenScaffolds(G_prime, end, iter_nodes, param):
-    Parameter.MemoryUsage()
     # here we should have a for loop looping over all start nodes. Start nodes already examined should be removed in a nice way to skip over counting
     already_visited = set()
     all_paths_sorted_wrt_score = []
@@ -275,7 +274,6 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
 #    for path in all_paths_found:
 #        print path
 
-    Parameter.MemoryUsage()
     return(all_paths_sorted_wrt_score)
 
 def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_length, param):

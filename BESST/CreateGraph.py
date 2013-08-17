@@ -25,6 +25,7 @@ from collections import defaultdict
 from math import pi
 from time import time
 
+from scipy.stats import ks_2samp
 import networkx as nx
 
 import Contig
@@ -241,11 +242,13 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     return(G, G_prime)
 
 
+
 def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
 
     span_score_obs = []
     std_dev_score_obs = []
     gap_obs = []
+    nr_link_obs = []
     cnt_sign = 0
 
     for edge in G.edges():
@@ -274,12 +277,13 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 G[edge[0]][edge[1]]['score'] = 0
                 continue
 
-            std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+            #std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
 
-#            if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
-#                std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
-#            else:
-#                std_dev_d_eq_0 = 2 ** 32
+            if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
+                std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+            else:
+                std_dev_d_eq_0 = 2 ** 32
+
             try:
                 std_dev = ((obs_squ - n * mean_ ** 2) / (n - 1)) ** 0.5
                 #chi_sq = (n - 1) * (std_dev ** 2 / std_dev_d_eq_0 ** 2)
@@ -297,19 +301,44 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             except KeyError:
                 l2 = G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
 
-            max_obs1 = max(l1)
-            min_obs1 = min(l1)
+            #max_obs1 = max(l1)
+            #min_obs1 = min(l1)
+            l1.sort()
+            n_obs = len(l1)
+            l1_mean = sum(l1) / float(n_obs)
+            l1 = map(lambda x: x - l1_mean, l1)
             max_obs2 = max(l2)
-            min_obs2 = min(l2)
-            diff = map(lambda x: abs(x[1] - x[0]), zip(sorted(l1), sorted(l2)))
-            sc = sum(diff) / len(diff)
-            try:
-                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
-            except ZeroDivisionError:
-                span_score = 0
-                #print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
+            #min_obs2 = min(l2)
+            l2.sort(reverse=True)
+            l2 = map(lambda x: abs(x - max_obs2), l2)
+            l2_mean = sum(l2) / float(n_obs)
+            l2 = map(lambda x: x - l2_mean, l2)
+            KS_statistic, p_value = ks_2samp(l1, l2)
 
-            #print sc, (max_obs1 - min_obs1), (max_obs2 - min_obs2), span_score, gap, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
+            #diff = map(lambda x: abs(abs(x[1]) - abs(x[0])), zip(l1, l2))
+            #sc = sum(diff) / len(diff)
+
+            if len(l1) < 3:
+                span_score = 0
+            else:
+                span_score = 1 - KS_statistic
+
+
+#            try:
+#                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
+#            except ZeroDivisionError:
+#                span_score = 0
+#            if span_score < 0:
+#                span_score = 0
+#                print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
+
+# if len(l1) > 3:
+#     print >> Information , 'avg_diff: ', sc, 'span1: ', (max_obs1 - min_obs1), 'span2: ', (max_obs2 - min_obs2), 'Span score: ', span_score, 'pval: ', p_value, 'Est gap: ', gap, 'Nr_links: ', len(l1) #, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
+
+
+                #print >> Information , l1
+                #print >> Information , l2
+                #print >> Information , diff
             #print  span_score
 
 #
@@ -355,6 +384,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 span_score_obs.append(span_score)
                 std_dev_score_obs.append(std_dev_score)
                 gap_obs.append(gap)
+                nr_link_obs.append(n_obs)
 
 
     if param.plots:
@@ -363,6 +393,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
         plots.dot_plot(std_dev_score_obs, span_score_obs, param, x_label='std_dev_score_obs', y_label='span_score_obs', title='Score_correlation' + plot + '.' + param.bamfile.split('/')[-1])
         plots.dot_plot(std_dev_score_obs, gap_obs, param, x_label='std_dev_score_obs', y_label='estimated gap size', title='Gap_to_sigma' + plot + '.' + param.bamfile.split('/')[-1])
         plots.dot_plot(span_score_obs, gap_obs, param, x_label='span_score_obs', y_label='estimated gap size', title='Gap_to_span' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(span_score_obs, nr_link_obs, param, x_label='span_score_obs', y_label='Number links', title='Obs_to_span' + plot + '.' + param.bamfile.split('/')[-1])
 
     for edge in G.edges():
         if G[edge[0]][edge[1]]['nr_links'] != None:

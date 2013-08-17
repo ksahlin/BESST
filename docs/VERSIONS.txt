@@ -77,3 +77,9 @@ V1.0.3.2
 * Made number of iterations performed in breadth first search a parameter instead of fixed to 1000.
 * Changed dispersity score of links. (explained in manual)
 *fixed bug in plotting. 
+
+V1.0.4
+* Fixed bug in dispersity score (a KS test from scipy)
+* No decision of path is made if scores are similar (breaks paths)
+* Added dotplots of number of links to dispersity score for verification. 
+* BESST now has dependency of scipy. Added this to setup script

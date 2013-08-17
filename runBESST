@@ -66,7 +66,6 @@ def main(options):
     from BESST import libmetrics
     from BESST.diploid import get_haplotype_regions
 
-    Parameter.MemoryUsage()
     tot_start = time()
     Contigs = {} # contig dict that stores contig objects 
     Scaffolds = {}     # scaffold dict with contig objects for easy fetching of all contigs in a scaffold
@@ -132,12 +131,10 @@ def main(options):
         print >> Information, 'Time elapsed for creating graph, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
         start = time()
 
-        Parameter.MemoryUsage()
         print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
 
-        Parameter.MemoryUsage()
 
         print >> Information, 'Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
         print 'Writing out scaffolding results for step', i + 1, ' ...'
@@ -156,7 +153,6 @@ def main(options):
 
 
         GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
-        Parameter.MemoryUsage()
 
     ### Calculate stats for last scaffolding step    
     scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]
@@ -170,7 +166,6 @@ def main(options):
     elapsed = time() - tot_start
     print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'
     print 'Finished\n\n '
-    Parameter.MemoryUsage()
 
     return()
 
@@ -292,7 +287,6 @@ errorhandle.parse_check(args, parser)
 
 if args.devel:
     import guppy
-
 
 
 if args.plots:

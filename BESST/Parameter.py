@@ -90,15 +90,15 @@ class counters(object):
         self.prev_obs2 = param_prev_obs2
         self.reads_with_too_long_insert = param_reads_with_too_long_insert
 
-
-def MemoryUsage():
-    percent_usage = subprocess.Popen("ps -v | grep 'python Main.py' | awk '{sum+=$12} END {print sum}'",
-                                     shell=True,
-                                     stdout=subprocess.PIPE,
-                                     )
-    stdout_list = percent_usage.communicate()[0]
-    print 'Percentage of memory occupied by BESST from total memory: ', stdout_list
-    return()
+#
+#def MemoryUsage():
+#    percent_usage = subprocess.Popen("ps -v | grep 'python Main.py' | awk '{sum+=$12} END {print sum}'",
+#                                     shell=True,
+#                                     stdout=subprocess.PIPE,
+#                                     )
+#    stdout_list = percent_usage.communicate()[0]
+#    print 'Percentage of memory occupied by BESST from total memory: ', stdout_list
+#    return()
 
 
 
