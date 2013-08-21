@@ -314,6 +314,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             l2_mean = sum(l2) / float(n_obs)
             l2 = map(lambda x: x - l2_mean, l2)
             KS_statistic, p_value = ks_2samp(l1, l2)
+            #M_W_statistic, p_val = mannwhitneyu(l1, l2)
 
             #diff = map(lambda x: abs(abs(x[1]) - abs(x[0])), zip(l1, l2))
             #sc = sum(diff) / len(diff)

@@ -257,6 +257,24 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
         remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
         remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
 
+#    already_visited_nodes = set()
+#    for edge in edge_scores_sorted:
+#        if edge[1] in already_visited_nodes and edge[0] in already_visited_nodes:
+#            continue
+#        elif edge[1] in already_visited_nodes:
+#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
+#            already_visited_nodes.add(edge[0])
+#        elif edge[0] in already_visited_nodes:
+#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
+#            already_visited_nodes.add(edge[1])
+#        else:
+#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
+#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
+#            already_visited_nodes.add(edge[1])
+#            already_visited_nodes.add(edge[0])
+
+
+
 
 #    for node in G:
 #        remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero)
@@ -474,7 +492,8 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 avg_gap = int(data_observation)
             if avg_gap < 0:
                 #TODO: Eventually implement SW algm to find ML overlap
-                avg_gap = 1
+                avg_gap = 0
+
             pos += int(avg_gap)
             G.remove_node((scaf, side))
             prev_node = node
