@@ -83,3 +83,10 @@ V1.0.4
 * No decision of path is made if scores are similar (breaks paths)
 * Added dotplots of number of links to dispersity score for verification. 
 * BESST now has dependency of scipy. Added this to setup script
+
+V1.0.4.1
+*Added gap adjustment for Francesco
+
+V1.0.4.2
+* Fixed bug in removing 0 score edges i G_prime. Now all edges in G are also removed in G_prime when searching for paths. This is an important fix.
+

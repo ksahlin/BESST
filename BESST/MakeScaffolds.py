@@ -160,7 +160,7 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
 
     if param.extend_paths:
         try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-            G_prime.remove_edges_from(zero_score_edges)
+            G_prime.remove_edges_from(remove_zero_score_edges)
         except nx.exception.NetworkXError:
             pass
 
