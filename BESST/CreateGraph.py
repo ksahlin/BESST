@@ -25,6 +25,7 @@ from collections import defaultdict
 from math import pi
 from time import time
 
+from scipy.stats import ks_2samp
 import networkx as nx
 
 import Contig
@@ -33,23 +34,16 @@ from Parameter import counters
 from mathstats.normaldist import normal
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
+import errorhandle
+import plots
 
 
 
-try:
-    #import matplotlib
-    #matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
-def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contigs, small_scaffolds, bam_file):
+def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file):
     G = nx.Graph()
     G_prime = nx.Graph()  # If we want to do path extension with small contigs
     print >> Information, 'Parsing BAM file...'
-
-    #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
-
 
     ##### Initialize contig and scaffold objects ######
 
@@ -96,12 +90,14 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     # Create the link edges in the graph by fetching info from bam file  
     print >> Information, 'Reading bam file and creating scaffold graph...'
     staart = time()
+
     for alignedread in bam_file:
         try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
             contig1 = bam_file.getrname(alignedread.rname)
             contig2 = bam_file.getrname(alignedread.mrnm)
         except ValueError:
             continue
+
         #TODO:Repeats (and haplotypes) may have been singled out, we need this statement (or a smarter version of it)
         if (contig1 in Contigs or contig1 in small_contigs) and (contig2 in Contigs or contig2 in small_contigs):
             pass
@@ -136,14 +132,13 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
                 ctr += 1
 
         ## add to coverage computation if contig is still in the list of considered contigs
-
+        #print contig1, contig2, alignedread.is_read2
         cont_aligned_len[contig1][0] += alignedread.rlen
-
         if contig1 != contig2 and alignedread.mapq == 0:
-            counter.non_unique += 1
+            counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
+
         if contig1 != contig2 and alignedread.is_read2 and not alignedread.is_unmapped and alignedread.mapq > 10:
-            #check how many non unique reads out of the useful ones (mapping to two different contigs)
-            if contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold: # and alignedread.tags[0][1] == 'U':
+            if contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
                 cont_obj1 = Contigs[contig1]
                 cont_obj2 = Contigs[contig2]
                 scaf_obj1 = Scaffolds[cont_obj1.scaffold]
@@ -182,11 +177,10 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
 ########################Use to validate scaffold in previous step here ############
                 pass
     print >> Information, 'ELAPSED reading file:', time() - staart
-    print >> Information, 'NR OF FISHY READ LINKS: ', ctr #,len(fishy_edges)/2.0, fishy_edges
+    print >> Information, 'NR OF FISHY READ LINKS: ', ctr
 
-    print >> Information, 'USEFUL READS (reads mapping to different contigs): ', counter.count
-    print >> Information, 'Non unique portion out of "USEFUL READS"  (filtered out from scaffolding): ', counter.non_unique
-    #print 'Non unique used for scaf: ', non_unique_for_scaf
+    print >> Information, 'Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count
+    print >> Information, 'Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique
     print >> Information, 'Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert
     if param.detect_duplicate:
         print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
@@ -211,29 +205,11 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
             leng.append(small_contigs[contig].length)
 
 
-    try:
-        import matplotlib.pyplot as plt
-        plt.xlabel('Contig length')
-        plt.ylabel('Coverage')
-        plt.title('Abyss assembly')
-        plt.plot(leng, cov, '.')
-        plt.savefig(output_dest + "/BESST_cov_all.png")
-        plt.clf()
-
-        plt.xlabel('Contig length')
-        plt.ylabel('Frequency')
-        plt.hist(leng, bins=500)
-        #plt.axis([0, 100, 0, 70])
-        plt.savefig(output_dest + "/all_lengths.png")
-
-    except ImportError:
-        pass
-
         sum_x += cont_coverage
         sum_x_sq += cont_coverage ** 2
         n += 1
 
-    mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, param.first_lib, output_dest, param.bamfile, Information)
+    mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
     if param.first_lib:
@@ -244,10 +220,12 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
 
-    #### temp check mean and std_dev and sign value of all links of all edges ###
-    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
+    ## Score edges in graph
+    plot = 'G'
+    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
-    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information)
+    plot = 'G_prime'
+    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
 
     #Remove all edges with link support less than 3 to be able to compute statistics: 
@@ -264,8 +242,13 @@ def PE(Contigs, Scaffolds, Information, output_dest, C_dict, param, small_contig
     return(G, G_prime)
 
 
-def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information):
 
+def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
+
+    span_score_obs = []
+    std_dev_score_obs = []
+    gap_obs = []
+    nr_link_obs = []
     cnt_sign = 0
 
     for edge in G.edges():
@@ -293,10 +276,14 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
             if -gap > len1 or -gap > len2:
                 G[edge[0]][edge[1]]['score'] = 0
                 continue
+
+            #std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+
             if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
                 std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
             else:
                 std_dev_d_eq_0 = 2 ** 32
+
             try:
                 std_dev = ((obs_squ - n * mean_ ** 2) / (n - 1)) ** 0.5
                 #chi_sq = (n - 1) * (std_dev ** 2 / std_dev_d_eq_0 ** 2)
@@ -305,25 +292,86 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
                 #chi_sq = 0
 
 
-            k = normal.MaxObsDistr(n, 0.95)
-            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
-                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
-                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
-                try:
-                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-                except KeyError:
-                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-                try:
-                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-                except KeyError:
-                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+            try:
+                l1 = G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
+            except KeyError:
+                l1 = G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
+            try:
+                l2 = G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
+            except KeyError:
+                l2 = G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
 
+            #max_obs1 = max(l1)
+            #min_obs1 = min(l1)
+            l1.sort()
+            n_obs = len(l1)
+            l1_mean = sum(l1) / float(n_obs)
+            l1 = map(lambda x: x - l1_mean, l1)
+            max_obs2 = max(l2)
+            #min_obs2 = min(l2)
+            l2.sort(reverse=True)
+            l2 = map(lambda x: abs(x - max_obs2), l2)
+            l2_mean = sum(l2) / float(n_obs)
+            l2 = map(lambda x: x - l2_mean, l2)
+            KS_statistic, p_value = ks_2samp(l1, l2)
+            #M_W_statistic, p_val = mannwhitneyu(l1, l2)
 
-                span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
-                span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
-                span_score = min(span_score1, span_score2)
-            else:
+            #diff = map(lambda x: abs(abs(x[1]) - abs(x[0])), zip(l1, l2))
+            #sc = sum(diff) / len(diff)
+
+            if len(l1) < 3:
                 span_score = 0
+            else:
+                span_score = 1 - KS_statistic
+
+
+#            try:
+#                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
+#            except ZeroDivisionError:
+#                span_score = 0
+#            if span_score < 0:
+#                span_score = 0
+#                print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
+
+# if len(l1) > 3:
+#     print >> Information , 'avg_diff: ', sc, 'span1: ', (max_obs1 - min_obs1), 'span2: ', (max_obs2 - min_obs2), 'Span score: ', span_score, 'pval: ', p_value, 'Est gap: ', gap, 'Nr_links: ', len(l1) #, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
+
+
+                #print >> Information , l1
+                #print >> Information , l2
+                #print >> Information , diff
+            #print  span_score
+
+#
+#            k = normal.MaxObsDistr(n, 0.95)
+#            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
+#                #span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
+#                #span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
+#
+#                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len1 + max(0, gap))
+#                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len2 + max(0, gap))
+#
+#                try:
+#                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
+#                except KeyError:
+#                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
+#                try:
+#                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+#                except KeyError:
+#                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
+#
+#
+#                #span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
+#                #span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
+#
+#                span_score1 = min((max(0, gap) + param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + param.read_len + span_obs1)) if span_obs1 > 0 else 0
+#                span_score2 = min((max(0, gap) + param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + param.read_len + span_obs2)) if span_obs2 > 0 else 0
+#
+#                span_score = min(span_score1, span_score2)
+#
+#                #span_score = (max(0, gap) + param.read_len + span_obs1) / float(span_max1)
+#            else:
+#                span_score = 0
 
 
             try:
@@ -333,6 +381,20 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information)
                 sys.stderr.write(str(std_dev) + ' ' + str(std_dev_d_eq_0) + ' ' + str(span_score) + '\n')
 
             G[edge[0]][edge[1]]['score'] = std_dev_score + span_score if std_dev_score > 0.5 and span_score > 0.5 else 0
+            if param.plots:
+                span_score_obs.append(span_score)
+                std_dev_score_obs.append(std_dev_score)
+                gap_obs.append(gap)
+                nr_link_obs.append(n_obs)
+
+
+    if param.plots:
+        plots.histogram(span_score_obs, param, bins=20, x_label='score', y_label='frequency', title='Dispersity_score_distribuion' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.histogram(std_dev_score_obs, param, bins=20, x_label='score', y_label='frequency', title='Standard_deviation_score_distribuion' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(std_dev_score_obs, span_score_obs, param, x_label='std_dev_score_obs', y_label='span_score_obs', title='Score_correlation' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(std_dev_score_obs, gap_obs, param, x_label='std_dev_score_obs', y_label='estimated gap size', title='Gap_to_sigma' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(span_score_obs, gap_obs, param, x_label='span_score_obs', y_label='estimated gap size', title='Gap_to_span' + plot + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(span_score_obs, nr_link_obs, param, x_label='span_score_obs', y_label='Number links', title='Obs_to_span' + plot + '.' + param.bamfile.split('/')[-1])
 
     for edge in G.edges():
         if G[edge[0]][edge[1]]['nr_links'] != None:
@@ -382,8 +444,6 @@ def InitializeGraph(dict_with_scaffolds, graph, Information):
         graph.add_edge((scaffold_, 'L'), (scaffold_, 'R'), nr_links=None)    #this is a scaffold object but can be both a single contig or a scaffold.
         graph.node[(scaffold_, 'L')]['length'] = dict_with_scaffolds[scaffold_].s_length
         graph.node[(scaffold_, 'R')]['length'] = dict_with_scaffolds[scaffold_].s_length
-        #dict_with_scaffolds[ scaffold_ ].scaffold_left_nbrs = {}
-        #dict_with_scaffolds[ scaffold_ ].scaffold_right_nbrs  = {}  
         if cnt % 100000 == 0 and cnt > 0:
             elapsed = time() - start1
             print >> Information, 'Total nr of keys added: ', cnt, 'Time for adding last 100 000 keys: ', elapsed
@@ -417,6 +477,10 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
         if counter % 100000 == 0:
             print >> Information, 'Time adding 100k keys', time() - start
             start = time()
+        if cont_names[i] not in  C_dict:
+            errorhandle.unknown_contig(cont_names[i])
+            continue
+
         if cont_lengths[i] >= contig_threshold:
             C = Contig.contig(cont_names[i])   # Create object contig
             C.length = cont_lengths[i]
@@ -500,7 +564,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if param.detect_duplicate:
             return(1)
 
-    if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:# 2**32: #param.ins_size_threshold: 
+    if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:
         if scaf_side1 == 'R':
             scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
             scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
@@ -516,10 +580,13 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
         else:
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
-            #G.edge[(scaf_obj1.name,scaf_side1)][(scaf_obj2.name,scaf_side2)]['obs'] += obs1+obs2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name].append(obs1)
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name].append(obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
     else:
         counter.reads_with_too_long_insert += 1
@@ -554,7 +621,7 @@ def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, In
     print >> Information, 'LG50: ', LG50, 'NG50: ', NG50, 'Initial contig assembly length: ', param.tot_assembly_length
     return(NG50, LG50)
 
-def CalculateMeanCoverage(Contigs, first_lib, output_dest, bamfile, Information):
+def CalculateMeanCoverage(Contigs, Information, param):
     # tuples like (cont lenght, contig name)
     list_of_cont_tuples = [(Contigs[contig].length, contig) for contig in Contigs]
     #sorted as longest first
@@ -586,14 +653,10 @@ def CalculateMeanCoverage(Contigs, first_lib, output_dest, bamfile, Information)
     print >> Information, 'Length of longest contig in calc of coverage: ', longest_contigs[0][0]
     print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
 
-    try:
-        import matplotlib.pyplot as plt
-        plt.hist(cov_of_longest_contigs, bins=50)
-        library = bamfile.split('/')[-1]
-        plt.savefig(output_dest + "/BESST_cov_1000_longest_cont" + library + ".png")
-        plt.clf()
-    except ImportError:
-        pass
+
+    if param.plots:
+        plots.histogram(cov_of_longest_contigs, param, bins=50, x_label='coverage' , y_label='frequency' , title='BESST_cov_1000_longest_cont' + param.bamfile.split('/')[-1])
+
     return(mean_cov, std_dev)
 
 def RemoveOutliers(mean_cov, std_dev, cov_list):
@@ -605,7 +668,7 @@ def RemoveOutliers(mean_cov, std_dev, cov_list):
         return(False, filtered_list)
 
 def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
-    output_dest = param.output_directory
+    param.output_directory
     mean_cov = param.mean_coverage
     std_dev = param.std_dev_coverage
     cov_cutoff = param.cov_cutoff
@@ -651,7 +714,7 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
             small_contigs[contig].is_haplotype = True
 
 
-    GO.PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs)
+    GO.PrintOutRepeats(Repeats, Contigs, param.output_directory, small_contigs)
     print >> Information, 'Removed a total of: ', count_repeats, ' repeats.'
     if param.detect_haplotype:
         print >> Information, 'Marked a total of: ', count_hapl, ' potential haplotypes.'

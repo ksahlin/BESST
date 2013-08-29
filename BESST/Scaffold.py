@@ -40,3 +40,5 @@ class scaffold(object):
         self.lower_right_nbrs_obs = scaffold_lower_right_nbrs
         self.upper_left_nbrs_obs = scaffold_upper_left_nbrs
         self.upper_right_nbrs_obs = scaffold_upper_right_nbrs
+
+

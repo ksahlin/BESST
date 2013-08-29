@@ -20,13 +20,22 @@
 
 import sys
 import os
+import errno
 from time import time
 from optparse import OptionParser
 import optparse
-#import gc
-#gc.disable()
+import argparse
+
+from BESST import errorhandle
 
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 def ReadInContigseqs(contigfile):
     cont_dict = {}
@@ -57,7 +66,6 @@ def main(options):
     from BESST import libmetrics
     from BESST.diploid import get_haplotype_regions
 
-    Parameter.MemoryUsage()
     tot_start = time()
     Contigs = {} # contig dict that stores contig objects 
     Scaffolds = {}     # scaffold dict with contig objects for easy fetching of all contigs in a scaffold
@@ -68,10 +76,15 @@ def main(options):
     param.scaffold_indexer = 1 # global indicator for scaffolds, used to index scaffolds when they are created
     param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
-    param.development = options.development
+    param.development = options.devel
     options.output = options.output + '/BESST_output'
-    os.popen('mkdir -p ' + options.output)
+
+    mkdir_p(options.output)
+    if options.plots:
+        mkdir_p(os.path.join(options.output, 'plots'))
+
     param.information_file = open(options.output + '/Statistics.txt', 'w')
+    param.plots = options.plots
     Information = param.information_file
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
@@ -82,6 +95,7 @@ def main(options):
         sys.exit()
     #iterate over libraries
     param.first_lib = True
+    param.path_threshold = options.path_threshold
     for i in xrange(len(options.bamfiles)):
         start = time()
         param.bamfile = options.bamfiles[i]
@@ -107,7 +121,7 @@ def main(options):
             libmetrics.get_metrics(bam_file, param, Information)
 
             #create graph
-            (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, param.output_directory, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
+            (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
 
         param.first_lib = False   #not the first lib any more
         if G == None:
@@ -117,12 +131,10 @@ def main(options):
         print >> Information, 'Time elapsed for creating graph, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
         start = time()
 
-        Parameter.MemoryUsage()
         print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
 
-        Parameter.MemoryUsage()
 
         print >> Information, 'Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
         print 'Writing out scaffolding results for step', i + 1, ' ...'
@@ -141,7 +153,6 @@ def main(options):
 
 
         GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
-        Parameter.MemoryUsage()
 
     ### Calculate stats for last scaffolding step    
     scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]
@@ -155,171 +166,144 @@ def main(options):
     elapsed = time() - tot_start
     print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'
     print 'Finished\n\n '
-    Parameter.MemoryUsage()
+
+    return()
 
 
 
-def vararg_callback(option, opt_str, value, parser):
-    assert value is None
-    value = []
+parser = argparse.ArgumentParser(prog='BESST', description="BESST - scaffolder for genomic assemblies.")
 
-    def floatable(str):
-        try:
-            float(str)
-            return True
-        except ValueError:
-            return False
-
-    for arg in parser.rargs:
-        # stop on --foo like options
-        if arg[:2] == "--" and len(arg) > 2:
-            break
-        # stop on -a, but not on -3 or -3.0
-        if arg[:1] == "-" and len(arg) > 1 and not floatable(arg):
-            break
-        try:
-            value.append(int(arg))
-        except ValueError:
-            value.append(arg)
-
-    del parser.rargs[:len(value)]
-    setattr(parser.values, option.dest, value)
-
-
-
-
-
-parser = OptionParser()
-libstats = optparse.OptionGroup(parser, 'Options for library statistics such as read length, insert size mean and std_dev, coverage etc.')
-haplotypes = optparse.OptionGroup(parser, 'Options involving haplotype detection.')
-required = optparse.OptionGroup(parser, 'Required input.')
-parameters = optparse.OptionGroup(parser, 'Parameters for algorithm.')
-other = optparse.OptionGroup(parser, 'Various other options.')
-
+required = parser.add_argument_group('required', 'Required arguments')
+libstats = parser.add_argument_group('read_library', 'Library parameters that can be set, e.g., read length, insert size mean/std_dev, coverage etc.')
+haplotypes = parser.add_argument_group('diploid', 'Options involving detection of split allele contigs in diploid assemblies.')
+parameters = parser.add_argument_group('parameters', 'Parameters/variables/threshold involved in BESST.')
+other = parser.add_argument_group('other', 'Various other parameters')
 
 ## required
-required.add_option("-c", dest="contigfile",
-                  help="Fasta file containing contigs.", type="string")
+required.add_argument("-c", dest="contigfile", type=str, required=True,
+                      help="Fasta file containing contigs.")
 
-required.add_option("-f", "--bamfile", dest="bamfiles", action="callback", callback=vararg_callback,
-                  help="Path(s) to bamfile(s).")
+required.add_argument("-f", dest="bamfiles", type=str, nargs='+', required=True,
+                      help="Path(s) to bamfile(s).")
 
-## optional
-other.add_option("-o", "--output", dest="output", default='.',
-                  help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.", type="string")
 
-libstats.add_option("-r", dest="readlen", action="callback", callback=vararg_callback,
+## libstats
+
+libstats.add_argument("-r", dest="readlen", type=int, nargs='+',
                   help="Mean read length of libraries. ")
 
-libstats.add_option("-m", dest="mean", action="callback", callback=vararg_callback,
+libstats.add_argument("-m", dest="mean", type=int, nargs='+',
                   help="Mean insert size of libraries.")
 
-libstats.add_option("-s", "--stddev", dest="stddev", action="callback", callback=vararg_callback,
+libstats.add_argument("-s", dest="stddev", type=int, nargs='+',
                   help="Estimated standard deviation of libraries.")
 
-parameters.add_option("-w", dest="relweight", default=3,
-                  help="Threshold value for the relative weight of an edge (deprecated)", type="int")
+libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',
+                  help="User specified coverage cutoff. (Manually filter \
+                  out contigs with coverage over this value)")
 
-parameters.add_option("-T", dest="threshold", action="callback", callback=vararg_callback,
+
+## parameters
+
+parameters.add_argument("-w", dest="relweight", type=int, default=3,
+                  help="Threshold value for the relative weight of an edge (deprecated)")
+
+parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
                   help="Threshold value filter out reads that are mapped too far apart given insert size. ")
 
-
-parameters.add_option("-e", dest="edgesupport", action="callback", callback=vararg_callback,
+parameters.add_argument("-e", dest="edgesupport", type=int, nargs='+',
                   help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
-parameters.add_option("-k", "--minsize", dest="minsize", action="callback", callback=vararg_callback,
+
+parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
-libstats.add_option("-z", "--covcutoff", dest="covcutoff", action="callback", callback=vararg_callback,
-                  help="User specified coverage cutoff. (Manually filter out contigs with coverage over this value)")
+parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
+                  help="The number of iterations performed in breadth first search for placing smaller contigs. ")
 
-haplotypes.add_option("-a", "--haplratio", dest="haplratio", default=1.3,
-                  help="Maximum length ratio for merging of haplotypic regions.", type="float")
 
-haplotypes.add_option("-b", "--haplthreshold", dest="haplthreshold", default=3,
+## haplotypes
+
+haplotypes.add_argument("-a", dest="haplratio", type=float, default=1.3,
+                  help="Maximum length ratio for merging of haplotypic regions.")
+
+haplotypes.add_argument("-b", dest="haplthreshold", type=int, default=3,
                   help="Number of standard deviations over mean/2 of coverage to allow for clasification of haplotype.\
                    Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
-                   if -b 3", type="int")
+                   if -b 3")
 
-haplotypes.add_option("-g", "--haplotype", dest="haplotype", default=0,
-                  help="Haplotype detection function, default = off", type="int")
+haplotypes.add_argument("-g", dest="haplotype", type=int , default=0,
+                  help="Haplotype detection function, default = off")
 
-other.add_option("-d", "--duplicate", dest="duplicate", default=1,
-                  help="Sequencing duplicates detection, default = off", type="int")
+## other 
 
-other.add_option("-K", "--kmer", dest="kmer", default=50,
-                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50", type="int")
+other.add_argument("-o", dest="output", type=str, default='.',
+                  help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")
 
-other.add_option("-M", "--mmer", dest="mmer", default=40,
-                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ", type="int")
+other.add_argument("-d", dest='duplicate' , action="store_false",
+                  help="Deactivate sequencing duplicates detection")
 
+other.add_argument("-K", dest="kmer", type=int, default=50,
+                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50")
 
-other.add_option("-y", "--extendpaths", dest="extendpaths", default=1,
-                  help="Enhance the N50 and L50 stats on behalf of increasing nr scaffolding errors. \
-                   This function should be pretty conservative so it's recommended to have the default value,\
-                    default = on. To turn of, specify -y 0.", type="int")
+other.add_argument("-M", dest="mmer", type=int, default=40,
+                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
 
-other.add_option("-q", action="store_true", dest="multiprocess",
+other.add_argument("-y", dest='extendpaths', action="store_false",
+                  help="Deactivate pathfinder module for including smaller contigs.")
+
+other.add_argument("-q", dest="multiprocess", action="store_true",
                 help="Parallellize work load of path finder module in case of multiple processors available.\
                   ",)
 
-other.add_option("-D", "--devel", dest="development",
-                  help="Run in development mode (bug checking and memory usage etc.)", type="int", default=0)
-#TEMPORARY parameters here, remove after spruce assembly
-other.add_option("-t", dest="transcriptalignfile",
-                  help="file of contigs", type="string")
+other.add_argument("-devel", action="store_true",
+                  help="Run in development mode (bug checking and memory usage etc.)")
 
-other.add_option("-p", dest="fosmidpool", default=None,
+other.add_argument("-plots", action="store_true",
+                  help="Plot coverage, histograms of scores e.t.c.")
+
+other.add_argument('--version', action='version', version='%(prog)s 1.0.3')
+
+
+
+
+#TEMPORARY parameters here, remove after spruce assembly
+other.add_argument("-t", dest="transcriptalignfile",
+                  help="file of contigs", type=str)
+
+other.add_argument("-p", dest="fosmidpool", default=None,
                   help="""Specify that data comes from a fosmid pool. This parameter sets the number of
                   links that the second strongest link must have in order to not do any scaffolding
-                  with the region.""", type="int")
+                  with the region.""", type=int)
 
-parser.add_option_group(required)
-parser.add_option_group(libstats)
-parser.add_option_group(parameters)
-parser.add_option_group(haplotypes)
-parser.add_option_group(other)
 
 if len(sys.argv) == 1:
     sys.argv.append('-h')
-(options, args) = parser.parse_args()
 
+args = parser.parse_args()
 
-if not all([x == None or len(x) == len(options.bamfiles) for x in [options.stddev , options.mean , options.readlen, options.edgesupport, options.covcutoff, options.threshold, options.minsize]]):
-    parser.error("Same number of arguments are required")
+errorhandle.check_module('mathstats')
+errorhandle.parse_check(args, parser)
 
-if (options.mean and not options.stddev) or (not options.mean and options.stddev):
-    parser.error("either both or none of -m and -s is required")
-if (options.threshold and not options.minsize) or (not options.threshold and options.minsize):
-    parser.error("either both or none of -T and -k is required")
-if not options.contigfile:
-    parser.error("parameter -c (a fasta contig file) is required")
-if not options.bamfiles:
-    parser.error("parameter -f (BAM files) is required")
-
-#check that bam files exists
-for file_ in options.bamfiles:
-    try:
-        open(file_)
-    except IOError as e:
-        sys.exit("couldn't find BAM file: " + file_ + " check that the path is correct and that the file exists")
-    try:
-        open(file_ + '.bai')
-    except IOError as e:
-        print "couldn't find index file: ", file_ + '.bai', " check that the path is correct and that the file exists"
-        sys.exit(0)
-#check that contig files exists
-try:
-    open(options.contigfile)
-except IOError as e:
-    sys.exit("couldn't open contig file " + options.contigfile + " check that the path is correct and that the file exists")
-
-if options.development:
+if args.devel:
     import guppy
 
-main(options)
 
-if options.development:
+if args.plots:
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        args.plots = False
+
+
+##
+# Call BESST algorithm
+
+main(args)
+
+if args.devel:
     h = guppy.hpy()
     print h.heap()
 

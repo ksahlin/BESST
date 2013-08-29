@@ -1,15 +1,15 @@
+
 import os
 from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.0.1',
+    version='1.0.4.2',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Science/Research",
-        #"License :: GNU General Public License v3 or later (GPLv3+)",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
@@ -24,5 +24,6 @@ setup(
     long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
     install_requires=['pysam==0.7',
                       'networkx>=1.4',
-                      'mathstats'],
+                      'mathstats',
+                      'scipy>=0.9'],
 )

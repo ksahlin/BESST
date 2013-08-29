@@ -38,7 +38,7 @@ class parameter(object):
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
-                 parameter_development=None):
+                 parameter_development=None, parameter_plots=None, parameter_path_threshold=None):
 
         # Library information
         # Contig information
@@ -73,6 +73,8 @@ class parameter(object):
         self.fosmidpool = parameter_fosmidpool
         self.extend_paths = parameter_extend_paths
         self.development = parameter_development
+        self.plots = parameter_plots
+        self.path_threshold = parameter_path_threshold
 
 
 class counters(object):
@@ -88,15 +90,15 @@ class counters(object):
         self.prev_obs2 = param_prev_obs2
         self.reads_with_too_long_insert = param_reads_with_too_long_insert
 
-
-def MemoryUsage():
-    percent_usage = subprocess.Popen("ps -v | grep 'python Main.py' | awk '{sum+=$12} END {print sum}'",
-                                     shell=True,
-                                     stdout=subprocess.PIPE,
-                                     )
-    stdout_list = percent_usage.communicate()[0]
-    print 'Percentage of memory occupied by BESST from total memory: ', stdout_list
-    return()
+#
+#def MemoryUsage():
+#    percent_usage = subprocess.Popen("ps -v | grep 'python Main.py' | awk '{sum+=$12} END {print sum}'",
+#                                     shell=True,
+#                                     stdout=subprocess.PIPE,
+#                                     )
+#    stdout_list = percent_usage.communicate()[0]
+#    print 'Percentage of memory occupied by BESST from total memory: ', stdout_list
+#    return()
 
 
 

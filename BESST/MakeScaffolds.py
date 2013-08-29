@@ -33,6 +33,7 @@ from mathstats.normaldist.truncatedskewed import param_est as GC
 from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 import haplotypes as HR
+import plots
 
 
 def constant_large():
@@ -51,6 +52,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     print >> Information, str(nr_edges) + ' link edges created.'
     print >> Information, 'Perform inference on scaffold graph...'
+
     #VizualizeGraph(G,param,Information)
 
     if param.detect_haplotype:
@@ -72,7 +74,8 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
     ##### Here is the scaffolding algorithm #######
 
     G = RemoveIsolatedContigs(G, Information)     #step1
-    RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param) #step2
+    plot = 'G'
+    RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
     G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
     G, Contigs, Scaffolds = RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param)    #step4    
     #The contigs that made it to proper scaffolds
@@ -83,25 +86,29 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
         print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
         PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
         print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
-        for node in G_prime.nodes():
-            nbrs = G_prime.neighbors(node)
-            for nbr in nbrs:
-                if G_prime[node][nbr]['nr_links'] and 'score' not in G_prime[node][nbr]:
-                    G_prime.remove_edge(node, nbr)
 
-        RemoveAmbiguousRegionsUsingScore(G_prime, G_prime, Information, param)
-        G_prime, Contigs, Scaffolds = RemoveLoops(G_prime, G_prime, Scaffolds, Contigs, Information, param)
-        for node in G_prime:
-            if node[0] not in Scaffolds:
-                scaf_obj = small_scaffolds[node[0]]
-                Scaffolds[node[0]] = scaf_obj
-                cont_objects = scaf_obj.contigs
-                for obj_ in cont_objects:
-                    ctg_name = obj_.name
-                    Contigs[ctg_name] = obj_
-                    del small_contigs[ctg_name]
-                del small_scaffolds[node[0]]
-        (Contigs, Scaffolds, param) = NewContigsScaffolds(G_prime, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)
+#
+#        for node in G_prime.nodes():
+#            nbrs = G_prime.neighbors(node)
+#            for nbr in nbrs:
+#                if G_prime[node][nbr]['nr_links'] and 'score' not in G_prime[node][nbr]:
+#                    G_prime.remove_edge(node, nbr)
+#
+#        plot = 'G_prime'
+#        #print 'GOING IN:', len(G_prime.edges()), len(G_prime.nodes())
+#        RemoveAmbiguousRegionsUsingScore(G_prime, G_prime, Information, param, plot)
+#        G_prime, Contigs, Scaffolds = RemoveLoops(G_prime, G_prime, Scaffolds, Contigs, Information, param)
+#        for node in G_prime:
+#            if node[0] not in Scaffolds:
+#                scaf_obj = small_scaffolds[node[0]]
+#                Scaffolds[node[0]] = scaf_obj
+#                cont_objects = scaf_obj.contigs
+#                for obj_ in cont_objects:
+#                    ctg_name = obj_.name
+#                    Contigs[ctg_name] = obj_
+#                    del small_contigs[ctg_name]
+#                del small_scaffolds[node[0]]
+#        (Contigs, Scaffolds, param) = NewContigsScaffolds(G_prime, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)
 
 
     ####### End of algorithm #####################
@@ -109,31 +116,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     return()
 
-def VizualizeGraph(G, param, Information):
-    import os
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
 
-        try:
-            os.mkdir(param.output_directory + '/graph_regions' + str(int(param.mean_ins_size)))
-        except OSError:
-            #directory is already created
-            pass
-        counter = 1
-        import copy
-
-        G_copy = copy.deepcopy(G)
-        RemoveIsolatedContigs(G_copy, Information)
-        CB = nx.connected_component_subgraphs(G_copy)
-        for cycle in CB:
-            nx.draw(cycle)
-            matplotlib.pyplot.savefig(param.output_directory + 'graph_regions' + str(int(param.mean_ins_size)) + '/' + str(counter) + '.png')
-            matplotlib.pyplot.clf()
-            counter += 1
-    except ImportError:
-        pass
-    return()
 
 def RemoveIsolatedContigs(G, Information):
     print >> Information, 'Remove isolated nodes.'
@@ -148,59 +131,165 @@ def RemoveIsolatedContigs(G, Information):
     return(G)
 
 
-def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param):
-    print >> Information, 'Remove edges from node if more than two edges'
-    counter1 = 0
-    for node in G:
-        nbrs = G.neighbors(node)
-        #Remove ambiguous edges
-        if len(nbrs) > 2:
-            score_list = []
-            for nbr in nbrs:
-                if G[node][nbr]['nr_links']:
-                    if 'score' not in G[node][nbr]:
-                        sys.stderr.write(str(G[node][nbr]))
-                    score_list.append((G[node][nbr]['score'], nbr))
-
-            score_list.sort()
-
-            if score_list[-1][0] > 0:
-            ### save the dominating link edge on this side of the contig
-                nr_nbrs = len(score_list)
-                for i in xrange(0, nr_nbrs - 1):
-                    G.remove_edge(node, score_list[i][1])
-                    if param.extend_paths:
-                        try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-                            G_prime.remove_edge(node, score_list[i][1])
-                        except nx.exception.NetworkXError:
-                            pass
-            else:
-                nr_nbrs = len(score_list)
-                for i in xrange(0, nr_nbrs):
-                    G.remove_edge(node, score_list[i][1])
-                    if param.extend_paths:
-                        try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-                            G_prime.remove_edge(node, score_list[i][1])
-                        except nx.exception.NetworkXError:
-                            pass
-            counter1 += 1
+def partition(pred, iterable):
+    trues = []
+    falses = []
+    for item in iterable:
+        if pred(item):
+            trues.append(item)
         else:
-            for nbr in nbrs:
-                if G[node][nbr]['nr_links']:
-                    if 'score' not in G[node][nbr]:
-                        sys.stderr.write(str(G[node][nbr]))
-                    if G[node][nbr]['score'] > 0:
-                        pass
-                    else:
-                        G.remove_edge(node, nbr)
-                        if param.extend_paths:
-                            try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-                                G_prime.remove_edge(node, nbr)
-                            except nx.exception.NetworkXError:
-                                pass
+            falses.append(item)
+    return trues, falses
+
+def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, record_decision):
+    nbrs = G.neighbors(node)
 
 
-    print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
+    #Remove ambiguous edges
+    filter_nbrs = filter(lambda nbr: 0 < G[node][nbr]['nr_links'] , nbrs) # remove other side of contig (has no "links")
+    score_list_temp = sorted(map(lambda nbr: (G[node][nbr]['score'], nbr), filter_nbrs)) # sort list of scores for neighbors
+    non_zero_score_edges, zero_score_edges = partition(lambda nbr: 0 < G[node][nbr[1]]['score'], score_list_temp) # Split list into 0-scoring and non-0-scoring edges
+
+
+    #remove all zero score edges
+    remove_zero_score_edges = map(lambda item: (node, item[1]) , zero_score_edges)
+    G.remove_edges_from(remove_zero_score_edges)
+    if param.plots:
+        for item in zero_score_edges:
+            edge_score_to_zero.append(item[0])
+
+    if param.extend_paths:
+        try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
+            G_prime.remove_edges_from(remove_zero_score_edges)
+        except nx.exception.NetworkXError:
+            pass
+
+    # Remove lower non zero score edges
+    if len(non_zero_score_edges) > 1:
+        if non_zero_score_edges[-2][0] / non_zero_score_edges[-1][0] > 0.9:
+            print >> Information, 'SCORES AMBVIVALENT', non_zero_score_edges[-1][0], non_zero_score_edges[-2][0]
+            remove_non_zero_edges = map(lambda item: (node, item[1]) , non_zero_score_edges) # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
+        else:
+            remove_non_zero_edges = map(lambda item: (node, item[1]) , non_zero_score_edges[:-1]) # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
+
+        G.remove_edges_from(remove_non_zero_edges) # remove the lower scoring edges
+        if param.extend_paths:
+            try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
+                G_prime.remove_edges_from(remove_non_zero_edges)
+            except nx.exception.NetworkXError:
+                pass
+
+    if param.plots:
+        if len(non_zero_score_edges) > 0:
+            if record_decision:
+                score_chosen_obs.append(non_zero_score_edges[-1][0])
+            for item in non_zero_score_edges[:-1]:
+                non_zero_score_removed_obs.append(item[0])
+
+
+
+
+#    if len(nbrs) > 2:
+#        score_list = []
+#        for nbr in nbrs:
+#            if G[node][nbr]['nr_links']:
+#                if 'score' not in G[node][nbr]:
+#                    sys.stderr.write(str(G[node][nbr]))
+#                score_list.append((G[node][nbr]['score'], nbr))
+#
+#        score_list.sort()
+#
+#        #print 'Assert:', score_list_temp == score_list
+#
+#        if score_list[-1][0] > 0:
+#        ### save the dominating link edge on this side of the contig
+#            nr_nbrs = len(score_list)
+#            for i in xrange(0, nr_nbrs - 1):
+#                G.remove_edge(node, score_list[i][1])
+#                if param.extend_paths:
+#                    try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
+#                        G_prime.remove_edge(node, score_list[i][1])
+#                    except nx.exception.NetworkXError:
+#                        pass
+#        else:
+#            nr_nbrs = len(score_list)
+#            for i in xrange(0, nr_nbrs):
+#                G.remove_edge(node, score_list[i][1])
+#                if param.extend_paths:
+#                    try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
+#                        G_prime.remove_edge(node, score_list[i][1])
+#                    except nx.exception.NetworkXError:
+#                        pass
+#        #counter1 += 1
+#    else:
+#        for nbr in nbrs:
+#            if G[node][nbr]['nr_links']:
+#                if 'score' not in G[node][nbr]:
+#                    sys.stderr.write(str(G[node][nbr]))
+#                if G[node][nbr]['score'] > 0:
+#                    pass
+#                else:
+#                    G.remove_edge(node, nbr)
+#                    if param.extend_paths:
+#                        try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
+#                            G_prime.remove_edge(node, nbr)
+#                        except nx.exception.NetworkXError:
+#                            pass
+
+
+
+
+    return()
+
+def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
+    score_chosen_obs = []
+    non_zero_score_removed_obs = []
+    edge_score_to_zero = []
+
+    nr_edges_before = len(G.edges())
+    print >> Information, 'Remove edges from node if more than two edges'
+    #counter1 = 0
+
+    link_edges = filter(lambda x: 'score' in x[2], G.edges(data=True))
+    edge_scores_sorted = sorted(link_edges, key=lambda x: x[2]['score'], reverse=True)
+
+    for edge in edge_scores_sorted:
+        remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
+        remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
+
+#    already_visited_nodes = set()
+#    for edge in edge_scores_sorted:
+#        if edge[1] in already_visited_nodes and edge[0] in already_visited_nodes:
+#            continue
+#        elif edge[1] in already_visited_nodes:
+#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
+#            already_visited_nodes.add(edge[0])
+#        elif edge[0] in already_visited_nodes:
+#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
+#            already_visited_nodes.add(edge[1])
+#        else:
+#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
+#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
+#            already_visited_nodes.add(edge[1])
+#            already_visited_nodes.add(edge[0])
+
+
+
+
+#    for node in G:
+#        remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero)
+
+
+    nr_edges_after = len(G.edges())
+    #print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
+    print >> Information, ' Number of edges in G before:', nr_edges_before
+    print >> Information, ' Number of edges in G after:', nr_edges_after
+    print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
+
+    if param.plots:
+        print len(score_chosen_obs)
+        list_of_datasets = [edge_score_to_zero, score_chosen_obs , non_zero_score_removed_obs]
+        plots.multiple_histogram(list_of_datasets, param, 'score', 'frequency', title='Besst_decision_scores' + plot + '.' + param.bamfile.split('/')[-1])
 
     return()
 
@@ -239,7 +328,6 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited):
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
     new_scaffolds_ = nx.connected_component_subgraphs(G)
-    print >> Information, 'Nr of new scaffolds created: ' + str(len(new_scaffolds_))
     print >> Information, 'Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_))
     for new_scaffold_ in new_scaffolds_:
         param.scaffold_indexer += 1
@@ -396,7 +484,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 else:
                     #print 'now', 2 * param.std_dev_ins_size + param.read_len
                     avg_gap = int(data_observation)
-                print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
                 #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
                 #contigs contained in other contigs
             #do naive gap estimation
@@ -404,7 +492,8 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 avg_gap = int(data_observation)
             if avg_gap < 0:
                 #TODO: Eventually implement SW algm to find ML overlap
-                avg_gap = 1
+                avg_gap = 0
+
             pos += int(avg_gap)
             G.remove_node((scaf, side))
             prev_node = node
@@ -429,7 +518,7 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             data_observation = (nr_links_ * param.mean_ins_size - sum_obs) / float(nr_links_)
             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
-            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold)
+            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
             if len(high_score_path) > 1:
                 if score >= 0.0:
                     #loc_count += 1
@@ -544,19 +633,20 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             end.add(node)
         iter_nodes = end.copy()
         print >> Information, 'Entering ELS.BetweenScaffolds single core'
-        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes)
+        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes, param)
         elapsed = time.time() - start
         print >> Information, "Elapsed time single core pathfinder: ", elapsed
 
     ################################################################
 
     start_end_node_update_storage = {}
-    #print 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
+    print >> Information, 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
     for sublist in reversed(all_paths_sorted_wrt_score):
         path = sublist[2]
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
+        print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -648,7 +738,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
 
         small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
-        #print small_scafs
         for item in small_scafs:
             scaf_obj = small_scaffolds[item[0]]
             Scaffolds[item[0]] = scaf_obj
@@ -726,7 +815,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             try:
                 G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
             except KeyError:
-                #may be the two different sides of a cotig (has no gap dist)
+                #may be the two different sides of a contig (has no gap dist)
                 pass
 
         start = path[0]
