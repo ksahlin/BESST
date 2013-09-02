@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.0.4.2',
+    version='1.0.4.3',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",

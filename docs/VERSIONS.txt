@@ -90,3 +90,5 @@ V1.0.4.1
 V1.0.4.2
 * Fixed bug in removing 0 score edges i G_prime. Now all edges in G are also removed in G_prime when searching for paths. This is an important fix.
 
+V1.0.4.3
+* Changed KS transform from mean to median in dispersity score
