@@ -304,16 +304,16 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             l1.sort()
             n_obs = len(l1)
             l1_mean = sum(l1) / float(n_obs)
-            l1_median = l1[len(l1) / 2]
-            #l1 = map(lambda x: x - l1_mean, l1)
-            l1 = map(lambda x: x - l1_median, l1)
+            #l1_median = l1[len(l1) / 2]
+            l1 = map(lambda x: x - l1_mean, l1)
+            #l1 = map(lambda x: x - l1_median, l1)
             max_obs2 = max(l2)
             l2.sort(reverse=True)
             l2 = map(lambda x: abs(x - max_obs2), l2)
             l2_mean = sum(l2) / float(n_obs)
-            l2_median = l2[len(l2) / 2]
-            #l2 = map(lambda x: x - l2_mean, l2)
-            l2 = map(lambda x: x - l2_median, l2)
+            #l2_median = l2[len(l2) / 2]
+            l2 = map(lambda x: x - l2_mean, l2)
+            #l2 = map(lambda x: x - l2_median, l2)
             KS_statistic, p_value = ks_2samp(l1, l2)
 
 
