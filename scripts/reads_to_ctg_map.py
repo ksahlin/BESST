@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from time import time
 
 import pysam
 
@@ -33,7 +34,9 @@ def sam_to_bam(sam_path, bam_path):
 # @param genome_path Path to the reference genome.
 # @param output_path Path of the output file without extension ".bam".
 #
-def map_paired_reads(pe1_path, pe2_path, genome_path, output_path):
+def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
+    print 'Aligning with bwa aln/sampe'
+    start = time()
     work_dir = tempfile.mkdtemp()
     genome_db = os.path.join(work_dir, "genome")
     pe1_output = os.path.join(work_dir, "pe1.sai")
@@ -50,14 +53,41 @@ def map_paired_reads(pe1_path, pe2_path, genome_path, output_path):
 
     with open(bwa_output, "w") as bwa_file:
         subprocess.check_call([ "bwa", "sampe",
-                                "-r", "@RG\tID:ILLUMINA\tSM:48_2\tPL:ILLUMINA\tLB:LIB1",
                                 genome_db,
                                 pe1_output, pe2_output,
                                 pe1_path, pe2_path ], stdout=bwa_file, stderr=null)
 
+    elapsed = time() - start
+    print 'Time elapsed for bwa aln/sampe: ', elapsed
+
     sam_to_bam(bwa_output, bwa_output + ".bam")
     pysam.sort(bwa_output + ".bam", output_path)
     pysam.index(output_path + '.bam')
+
+def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path):
+    print 'Aligning with bwa mem'
+    start = time()
+    work_dir = tempfile.mkdtemp()
+    genome_db = os.path.join(work_dir, "genome")
+    pe1_output = os.path.join(work_dir, "pe1.sai")
+    pe2_output = os.path.join(work_dir, "pe2.sai")
+    bwa_output = os.path.join(work_dir, "output.sam")
+
+    null = open("/dev/null")
+    subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=null)
+    with open(bwa_output, "w") as bwa_file:
+        subprocess.check_call([ "bwa", "mem", "-t", threads,
+                                genome_db, pe1_path, pe2_path ],
+                              stdout=bwa_file,
+                              stderr=null)
+
+    elapsed = time() - start
+    print 'Time elapsed for bwa mem: ', elapsed
+    sam_to_bam(bwa_output, bwa_output + ".bam")
+    pysam.sort(bwa_output + ".bam", output_path)
+    pysam.index(output_path + '.bam')
+
+
 
 def map_single_reads(pe_path, genome_path, output_path):
     work_dir = tempfile.mkdtemp()
@@ -89,9 +119,16 @@ if __name__ == '__main__':
     parser.add_argument('pe2_path', type=str, nargs='?', default=False, help='Path to the second pairs. Leave unspecified if single reads.')
     parser.add_argument('genome_path', type=str, help='Path to the reference genome/contigs.')
     parser.add_argument('output_path', type=str, help='Output path of resulting .bam and .bai file.')
+    parser.add_argument('--threads', type=str, default='8', required=False, help='Number of threads for bwa mem.')
+    parser.add_argument('--nomem', action="store_true", required=False,
+                        help='bwa mem default, If flag specified thescript uses old bwa algorithm with "aln" and "sampe". ')
+
     args = parser.parse_args()
 
-    if args.pe2_path:
-        map_paired_reads(args.pe1_path, args.pe2_path, args.genome_path, args.output_path)
+
+    if args.pe2_path and args.nomem:
+        bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, args.output_path)
+    elif args.pe2_path:
+        bwa_mem(args.pe1_path, args.pe2_path, args.genome_path, args.threads, args.output_path)
     else:
         map_single_reads(args.pe1_path, args.genome_path, args.output_path)

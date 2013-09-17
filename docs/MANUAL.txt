@@ -1,5 +1,11 @@
 BESST
 ======
+
+OBS:
+--------
+Common pitfall:
+BESST requires reads to be mapped in FR mode, i.e. --->  <---, mate pairs thus needs to be reverse complemented.
+------
  
 INPUT:
 -------
