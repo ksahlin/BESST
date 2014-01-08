@@ -50,6 +50,7 @@ class Worker(multiprocessing.Process):
         G_prime = job[1]
         #small_scaffolds = job[2]
         end = job[2]
+        param = job[3]
             #all_paths_sorted_wrt_score = [(1,[]),(2,[])]
 
             # except Queue.Empty:
@@ -58,7 +59,7 @@ class Worker(multiprocessing.Process):
 
         print 'Enter ', multiprocessing.current_process().name
             # the actual processing
-        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, start_nodes)
+        all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, start_nodes, param)
         #all_paths_sorted_wrt_score = [(1,[]),(2,[])]
             #nr_paths = find_all_paths(graph, start_node, end_node)
             # store the result

@@ -284,7 +284,10 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
     #print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
     print >> Information, ' Number of edges in G before:', nr_edges_before
     print >> Information, ' Number of edges in G after:', nr_edges_after
-    print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
+    try:
+        print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
+    except ZeroDivisionError:
+        pass
 
     if param.plots:
         print len(score_chosen_obs)
@@ -599,7 +602,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         nr_processes = 0
         # partition equally many nodes in G to each core
         while counter < nr_jobs:
-            work_queue.put((set(nodes[counter:counter + chunk]), G_prime, end))
+            work_queue.put((set(nodes[counter:counter + chunk]), G_prime, end, param))
             nr_processes += 1
             print >> Information, 'node nr', counter, 'to', counter + chunk - 1, 'added'
             #print work_queue.get()
