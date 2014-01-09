@@ -284,10 +284,10 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
     #print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
     print >> Information, ' Number of edges in G before:', nr_edges_before
     print >> Information, ' Number of edges in G after:', nr_edges_after
-    try:
+    if nr_edges_before==0:
+        print >> Information, ' %-age removed edges: N/A (no edges to remove)'
+    else:
         print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
-    except ZeroDivisionError:
-        pass
 
     if param.plots:
         print len(score_chosen_obs)
