@@ -6,7 +6,12 @@ Created on Aug 12, 2013
 
 import os
 
-import matplotlib.pyplot as plt
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+except ImportError, RuntimeError:
+    pass
 
 
 def histogram(x_, param, bins=20, x_label='x', y_label='y', title='Histogram'):

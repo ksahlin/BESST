@@ -327,56 +327,6 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             else:
                 span_score = 1 - KS_statistic
 
-
-#            try:
-#                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
-#            except ZeroDivisionError:
-#                span_score = 0
-#            if span_score < 0:
-#                span_score = 0
-#                print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
-
-# if len(l1) > 3:
-#     print >> Information , 'avg_diff: ', sc, 'span1: ', (max_obs1 - min_obs1), 'span2: ', (max_obs2 - min_obs2), 'Span score: ', span_score, 'pval: ', p_value, 'Est gap: ', gap, 'Nr_links: ', len(l1) #, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
-
-
-                #print >> Information , l1
-                #print >> Information , l2
-                #print >> Information , diff
-            #print  span_score
-
-#
-#            k = normal.MaxObsDistr(n, 0.95)
-#            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
-#                #span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
-#                #span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
-#
-#                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len1 + max(0, gap))
-#                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len2 + max(0, gap))
-#
-#                try:
-#                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-#                except KeyError:
-#                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-#                try:
-#                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-#                except KeyError:
-#                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-#
-#
-#                #span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
-#                #span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
-#
-#                span_score1 = min((max(0, gap) + param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + param.read_len + span_obs1)) if span_obs1 > 0 else 0
-#                span_score2 = min((max(0, gap) + param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + param.read_len + span_obs2)) if span_obs2 > 0 else 0
-#
-#                span_score = min(span_score1, span_score2)
-#
-#                #span_score = (max(0, gap) + param.read_len + span_obs1) / float(span_max1)
-#            else:
-#                span_score = 0
-
-
             try:
                 std_dev_score = min(std_dev / std_dev_d_eq_0, std_dev_d_eq_0 / std_dev) #+ span_score #+ min(n/E_links, E_links/float(n))
             except ZeroDivisionError:

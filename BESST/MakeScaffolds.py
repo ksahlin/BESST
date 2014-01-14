@@ -187,58 +187,6 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
                 non_zero_score_removed_obs.append(item[0])
 
 
-
-
-#    if len(nbrs) > 2:
-#        score_list = []
-#        for nbr in nbrs:
-#            if G[node][nbr]['nr_links']:
-#                if 'score' not in G[node][nbr]:
-#                    sys.stderr.write(str(G[node][nbr]))
-#                score_list.append((G[node][nbr]['score'], nbr))
-#
-#        score_list.sort()
-#
-#        #print 'Assert:', score_list_temp == score_list
-#
-#        if score_list[-1][0] > 0:
-#        ### save the dominating link edge on this side of the contig
-#            nr_nbrs = len(score_list)
-#            for i in xrange(0, nr_nbrs - 1):
-#                G.remove_edge(node, score_list[i][1])
-#                if param.extend_paths:
-#                    try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-#                        G_prime.remove_edge(node, score_list[i][1])
-#                    except nx.exception.NetworkXError:
-#                        pass
-#        else:
-#            nr_nbrs = len(score_list)
-#            for i in xrange(0, nr_nbrs):
-#                G.remove_edge(node, score_list[i][1])
-#                if param.extend_paths:
-#                    try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-#                        G_prime.remove_edge(node, score_list[i][1])
-#                    except nx.exception.NetworkXError:
-#                        pass
-#        #counter1 += 1
-#    else:
-#        for nbr in nbrs:
-#            if G[node][nbr]['nr_links']:
-#                if 'score' not in G[node][nbr]:
-#                    sys.stderr.write(str(G[node][nbr]))
-#                if G[node][nbr]['score'] > 0:
-#                    pass
-#                else:
-#                    G.remove_edge(node, nbr)
-#                    if param.extend_paths:
-#                        try: #we might have been removed this edge from G_prime when we did individual filtering of G_prime in CreateGraph module
-#                            G_prime.remove_edge(node, nbr)
-#                        except nx.exception.NetworkXError:
-#                            pass
-
-
-
-
     return()
 
 def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
@@ -256,29 +204,6 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
     for edge in edge_scores_sorted:
         remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
         remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
-
-#    already_visited_nodes = set()
-#    for edge in edge_scores_sorted:
-#        if edge[1] in already_visited_nodes and edge[0] in already_visited_nodes:
-#            continue
-#        elif edge[1] in already_visited_nodes:
-#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
-#            already_visited_nodes.add(edge[0])
-#        elif edge[0] in already_visited_nodes:
-#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
-#            already_visited_nodes.add(edge[1])
-#        else:
-#            remove_edges(G, G_prime, Information, param, edge[0], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, True)
-#            remove_edges(G, G_prime, Information, param, edge[1], score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero, False)
-#            already_visited_nodes.add(edge[1])
-#            already_visited_nodes.add(edge[0])
-
-
-
-
-#    for node in G:
-#        remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zero_score_removed_obs, edge_score_to_zero)
-
 
     nr_edges_after = len(G.edges())
     #print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
