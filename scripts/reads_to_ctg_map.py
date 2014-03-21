@@ -42,20 +42,21 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
     pe1_output = os.path.join(work_dir, "pe1.sai")
     pe2_output = os.path.join(work_dir, "pe2.sai")
     bwa_output = os.path.join(work_dir, "output.sam")
+    stderr_file = open(output_path+'.bwa.1','w')
 
-    null = open("/dev/null")
-    subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=null)
+    #null = open("/dev/null")
+    subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=stderr_file)
     with open(pe1_output, "w") as pe1_file:
-        subprocess.check_call([ "bwa", "aln", genome_db, pe1_path ], stdout=pe1_file, stderr=null)
+        subprocess.check_call([ "bwa", "aln", genome_db, pe1_path ], stdout=pe1_file, stderr=stderr_file)
 
     with open(pe2_output, "w") as pe2_file:
-        subprocess.check_call([ "bwa", "aln", genome_db, pe2_path ], stdout=pe2_file, stderr=null)
+        subprocess.check_call([ "bwa", "aln", genome_db, pe2_path ], stdout=pe2_file, stderr=stderr_file)
 
     with open(bwa_output, "w") as bwa_file:
         subprocess.check_call([ "bwa", "sampe",
                                 genome_db,
                                 pe1_output, pe2_output,
-                                pe1_path, pe2_path ], stdout=bwa_file, stderr=null)
+                                pe1_path, pe2_path ], stdout=bwa_file , stderr=stderr_file)
 
     elapsed = time() - start
     print 'Time elapsed for bwa aln/sampe: ', elapsed
@@ -72,14 +73,15 @@ def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path):
     pe1_output = os.path.join(work_dir, "pe1.sai")
     pe2_output = os.path.join(work_dir, "pe2.sai")
     bwa_output = os.path.join(work_dir, "output.sam")
+    stderr_file = open(output_path+'.bwa.1','w')
 
-    null = open("/dev/null")
-    subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=null)
+    #null = open("/dev/null")
+    subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=stderr_file)
     with open(bwa_output, "w") as bwa_file:
         subprocess.check_call([ "bwa", "mem", "-t", threads,
                                 genome_db, pe1_path, pe2_path ],
                               stdout=bwa_file,
-                              stderr=null)
+                              stderr=stderr_file)
 
     elapsed = time() - start
     print 'Time elapsed for bwa mem: ', elapsed
