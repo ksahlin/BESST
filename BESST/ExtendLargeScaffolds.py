@@ -127,8 +127,8 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
         except ZeroDivisionError:
             score = good_link_weight
 
-        #return score, bad_link_weight
-        return good_link_weight - bad_link_weight, bad_link_weight
+        return score, bad_link_weight
+        #return good_link_weight - bad_link_weight, bad_link_weight
         #return good_edges_count - bad_edges_count, bad_link_weight
 
 

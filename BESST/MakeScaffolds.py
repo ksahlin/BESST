@@ -420,7 +420,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 avg_gap = int(data_observation)
             if avg_gap < 0:
                 #TODO: Eventually implement SW algm to find ML overlap
-                avg_gap = 0
+                avg_gap = 1
 
             pos += int(avg_gap)
             G.remove_node((scaf, side))
@@ -756,6 +756,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         (G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
+        print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         Scaffolds[S.name] = S        #include in scaffold library
         #add the new scaffold object to G_prime

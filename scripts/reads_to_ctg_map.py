@@ -47,10 +47,10 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
     #null = open("/dev/null")
     subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=stderr_file)
     with open(pe1_output, "w") as pe1_file:
-        subprocess.check_call([ "bwa", "aln", genome_db, pe1_path ], stdout=pe1_file, stderr=stderr_file)
+        subprocess.check_call([ "bwa", "aln", "-t 8", genome_db, pe1_path ], stdout=pe1_file, stderr=stderr_file)
 
     with open(pe2_output, "w") as pe2_file:
-        subprocess.check_call([ "bwa", "aln", genome_db, pe2_path ], stdout=pe2_file, stderr=stderr_file)
+        subprocess.check_call([ "bwa", "aln", "-t 8", genome_db, pe2_path ], stdout=pe2_file, stderr=stderr_file)
 
     with open(bwa_output, "w") as bwa_file:
         subprocess.check_call([ "bwa", "sampe",

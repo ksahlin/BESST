@@ -232,7 +232,7 @@ haplotypes.add_argument("-b", dest="haplthreshold", type=int, default=3,
                    Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
                    if -b 3")
 
-haplotypes.add_argument("-g", dest="haplotype", type=int , default=0,
+haplotypes.add_argument("-g", dest="haplotype", action="store_true",
                   help="Haplotype detection function, default = off")
 
 ## other 
