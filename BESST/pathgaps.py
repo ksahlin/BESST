@@ -48,7 +48,18 @@ class Path(object):
         # get positions for when all gaps are 0
         self.update_positions()
 
-        self.observations = observations
+        # let us cheat here! Instead of calculating likeliooods of thousands of
+        # onservations we calculate the ikelihood for them average (mean) of the
+        # observations and weight it with the number of observations
+        obs_dict = {}
+        for c1,c2 in observations:
+            nr_obs = len(observations[(c1,c2)])
+            mean_obs = sum(observations[(c1,c2)])/nr_obs
+            obs_dict[(c1,c2)] = (mean_obs,nr_obs)
+            
+
+        self.observations = obs_dict
+        #print self.observations
 
 
     def get_distance(self,start_index,stop_index):
@@ -66,19 +77,20 @@ class Path(object):
         self.isizes = {}
         for (c1,c2) in self.observations:
             gap = self.ctgs[c2].position - (self.ctgs[c1].position + self.ctgs[c1].length) - (c2-c1) # last thing is an index thing
-            x = map(lambda obs: obs + gap , self.observations[(c1,c2)]) # inferr isizes
+            #x = map(lambda obs: obs[0] + gap , self.observations[(c1,c2)]) # inferr isizes
+            x = self.observations[(c1,c2)][0] + gap
             self.isizes[(c1,c2)] = x
 
     def propose_new_state(self,mean,stddev):
         path_proposed = copy.deepcopy(self) # create a new state
         #(index,gap) = random.choice([(i,gap) for i,gap in enumerate(self.gaps)]) # choose a gap to change
         (c1,c2) = random.choice(self.observations.keys())
-        print 'CHOSEN:', (c1,c2)
-        obs = self.observations[(c1,c2)] # take out observations and
+        #print 'CHOSEN:', (c1,c2)
+        mean_obs = self.observations[(c1,c2)][0] # take out observations and
 
         #obs = self.observations[(index,index+1)] # take out observations and
         exp_mean_over_bp = mean + stddev**2/float(mean+1)
-        mean_obs = sum(obs)/float(len(obs)) # get the mean
+        #mean_obs = sum(obs)/float(len(obs)) # get the mean
         proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
         (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
         avg_suggested_gap = (proposed_distance - total_contig_length)/ c2-c1
@@ -90,8 +102,9 @@ class Path(object):
     def calc_log_likelihood(self,mean,stddev):
         log_likelihood_value = 0
         for (c1,c2) in self.isizes:
-            for isize in self.isizes[(c1,c2)]:
-                log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
+            log_likelihood_value = math.log( normpdf(self.isizes[(c1,c2)],mean,stddev) ) * self.observations[(c1,c2)][1]
+            #for isize in self.isizes[(c1,c2)]:
+            #    log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
             
         return log_likelihood_value
 
@@ -99,7 +112,7 @@ class Path(object):
         path_dict = {}
         for ctg1,ctg2 in zip(self.ctgs[:-1],self.ctgs[1:]):
             path_dict[(ctg1,ctg2)] = ctg2.position - (ctg1.position + ctg1.length) - 1 
-        print path_dict
+        #print path_dict
         return path_dict
 
 
@@ -140,19 +153,19 @@ def position_maximum_likelihood(path, mean,stddev):
             path = suggested_path
             curr_state_count = 1
         else:
-            print 'PATH not taken!'
+            #print 'PATH not taken!'
             curr_state_count += 1
 
             
 
 
         # see if "converged" or not
-        if curr_state_count >= 5:
+        if curr_state_count >= 10:
             break
 
         
         iteration += 1
-        if iteration >= 5:
+        if iteration >= 100:
             break
         
 
@@ -176,10 +189,14 @@ def main(contig_lenghts, observations, mean, stddev):
 
 if __name__ == '__main__':
     contig_lenghts = [3000,500,500,500,3000]
-    observations = {(0,1):[1800,2000], (0,2):[1500,1800,1400,1700], (0,3):[1200,800,1000], 
+    observations_normal = {(0,1):[1800,2000], (0,2):[1500,1800,1400,1700], (0,3):[1200,800,1000], 
                     (1,2):[750,800],(1,3):[600,700], (1,4):[300,600,700],
                     (2,3):[700,750], (2,4):[1400,1570],
                     (3,4):[2000,1750], }
+    observations = {(0,1):[450,500], (0,2):[100,100], 
+                    (1,2):[750,800],(1,3):[600,700],
+                    (2,3):[700,750], (2,4):[400,170],
+                    (3,4):[500,750], }
     mean = 1500
     stddev = 500
     main(contig_lenghts,observations,mean,stddev)
