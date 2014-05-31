@@ -458,7 +458,6 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
 
                 ##################### v1.0.4.5 
                 ## modified improved path gap estimation here!!
-                print 'PAAATH',high_score_path
                 high_score_path_copy = copy.deepcopy(high_score_path)
                 G_ = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
                 G.remove_edge(start, end)
