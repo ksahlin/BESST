@@ -22,6 +22,7 @@
 import sys
 from collections import defaultdict
 import time
+import copy
 
 import networkx as nx
 from networkx import algorithms
@@ -34,6 +35,7 @@ from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 import haplotypes as HR
 import plots
+import pathgaps
 
 
 def constant_large():
@@ -383,42 +385,46 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
 
                 G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         else:
-            #calculate gap to next scaffold
-            sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
-            nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
-            data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
-            mean_obs = sum_obs / float(nr_links)
-            #try:
-            c1_len = Scaffolds[scaf].s_length
-            #except KeyError:
-            #    c1_len=small_scaffolds[scaf].s_length
-            #try:
-            c2_len = Scaffolds[nbr_scaf].s_length
-            #except KeyError:
-            #   c2_len=small_scaffolds[nbr_scaf].s_length
-            #do fancy gap estimation by the bias estimator formula
-            if param.std_dev_ins_size and nr_links >= 5:
-                #pre calculated value in lookup table 
-                if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
-                    #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
-                    try:
-                        avg_gap = dValuesTable[int(round(data_observation, 0))]
-                    except KeyError:
+            if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
+                #calculate gap to next scaffold
+                sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
+                nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
+                data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
+                mean_obs = sum_obs / float(nr_links)
+                #try:
+                c1_len = Scaffolds[scaf].s_length
+                #except KeyError:
+                #    c1_len=small_scaffolds[scaf].s_length
+                #try:
+                c2_len = Scaffolds[nbr_scaf].s_length
+                #except KeyError:
+                #   c2_len=small_scaffolds[nbr_scaf].s_length
+                #do fancy gap estimation by the bias estimator formula
+                if param.std_dev_ins_size and nr_links >= 5:
+                    #pre calculated value in lookup table 
+                    if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
+                        #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
+                        try:
+                            avg_gap = dValuesTable[int(round(data_observation, 0))]
+                        except KeyError:
+                            avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                            #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
+                    #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
+                    elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
                         avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
-                        #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
-                #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
-                elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
-                    avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                    else:
+                        #print 'now', 2 * param.std_dev_ins_size + param.read_len
+                        avg_gap = int(data_observation)
+                    #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                    #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
+                    #contigs contained in other contigs
+                #do naive gap estimation
                 else:
-                    #print 'now', 2 * param.std_dev_ins_size + param.read_len
                     avg_gap = int(data_observation)
-                #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
-                #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
-                #contigs contained in other contigs
-            #do naive gap estimation
             else:
-                avg_gap = int(data_observation)
-            if avg_gap < 0:
+                avg_gap = G[(scaf, side)][(nbr_scaf, nbr_side)]['avg_gap']
+
+            if avg_gap <= 1:
                 #TODO: Eventually implement SW algm to find ML overlap
                 avg_gap = 1
 
@@ -447,38 +453,154 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
             high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
-            if len(high_score_path) > 1:
-                if score >= 0.0:
-                    #loc_count += 1
-                    #remove edge in G to fill in the small scaffolds
-                    G.remove_edge(start, end)
-                    #add small scaffolds to G
-                    for i in range(0, len(high_score_path) - 1):
-                        nr_lin = G_prime[high_score_path[i]][high_score_path[i + 1]]['nr_links']
-                        try:
-                            total_dist = G_prime[high_score_path[i]][high_score_path[i + 1]]['obs']
-                            G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin, obs=total_dist)
-                        except KeyError:
-                            G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin)
-                    #remove the small contigs from G_prime
-                    G_prime.remove_nodes_from(high_score_path[1:-1])
-                    # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
-                    small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
-                    for item in small_scafs:
-                        scaf_obj = small_scaffolds[item[0]]
-                        Scaffolds[item[0]] = scaf_obj
-                        cont_objects = scaf_obj.contigs
-                        for obj_ in cont_objects:
-                            ctg_name = obj_.name
-                            Contigs[ctg_name] = obj_
-                            del small_contigs[ctg_name]
-                        del small_scaffolds[item[0]]
+
+            if high_score_path and score >= 0.0:
+                print 'PAAATH',high_score_path
+                high_score_path_copy = copy.deepcopy(high_score_path)
+                G_ = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
+                print G_.edges(data=True)
+
+                ## modified
+                G.remove_edge(start, end)
+                G.add_edges_from(G_.edges(data=True))
+                G_prime.remove_nodes_from(high_score_path[1:-1])
+                # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
+                small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
+                for item in small_scafs:
+                    scaf_obj = small_scaffolds[item[0]]
+                    Scaffolds[item[0]] = scaf_obj
+                    cont_objects = scaf_obj.contigs
+                    for obj_ in cont_objects:
+                        ctg_name = obj_.name
+                        Contigs[ctg_name] = obj_
+                        del small_contigs[ctg_name]
+                    del small_scaffolds[item[0]]
+                #sys.exit()
+                #############
+
+
+
+                # #loc_count += 1
+                # #remove edge in G to fill in the small scaffolds
+                # G.remove_edge(start, end)
+                # #add small scaffolds to G
+                # for i in range(0, len(high_score_path) - 1):
+                #     nr_lin = G_prime[high_score_path[i]][high_score_path[i + 1]]['nr_links']
+                #     try:
+                #         total_dist = G_prime[high_score_path[i]][high_score_path[i + 1]]['obs']
+                #         G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin, obs=total_dist)
+                #     except KeyError:
+                #         G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin)
+                # #remove the small contigs from G_prime
+                # G_prime.remove_nodes_from(high_score_path[1:-1])
+                # # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
+                # small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
+                # for item in small_scafs:
+                #     scaf_obj = small_scaffolds[item[0]]
+                #     Scaffolds[item[0]] = scaf_obj
+                #     cont_objects = scaf_obj.contigs
+                #     for obj_ in cont_objects:
+                #         ctg_name = obj_.name
+                #         Contigs[ctg_name] = obj_
+                #         del small_contigs[ctg_name]
+                #     del small_scaffolds[item[0]]
 
     ####################################################################
     return()
 
 
 
+def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
+    ## ACCURATE GAP EST HERE
+
+    # print G_prime.subgraph(path).edges(data=True)
+    sub_graph = G_prime.subgraph(path)
+    print G_prime.subgraph(path).edges(data=True)
+    sub_graph_reduced = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] in sub_graph[x[0]][x[1]] , sub_graph.edges())
+
+    # for c1,c2 in sub_graph_reduced:
+    #     try:
+    #         sub_graph[c1][c2][c1[0]]
+    #     except KeyError:
+
+
+    #print sub_graph[(9,'L')][(23,'L')][9]
+    #print sub_graph_reduced
+    #rint  Scaffolds[9].s_length, Scaffolds[117].s_length, [x.length for x in Scaffolds[117].contigs]
+    observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
+    sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
+    for c1,c2 in sub_graph_small_to_large_ctgs:
+        #print c1,c2
+        #print 'lool', [sub_graph[c1][c2]['obs']/ float(sub_graph[c1][c2]['nr_links'])]*sub_graph[c1][c2]['nr_links']
+        print ' obs:',sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']
+        observations[(c1,c2)] = [sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
+    #print observations
+    print path
+    contigs_to_indexes = {}
+    indexes_to_contigs = {}
+    index = 0
+    for ctg in path:
+        if ctg[0] in contigs_to_indexes:
+            continue
+        else:
+            contigs_to_indexes[ctg[0]] = index
+            indexes_to_contigs[index] =  ctg[0]
+
+            index += 1
+
+    contig_lengths = []
+    for ctg in contigs_to_indexes:
+        try:
+            contig_lengths.append((contigs_to_indexes[ctg], Scaffolds[ctg].s_length))
+        except KeyError:
+            contig_lengths.append((contigs_to_indexes[ctg], small_scaffolds[ctg].s_length))
+
+    #contig_lengths2 = map(lambda x: (contigs_to_indexes[x], Scaffolds[x].s_length), contigs_to_indexes) 
+
+    #print contig_lengths
+    ctg_lengths_sorted = map(lambda x: x[1], sorted(contig_lengths, key=lambda x: x[0]))
+    print ctg_lengths_sorted
+    index_observations = {}
+    for c1,c2 in observations:
+        i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
+        index_observations[(i1,i2)] = observations[(c1,c2)]
+        #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
+    #observations =  map(lambda x: (contigs_to_indexes[x[0][0]], contigs_to_indexes[x[1][0]]) = observations[x], observations)   
+
+    #print index_observations
+    #print ctg_lengths_sorted
+    #print index_observations
+    result_path = pathgaps.main(ctg_lengths_sorted, index_observations, param.mean_ins_size, param.std_dev_ins_size)
+
+    path_dict_index = result_path.make_path_dict_for_besst()
+    path_dict = map(lambda x: (indexes_to_contigs[x[0].index],indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)
+    print path_dict
+    # for ctg in result_path.ctgs:
+    #     contig = indexes_to_contigs[ctg.index]
+    #     ctg.length
+    #     ctg.position
+
+    G_ = nx.Graph()
+    path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
+    path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
+    G_.add_edges_from(zip(path[::1], path[1::]))
+
+    print G_.edges()
+    for c1,c2,gap in path_dict:
+        if (c2,'L') in G_[(c1,'L')]:
+            G_[(c1,'L')][(c2,'L')]['avg_gap'] = gap 
+        elif (c2,'R') in G_[(c1,'L')]:
+            G_[(c1,'L')][(c2,'R')]['avg_gap'] = gap
+        elif (c2,'L') in G_[(c1,'R')]:
+            G_[(c1,'R')][(c2,'L')]['avg_gap'] = gap
+        elif (c2,'R') in G_[(c1,'R')]:
+            G_[(c1,'R')][(c2,'R')]['avg_gap'] = gap
+        else:
+            print 'Could not find edge!'
+            sys.exit()
+    print G_.edges(data=True)
+
+    return(G_)
 
 
 def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information):
@@ -679,24 +801,21 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         ## in another path, we need to update "Scaffolds" structure here along as we go in order for
         ## the above dublette checking function to work
 
-        #make the path a small linear graph
-        G_ = nx.Graph()
-#        if path[0][1] == 'L':
-#            path.insert(0,(path[0][0],'R')) 
-#        else: 
-#            path.insert(0,(path[0][0],'L'))
-#        if path[len(path)-1][1] == 'L':
-#            path.insert(len(path),(path[len(path)-1][0],'R'))  
-#        else:
-#            path.insert(len(path),(path[len(path)-1][0],'L'))
 
-        path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
-        path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
+        G_ = estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param)
 
+
+        # #make the path a small linear graph
+        # G_ = nx.Graph()
+        # path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
+        # path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
+        # G_.add_edges_from(zip(path[::1], path[1::]))
 
         start_end_node_update_storage[path[0]] = 0
         start_end_node_update_storage[path[-1]] = 0
-        G_.add_edges_from(zip(path[::1], path[1::]))
+
+
+        print 'DATA for G_',G_.edges(data=True)
 
         for edge in G_.edges():
             try:

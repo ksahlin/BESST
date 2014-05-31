@@ -21,6 +21,7 @@
 
 import copy
 import math
+import random
 
 from mathstats.normaldist.normal import normpdf
 
@@ -50,14 +51,16 @@ class Path(object):
         self.observations = observations
 
 
+    def get_distance(self,start_index,stop_index):
+        total_contig_length = sum(map(lambda x: x.length ,filter(lambda x: start_index <= x.index < stop_index, self.ctgs) ))
+        total_gap_length = sum(self.gaps[start_index:stop_index])
+        index_adjusting = len(self.gaps[start_index:stop_index]) # one extra bp shifted each time
+        return (total_contig_length, total_gap_length, index_adjusting)
 
     def update_positions(self):
         for ctg in self.ctgs:
             index = ctg.index
-            total_contig_length = sum(map(lambda x: x.length ,filter(lambda x: 0 <= x.index < index, self.ctgs) ))
-            total_gap_length = sum(self.gaps[0:index])
-            index_adjusting = len(self.gaps[0:index]) # one extra bp shifted each time
-            ctg.position = total_contig_length + total_gap_length + index_adjusting
+            ctg.position = sum(self.get_distance(0,index))
 
     def get_inferred_isizes(self):
         self.isizes = {}
@@ -65,7 +68,24 @@ class Path(object):
             gap = self.ctgs[c2].position - (self.ctgs[c1].position + self.ctgs[c1].length) - (c2-c1) # last thing is an index thing
             x = map(lambda obs: obs + gap , self.observations[(c1,c2)]) # inferr isizes
             self.isizes[(c1,c2)] = x
-        print self.isizes
+
+    def propose_new_state(self,mean,stddev):
+        path_proposed = copy.deepcopy(self) # create a new state
+        #(index,gap) = random.choice([(i,gap) for i,gap in enumerate(self.gaps)]) # choose a gap to change
+        (c1,c2) = random.choice(self.observations.keys())
+        print 'CHOSEN:', (c1,c2)
+        obs = self.observations[(c1,c2)] # take out observations and
+
+        #obs = self.observations[(index,index+1)] # take out observations and
+        exp_mean_over_bp = mean + stddev**2/float(mean+1)
+        mean_obs = sum(obs)/float(len(obs)) # get the mean
+        proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
+        (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
+        avg_suggested_gap = (proposed_distance - total_contig_length)/ c2-c1
+        for index in range(c1,c2):
+            path_proposed.gaps[index] = avg_suggested_gap
+        #path_proposed.gaps[index] = proposed_distance
+        return path_proposed
 
     def calc_log_likelihood(self,mean,stddev):
         log_likelihood_value = 0
@@ -74,6 +94,15 @@ class Path(object):
                 log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
             
         return log_likelihood_value
+
+    def make_path_dict_for_besst(self):
+        path_dict = {}
+        for ctg1,ctg2 in zip(self.ctgs[:-1],self.ctgs[1:]):
+            path_dict[(ctg1,ctg2)] = ctg2.position - (ctg1.position + ctg1.length) - 1 
+        print path_dict
+        return path_dict
+
+
     def __str__(self):
         string= ''
         for ctg in self.ctgs:
@@ -88,55 +117,49 @@ def position_maximum_likelihood(path, mean,stddev):
     iteration = 0 
     curr_state_count = 1 # how many iterations we have remained in state
     while True:
-        
-        print path
+        #print 'CURRENT PATH:'
+        #print path
+        #print 'curr highest likelihood: ', path.calc_log_likelihood(mean,stddev)
 
         # change gaps
             # MCMC based sampling:
             # take the most deviant mean insert size observation (x_hat = o_hat + current_gap)
             # given the current positioning. 
             # Adjust the current_gap to new_gap so that o_hat + new_gap = mean
-        suggested_path = copy.deepcopy(path)
-        suggested_path.gaps = [100,100,100]
+
+        suggested_path = path.propose_new_state(mean,stddev)
         suggested_path.update_positions()
         suggested_path.get_inferred_isizes()
-        print suggested_path
         suggested_path.calc_log_likelihood(mean,stddev)
 
+        #print 'SUGGESTED PATH:'
+        #print suggested_path
+        #print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
         # compare likelihood values ML value for path
         if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
             path = suggested_path
             curr_state_count = 1
         else:
+            print 'PATH not taken!'
             curr_state_count += 1
 
             
-        print 'curr highest likelihood: ', path.calc_log_likelihood(mean,stddev)
 
 
         # see if "converged" or not
-        if curr_state_count >= 20:
+        if curr_state_count >= 5:
             break
 
         
-
-
         iteration += 1
-        if iteration >=3:
+        if iteration >= 5:
             break
         
-        # update new positions
-
-        # get all insert sizes given new positions
-
-
-        
-
-
-
-    
 
     return path
+        
+
+
 
 def main(contig_lenghts, observations, mean, stddev):
     """
@@ -147,12 +170,16 @@ def main(contig_lenghts, observations, mean, stddev):
 
     path = Path(contig_lenghts,observations)
 
-    position_maximum_likelihood(path,mean,stddev)
+    ML_path = position_maximum_likelihood(path,mean,stddev)
+    return ML_path
 
 
 if __name__ == '__main__':
-    contig_lenghts = [3000,500,500,3000]
-    observations = {(0,1):[1800,2000], (0,2):[1500,1800,1400], (0,3):[500,800,1000], (1,2):[750,800],(1,3):[1400,1700],(2,3):[1700,1800,1400]}
+    contig_lenghts = [3000,500,500,500,3000]
+    observations = {(0,1):[1800,2000], (0,2):[1500,1800,1400,1700], (0,3):[1200,800,1000], 
+                    (1,2):[750,800],(1,3):[600,700], (1,4):[300,600,700],
+                    (2,3):[700,750], (2,4):[1400,1570],
+                    (3,4):[2000,1750], }
     mean = 1500
     stddev = 500
     main(contig_lenghts,observations,mean,stddev)
