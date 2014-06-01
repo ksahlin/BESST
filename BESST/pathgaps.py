@@ -27,7 +27,7 @@ from mathstats.normaldist.normal import normpdf
 
 
 class Contig(object):
-    """docstring for Contig"""
+    """Container with contig information for a contig in a path"""
     def __init__(self, index, length):
         super(Contig, self).__init__()
         self.index = index
@@ -36,7 +36,15 @@ class Contig(object):
         
 
 class Path(object):
-    """docstring for Path"""
+    """Contains all information of a path. This is basically a supgraph of the 
+    Scaffold graph in BESST contianing all contigs in a path that has high score 
+    and is going to be made into a scaffold. 
+
+    Path is an object with methods for calculating likelihood of a path given link observations.
+    Due to computational requiremants, we don't calculate the true likelihoos all paths usually have thousands
+    of links. Instead, we take the average link obervation between all contigs. This will not give true ML 
+    estimates but speeds up calculation with thousands of x order. In practice, using average link obervation 
+    For ML estimation will give a fairly good prediction. For this cheat, see comment approx 15 lines below.  """
     def __init__(self, ctg_lengths, observations):
         super(Path, self).__init__()
         self.ctgs = []
@@ -81,28 +89,69 @@ class Path(object):
             x = self.observations[(c1,c2)][0] + gap
             self.isizes[(c1,c2)] = x
 
-    def propose_new_state(self,mean,stddev):
+    def propose_new_state_MCMC(self,mean,stddev):
+        """
+            This function proposes (by random sampling) an edge between two contigs c1 and c2 in the contig path
+            that we will change the gap size for.
+            Currently, we change the gap to expected_mean_obs - mean_observation, e.g. a
+            semi-naive estimation. More variablity in the proposal function is required for coming 
+            closer to true ML gap sizes in a path. This can be achieved for example by, not only 
+            sampling the edge, but also sample the gap with e.g. a N(expected_mean_obs - mean_observation, sigma/sqrt(nr_obs))
+            distribution.
+
+            However, getting high accuracy in gap for all contigs in a path can require many samples in the MCMC chain and we have
+            many paths to estimate. Also, in practice ML_gap_naive is often a decent proposal.
+
+        """
         path_proposed = copy.deepcopy(self) # create a new state
         #(index,gap) = random.choice([(i,gap) for i,gap in enumerate(self.gaps)]) # choose a gap to change
         (c1,c2) = random.choice(self.observations.keys())
-        #print 'CHOSEN:', (c1,c2)
         mean_obs = self.observations[(c1,c2)][0] # take out observations and
 
         #obs = self.observations[(index,index+1)] # take out observations and
         exp_mean_over_bp = mean + stddev**2/float(mean+1)
         #mean_obs = sum(obs)/float(len(obs)) # get the mean
         proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
+        print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
         (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
-        avg_suggested_gap = (proposed_distance - total_contig_length)/ c2-c1
+        print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
+        avg_suggested_gap = (proposed_distance - total_contig_length) / (c2-c1)
+        #print avg_suggested_gap, proposed_distance, total_contig_length, c2-c1
         for index in range(c1,c2):
             path_proposed.gaps[index] = avg_suggested_gap
         #path_proposed.gaps[index] = proposed_distance
         return path_proposed
 
+    def new_state_for_ordered_search(self,start_contig,stop_contig,mean,stddev):
+        """
+            This function gives a new state between two contigs c1 and c2 in the contig path
+            that we will change the gap size for.
+            Currently, we change the gap to expected_mean_obs - mean_observation, e.g. a
+            semi-naive estimation. More variablity in gap prediction could be acheved in the 
+            same way as described for function propose_new_state_MCMC().
+             
+        """
+        new_path = copy.deepcopy(self) # create a new state
+        (c1,c2) = (start_contig,stop_contig)
+        mean_obs = self.observations[(c1,c2)][0] # take out observations and
+        exp_mean_over_bp = mean + stddev**2/float(mean+1)
+        proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
+
+        print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
+        (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
+        print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
+        avg_suggested_gap = (proposed_distance - total_contig_length) / (c2-c1)
+        #print avg_suggested_gap, proposed_distance, total_contig_length, c2-c1
+        for index in range(c1,c2):
+            new_path.gaps[index] = avg_suggested_gap
+        #new_path.gaps[index] = proposed_distance
+        return new_path
+
+
     def calc_log_likelihood(self,mean,stddev):
         log_likelihood_value = 0
         for (c1,c2) in self.isizes:
-            log_likelihood_value = math.log( normpdf(self.isizes[(c1,c2)],mean,stddev) ) * self.observations[(c1,c2)][1]
+            log_likelihood_value += math.log( normpdf(self.isizes[(c1,c2)],mean,stddev) ) * self.observations[(c1,c2)][1]
             #for isize in self.isizes[(c1,c2)]:
             #    log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
             
@@ -124,15 +173,15 @@ class Path(object):
         return string
 
 
-def position_maximum_likelihood(path, mean,stddev):
+def MCMC(path, mean,stddev):
     
     path.get_inferred_isizes()
     iteration = 0 
     curr_state_count = 1 # how many iterations we have remained in state
     while True:
-        #print 'CURRENT PATH:'
-        #print path
-        #print 'curr highest likelihood: ', path.calc_log_likelihood(mean,stddev)
+        print 'CURRENT PATH:'
+        print path
+        print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)
 
         # change gaps
             # MCMC based sampling:
@@ -140,20 +189,21 @@ def position_maximum_likelihood(path, mean,stddev):
             # given the current positioning. 
             # Adjust the current_gap to new_gap so that o_hat + new_gap = mean
 
-        suggested_path = path.propose_new_state(mean,stddev)
+        suggested_path = path.propose_new_state_MCMC(mean,stddev)
         suggested_path.update_positions()
         suggested_path.get_inferred_isizes()
         suggested_path.calc_log_likelihood(mean,stddev)
 
-        #print 'SUGGESTED PATH:'
-        #print suggested_path
-        #print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
+        print 'SUGGESTED PATH:'
+        print suggested_path
+        print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
         # compare likelihood values ML value for path
         if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
+            print "SWITCHED PATH TO SUGGESTED PATH!!"
             path = suggested_path
             curr_state_count = 1
         else:
-            #print 'PATH not taken!'
+            print 'PATH not taken!'
             curr_state_count += 1
 
             
@@ -167,12 +217,39 @@ def position_maximum_likelihood(path, mean,stddev):
         iteration += 1
         if iteration >= 100:
             break
-        
+      
+    print 'FINAL PATH:'
+    print path
+    print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)  
 
     return path
         
+def ordered_search(path, mean,stddev):
 
+    path.get_inferred_isizes()
 
+    for c1 in range(len(path.ctgs)-1):
+        for c2 in range(c1+1,len(path.ctgs)):
+            if (c1,c2) in path.observations:
+                suggested_path = path.new_state_for_ordered_search(c1,c2,mean,stddev)
+                suggested_path.update_positions()
+                suggested_path.get_inferred_isizes()
+                suggested_path.calc_log_likelihood(mean,stddev)
+
+                if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
+                    print "SWITCHED PATH TO SUGGESTED PATH!!"
+                    path = suggested_path
+                    print path
+                else:
+                    print 'PATH not taken!'
+            else:
+                continue
+      
+    # print 'FINAL PATH:'
+    # print path
+    # print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)  
+
+    return path
 
 def main(contig_lenghts, observations, mean, stddev):
     """
@@ -183,7 +260,15 @@ def main(contig_lenghts, observations, mean, stddev):
 
     path = Path(contig_lenghts,observations)
 
-    ML_path = position_maximum_likelihood(path,mean,stddev)
+    #ML_path = MCMC(path,mean,stddev)
+    ML_path = ordered_search(path,mean,stddev)
+
+    # print 'MCMC path:'
+    # print ML_path
+    # print 'MCMC path likelihood:',ML_path.calc_log_likelihood(mean,stddev)
+    # print 'Ordered search path:'
+    # print ML_path
+    # print 'Ordered search likelihood:',ML_path.calc_log_likelihood(mean,stddev)
     return ML_path
 
 
@@ -193,10 +278,25 @@ if __name__ == '__main__':
                     (1,2):[750,800],(1,3):[600,700], (1,4):[300,600,700],
                     (2,3):[700,750], (2,4):[1400,1570],
                     (3,4):[2000,1750], }
-    observations = {(0,1):[450,500], (0,2):[100,100], 
-                    (1,2):[750,800],(1,3):[600,700],
-                    (2,3):[700,750], (2,4):[400,170],
-                    (3,4):[500,750], }
+
+    observations_linear = {(0,1):[450,500],  (1,2):[750,800],
+                    (2,3):[700,750], (3,4):[400,170]}
+
+    # The imortance of support:
+    # one edge with a lot of observatins contradicting the others
+    observations_matter = {(0,1):[450,500],  (1,2):[750,800],
+                    (2,3):[700,750], (3,4):[400,170],
+                    (0,4):[700]*30 }
+
+    # long contig, 500bp gap, 3*short_contigs, long contig
+    observations = {(0,1):[1450,1300,1200,1570], (0,2):[700,800,1000], (0,3):[250,300],
+                    (1,2):[900],(1,3):[900,800], (1,4):[800,900,1000],
+                    (2,3):[900], (2,4):[900,800],
+                    (3,4):[1500,1750,1350,1900,1950] }
+
+    # negative gaps test case here:
+
+
     mean = 1500
     stddev = 500
     main(contig_lenghts,observations,mean,stddev)
