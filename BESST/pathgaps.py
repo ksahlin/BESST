@@ -137,9 +137,9 @@ class Path(object):
         exp_mean_over_bp = mean + stddev**2/float(mean+1)
         proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
 
-        print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
+        #print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
         (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
-        print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
+        #print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
         avg_suggested_gap = (proposed_distance - total_contig_length) / (c2-c1)
         #print avg_suggested_gap, proposed_distance, total_contig_length, c2-c1
         for index in range(c1,c2):
@@ -237,11 +237,12 @@ def ordered_search(path, mean,stddev):
                 suggested_path.calc_log_likelihood(mean,stddev)
 
                 if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
-                    print "SWITCHED PATH TO SUGGESTED PATH!!"
+                    #print "SWITCHED PATH TO SUGGESTED PATH!!"
                     path = suggested_path
-                    print path
+                    #print path
                 else:
-                    print 'PATH not taken!'
+                    pass
+                    #print 'PATH not taken!'
             else:
                 continue
       
