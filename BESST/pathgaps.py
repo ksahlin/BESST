@@ -23,6 +23,7 @@ import copy
 import math
 import random
 
+from pulp import *
 from mathstats.normaldist.normal import normpdf
 
 
@@ -96,7 +97,7 @@ class Path(object):
             Currently, we change the gap to expected_mean_obs - mean_observation, e.g. a
             semi-naive estimation. More variablity in the proposal function is required for coming 
             closer to true ML gap sizes in a path. This can be achieved for example by, not only 
-            sampling the edge, but also sample the gap with e.g. a N(expected_mean_obs - mean_observation, sigma/sqrt(nr_obs))
+            sampling the edge, but also sample the gap with e.g. a N(expected_mean_obs - mean_observation, stddev/sqrt(nr_obs))
             distribution.
 
             However, getting high accuracy in gap for all contigs in a path can require many samples in the MCMC chain and we have
@@ -150,8 +151,9 @@ class Path(object):
 
     def calc_log_likelihood(self,mean,stddev):
         log_likelihood_value = 0
+        exp_mean_over_bp = mean + stddev**2/float(mean+1)
         for (c1,c2) in self.isizes:
-            log_likelihood_value += math.log( normpdf(self.isizes[(c1,c2)],mean,stddev) ) * self.observations[(c1,c2)][1]
+            log_likelihood_value += math.log( normpdf(self.isizes[(c1,c2)],exp_mean_over_bp, stddev) ) * self.observations[(c1,c2)][1]
             #for isize in self.isizes[(c1,c2)]:
             #    log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
             
@@ -164,6 +166,52 @@ class Path(object):
         #print path_dict
         return path_dict
 
+
+    def LP_solve_gaps(self,mean,stddev):
+        exp_mean_over_bp = mean + stddev**2/float(mean+1)
+
+        gap_vars= []
+        for i in range(len(self.ctgs)-1):
+            gap_vars.append( LpVariable(str(i), None, exp_mean_over_bp + 4*stddev, cat='Integer'))
+
+        # help variables because objective function is an absolute value
+        help_variables = {}
+        for (i,j) in self.observations:
+            help_variables[(i,j)] = LpVariable("z_"+str(i)+'_'+str(j), None, None,cat='Integer')
+
+
+        problem = LpProblem("PathProblem",LpMinimize)
+
+        problem += lpSum( [ help_variables[(i,j)]*self.observations[(i,j)][1] for (i,j) in self.observations] ), "objective"
+
+
+        # adding constraints induced by the absolute value of objective function
+        for (i,j) in self.observations:
+            problem += exp_mean_over_bp - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
+
+        for (i,j) in self.observations:
+            problem += - exp_mean_over_bp + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
+
+
+        # adding distance constraints
+
+        for (i,j) in self.observations:
+            problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= exp_mean_over_bp +4*stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
+
+        for (i,j) in self.observations:
+            problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - exp_mean_over_bp +4*stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
+
+        print problem.solve()
+
+        optimal_gap_solution = [0]*(len(self.ctgs) -1)
+        for v in problem.variables():
+            try:
+                optimal_gap_solution[int( v.name)] = v.varValue
+                print v.name, "=", v.varValue
+            except ValueError:
+                pass
+
+        return optimal_gap_solution
 
     def __str__(self):
         string= ''
@@ -179,9 +227,9 @@ def MCMC(path, mean,stddev):
     iteration = 0 
     curr_state_count = 1 # how many iterations we have remained in state
     while True:
-        print 'CURRENT PATH:'
-        print path
-        print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)
+        # print 'CURRENT PATH:'
+        # print path
+        # print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)
 
         # change gaps
             # MCMC based sampling:
@@ -194,16 +242,16 @@ def MCMC(path, mean,stddev):
         suggested_path.get_inferred_isizes()
         suggested_path.calc_log_likelihood(mean,stddev)
 
-        print 'SUGGESTED PATH:'
-        print suggested_path
-        print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
+        # print 'SUGGESTED PATH:'
+        # print suggested_path
+        # print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
         # compare likelihood values ML value for path
         if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
-            print "SWITCHED PATH TO SUGGESTED PATH!!"
+            #print "SWITCHED PATH TO SUGGESTED PATH!!"
             path = suggested_path
             curr_state_count = 1
         else:
-            print 'PATH not taken!'
+            #print 'PATH not taken!'
             curr_state_count += 1
 
             
@@ -218,9 +266,9 @@ def MCMC(path, mean,stddev):
         if iteration >= 100:
             break
       
-    print 'FINAL PATH:'
-    print path
-    print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)  
+    # print 'FINAL PATH:'
+    # print path
+    # print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)  
 
     return path
         
@@ -261,8 +309,12 @@ def main(contig_lenghts, observations, mean, stddev):
 
     path = Path(contig_lenghts,observations)
 
-    #ML_path = MCMC(path,mean,stddev)
-    ML_path = ordered_search(path,mean,stddev)
+    # ML_path = MCMC(path,mean,stddev)
+    # ML_path = ordered_search(path,mean,stddev)
+
+    optimal_LP_gaps = path.LP_solve_gaps(mean,stddev)
+    path.gaps = optimal_LP_gaps
+    path.update_positions()
 
     # print 'MCMC path:'
     # print ML_path
@@ -270,8 +322,9 @@ def main(contig_lenghts, observations, mean, stddev):
     # print 'Ordered search path:'
     # print ML_path
     # print 'Ordered search likelihood:',ML_path.calc_log_likelihood(mean,stddev)
-    return ML_path
+    # return ML_path
 
+    return path
 
 if __name__ == '__main__':
     contig_lenghts = [3000,500,500,500,3000]
