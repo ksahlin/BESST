@@ -25,6 +25,7 @@ import random
 
 from pulp import *
 from mathstats.normaldist.normal import normpdf
+from mathstats.normaldist.truncatedskewed import param_est as GC
 
 
 class Contig(object):
@@ -46,8 +47,11 @@ class Path(object):
     of links. Instead, we take the average link obervation between all contigs. This will not give true ML 
     estimates but speeds up calculation with thousands of x order. In practice, using average link obervation 
     For ML estimation will give a fairly good prediction. For this cheat, see comment approx 15 lines below.  """
-    def __init__(self, ctg_lengths, observations):
+    def __init__(self, ctg_lengths, observations, mean, stddev,read_len):
         super(Path, self).__init__()
+        self.mean = mean
+        self.stddev = stddev
+        self.read_len = read_len
         self.ctgs = []
         for i,length in enumerate(ctg_lengths):
             self.ctgs.append(Contig(i, length))
@@ -84,11 +88,20 @@ class Path(object):
 
     def get_inferred_isizes(self):
         self.isizes = {}
+
         for (c1,c2) in self.observations:
             gap = self.ctgs[c2].position - (self.ctgs[c1].position + self.ctgs[c1].length) - (c2-c1) # last thing is an index thing
             #x = map(lambda obs: obs[0] + gap , self.observations[(c1,c2)]) # inferr isizes
             x = self.observations[(c1,c2)][0] + gap
             self.isizes[(c1,c2)] = x
+
+    def get_GapEst_isizes(self):
+        self.gapest_predictions = {}
+        for (i,j) in self.observations:
+            mean_obs = self.observations[(i,j)][0]
+            self.gapest_predictions[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+            #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+        
 
     def propose_new_state_MCMC(self,mean,stddev):
         """
@@ -159,6 +172,17 @@ class Path(object):
             
         return log_likelihood_value
 
+    def calc_dist_objective(self):
+        objective_value = 0
+        self.get_GapEst_isizes()
+        for (c1,c2) in self.isizes:
+
+            objective_value += abs(self.gapest_predictions[(c1,c2)] - self.isizes[(c1,c2)]) * self.observations[(c1,c2)][1]
+            #for isize in self.isizes[(c1,c2)]:
+            #    objective_value += math.log( normpdf(isize,mean,stddev) )
+            
+        return objective_value
+
     def make_path_dict_for_besst(self):
         path_dict = {}
         for ctg1,ctg2 in zip(self.ctgs[:-1],self.ctgs[1:]):
@@ -167,12 +191,23 @@ class Path(object):
         return path_dict
 
 
-    def LP_solve_gaps(self,mean,stddev):
-        exp_mean_over_bp = mean + stddev**2/float(mean+1)
+    def LP_solve_gaps(self):
+        exp_means_gapest = {}
+        for (i,j) in self.observations:
+            mean_obs = self.observations[(i,j)][0]
+            exp_means_gapest[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+            #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+        
+        print exp_means_gapest
+
+        #exp_mean_over_bp = self.mean + self.stddev**2/float(self.mean+1)
+
+        #calculate individual exp_mean over each edge given observation with gapest??
+
 
         gap_vars= []
         for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), None, exp_mean_over_bp + 4*stddev, cat='Integer'))
+            gap_vars.append( LpVariable(str(i), None, self.mean + 4*self.stddev, cat='Integer'))
 
         # help variables because objective function is an absolute value
         help_variables = {}
@@ -187,21 +222,32 @@ class Path(object):
 
         # adding constraints induced by the absolute value of objective function
         for (i,j) in self.observations:
-            problem += exp_mean_over_bp - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
+            problem += exp_means_gapest[(i,j)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
 
         for (i,j) in self.observations:
-            problem += - exp_mean_over_bp + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
+            problem += - exp_means_gapest[(i,j)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
 
 
         # adding distance constraints
 
         for (i,j) in self.observations:
-            problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= exp_mean_over_bp +4*stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
+            problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= self.mean +4*self.stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
 
         for (i,j) in self.observations:
-            problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - exp_mean_over_bp +4*stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
+            problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
 
-        print problem.solve()
+        try:
+            print problem.solve()
+        except : #PulpSolverError:
+            print 'Could not solve LP, printing instance:'
+            print 'Objective:'
+            print problem.objective
+            print 'Constraints:'
+            print problem.constraints
+
+            print 'Solving with ordered_search instead'
+            path = ordered_search(self)
+            return path.gaps
 
         optimal_gap_solution = [0]*(len(self.ctgs) -1)
         for v in problem.variables():
@@ -272,19 +318,18 @@ def MCMC(path, mean,stddev):
 
     return path
         
-def ordered_search(path, mean,stddev):
+def ordered_search(path):
 
     path.get_inferred_isizes()
 
     for c1 in range(len(path.ctgs)-1):
         for c2 in range(c1+1,len(path.ctgs)):
             if (c1,c2) in path.observations:
-                suggested_path = path.new_state_for_ordered_search(c1,c2,mean,stddev)
+                suggested_path = path.new_state_for_ordered_search(c1,c2,path.mean,path.stddev)
                 suggested_path.update_positions()
                 suggested_path.get_inferred_isizes()
-                suggested_path.calc_log_likelihood(mean,stddev)
-
-                if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
+                suggested_path.calc_dist_objective()
+                if suggested_path.calc_dist_objective() < path.calc_dist_objective():
                     #print "SWITCHED PATH TO SUGGESTED PATH!!"
                     path = suggested_path
                     #print path
@@ -300,19 +345,19 @@ def ordered_search(path, mean,stddev):
 
     return path
 
-def main(contig_lenghts, observations, mean, stddev):
+def main(contig_lenghts, observations, mean, stddev, read_len):
     """
     contig_lenghts: Ordered list of integers which is contig lengths (ordered as contigs comes in the path)
     observations:  dictionary oflist of observations, eg for contigs c1,c2,c3
                     we can have [(c1,c2):[23, 33, 21],(c1,c3):[12,14,11],(c2,c3):[11,34,32]]
     """
 
-    path = Path(contig_lenghts,observations)
+    path = Path(contig_lenghts,observations, mean, stddev, read_len)
 
     # ML_path = MCMC(path,mean,stddev)
     # ML_path = ordered_search(path,mean,stddev)
 
-    optimal_LP_gaps = path.LP_solve_gaps(mean,stddev)
+    optimal_LP_gaps = path.LP_solve_gaps()
     path.gaps = optimal_LP_gaps
     path.update_positions()
 
@@ -353,6 +398,7 @@ if __name__ == '__main__':
 
     mean = 1500
     stddev = 500
-    main(contig_lenghts,observations,mean,stddev)
+    read_len = 100
+    main(contig_lenghts,observations,mean,stddev, read_len)
 
 

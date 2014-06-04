@@ -88,6 +88,13 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
         print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
         PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
         print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
+        print >> Information, 'Number of gaps estimated by GapEst-LP module pathgaps in this step is: {0}'.format(param.path_gaps_estimated)
+
+    if param.plots:
+        plots.histogram(param.gap_estimations, param, bins=50, x_label='gap size', y_label='Frequency', title='GapPredictions', nr_obs = len(param.gap_estimations))
+
+ ## TODO: Look if we can use the new pathgaps theory to include these isolated 
+ ## regions of small contigs in the scaffolding
 
 #
 #        for node in G_prime.nodes():
@@ -415,14 +422,17 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                     else:
                         #print 'now', 2 * param.std_dev_ins_size + param.read_len
                         avg_gap = int(data_observation)
+                        param.gap_estimations.append( avg_gap )
                     #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
                     #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
                     #contigs contained in other contigs
                 #do naive gap estimation
                 else:
                     avg_gap = int(data_observation)
+                    param.gap_estimations.append( avg_gap )
             else:
                 avg_gap = G[(scaf, side)][(nbr_scaf, nbr_side)]['avg_gap']
+                param.gap_estimations.append( avg_gap )
 
             if avg_gap <= 1:
                 #TODO: Eventually implement SW algm to find ML overlap
@@ -570,7 +580,10 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
     #print index_observations
     #print ctg_lengths_sorted
     #print index_observations
-    result_path = pathgaps.main(ctg_lengths_sorted, index_observations, param.mean_ins_size, param.std_dev_ins_size)
+    result_path = pathgaps.main(ctg_lengths_sorted, index_observations, param.mean_ins_size, param.std_dev_ins_size, param.read_len)
+
+    param.path_gaps_estimated += len(result_path.gaps)
+
 
     path_dict_index = result_path.make_path_dict_for_besst()
     path_dict = map(lambda x: (indexes_to_contigs[x[0].index],indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)

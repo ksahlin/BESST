@@ -38,7 +38,8 @@ class parameter(object):
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
-                 parameter_development=None, parameter_plots=None, parameter_path_threshold=None):
+                 parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
+                 path_gaps_estimated =0, parameter_gap_estimations = []):
 
         # Library information
         # Contig information
@@ -76,6 +77,9 @@ class parameter(object):
         self.plots = parameter_plots
         self.path_threshold = parameter_path_threshold
 
+        # related to gap distances
+        self.path_gaps_estimated = path_gaps_estimated
+        self.gap_estimations = parameter_gap_estimations
 
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,
