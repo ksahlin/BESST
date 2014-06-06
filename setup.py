@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.0.4.4',
+    version='1.1',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -25,5 +25,6 @@ setup(
     install_requires=['pysam==0.7',
                       'networkx>=1.4',
                       'mathstats',
-                      'scipy>=0.9'],
+                      'scipy>=0.9',
+                      'pulp>=1.4'],
 )

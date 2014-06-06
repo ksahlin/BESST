@@ -90,3 +90,13 @@ V1.0.4.1
 V1.0.4.2
 * Fixed bug in removing 0 score edges i G_prime. Now all edges in G are also removed in G_prime when searching for paths. This is an important fix.
 
+V1.1
+* Gap size estimations in  non linear scaffold regions are now estimated with a LP module toghether with GapEst. Since the theory of gapest (analytic derivation, hence the speed) only works for one gap between two scaffolds, all gaps were previously estimated one by one with GapEst. Now, in nonlinear regions, gaps between all pairs of scaffolds are estimated. These estimations are then given as input in the objective function for an linear programming instance. The onbejtive is to minimize the total distance of a current solution to the LP, given GapEst estimated ones. This will give more robust esitmations in case where short contigs and few links by making use of more information simultaneosly.
+
+* Added a histogram of estimated gap distribution in cas -plots are specified.
+
+* If a gap estiamtion is less than or equal to 0, a single lower case 'n' is output between contigs (changed from a single 'N'). This is changed to try to standardize the output of scaffolders (SSPACE output 'n'). Also after discussion with QUAST (assembly evaluating software) author Alexey to be able to parse scaffold output consistently.
+
+* pulp (Linear programming module for python) is added as required packages
+
+* added parameter --separate_repeats to separate potential repeats (inferred by BESST) into a file "repeats.fa". This was default output for BESST in earlier versions. Now, default output is a single file in each scaffolding step Scaffolds_passX.fa.

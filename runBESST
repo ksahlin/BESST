@@ -22,9 +22,8 @@ import sys
 import os
 import errno
 from time import time
-from optparse import OptionParser
-import optparse
 import argparse
+import shutil
 
 from BESST import errorhandle
 
@@ -37,7 +36,7 @@ def mkdir_p(path):
             pass
         else: raise
 
-def ReadInContigseqs(contigfile):
+def ReadInContigseqs(contigfile,contig_filter_length, Information):
     cont_dict = {}
     k = 0
     temp = ''
@@ -54,6 +53,15 @@ def ReadInContigseqs(contigfile):
         else:
             temp += line.strip()
     cont_dict[accession] = temp
+
+    if contig_filter_length:
+        singled_out = 0
+        for contig in cont_dict.keys():
+            if len(cont_dict[contig]) < contig_filter_length:
+                del cont_dict[contig]
+                singled_out += 1
+        print >> Information, 'Number of contigs discarded from further analysis (with -filter_contigs set to {0}): {1}'.format(contig_filter_length,singled_out)
+
     return(cont_dict)
 
 def main(options):
@@ -88,7 +96,7 @@ def main(options):
     Information = param.information_file
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
-    C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
+    C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
     print 'Number of initial contigs:', len(C_dict)
     if options.haplotype:
         get_haplotype_regions.main(options.output, C_dict, options.kmer, options.mmer, 0.8)
@@ -153,6 +161,15 @@ def main(options):
 
 
         GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
+       
+        if not options.separate_repeats:
+            destination = open("{0}/pass{1}/Scaffolds_pass{1}.fa".format(param.output_directory, str(i+1) ), 'wb')
+            #destination = open(outfile,'wb')
+            shutil.copyfileobj(open("{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
+            shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
+            destination.close()
+            os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
+            os.remove( "{0}/repeats.fa".format(param.output_directory, str(i+1) ) )
 
     ### Calculate stats for last scaffolding step    
     scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]
@@ -165,6 +182,7 @@ def main(options):
 
     elapsed = time() - tot_start
     print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'
+
     print 'Finished\n\n '
 
     return()
@@ -218,6 +236,12 @@ parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
+parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int, default=None,
+                    help="Contigs under this size is discarded from all scaffolding (including pathfinding).\
+                    they are also not included in the resulting scaffold output fasta file and any\
+                    of the other files as well as all statistics. Default: All contigs are included")
+
+
 parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
                   help="The number of iterations performed in breadth first search for placing smaller contigs. ")
 
@@ -262,8 +286,11 @@ other.add_argument("-devel", action="store_true",
 other.add_argument("-plots", action="store_true",
                   help="Plot coverage, histograms of scores e.t.c.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.0.4.2')
+other.add_argument("--separate_repeats", dest="separate_repeats", action="store_true",
+                  help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
+                  not included in the main scaffolding output file with this flag specified.")
 
+other.add_argument('--version', action='version', version='%(prog)s 1.0.4.2')
 
 
 
