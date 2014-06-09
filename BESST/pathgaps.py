@@ -72,7 +72,10 @@ class Path(object):
             
 
         self.observations = obs_dict
-        #print self.observations
+
+        # for c1,c2 in self.observations:
+        #     if self.observations[(c1,c2)][0] > 1500:
+        #         print self.observations
 
 
     def get_distance(self,start_index,stop_index):
@@ -126,9 +129,9 @@ class Path(object):
         exp_mean_over_bp = mean + stddev**2/float(mean+1)
         #mean_obs = sum(obs)/float(len(obs)) # get the mean
         proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
-        print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
+        #print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
         (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
-        print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
+        #print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
         avg_suggested_gap = (proposed_distance - total_contig_length) / (c2-c1)
         #print avg_suggested_gap, proposed_distance, total_contig_length, c2-c1
         for index in range(c1,c2):
@@ -198,7 +201,7 @@ class Path(object):
             exp_means_gapest[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
             #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
-        print exp_means_gapest
+        #print exp_means_gapest
 
         #exp_mean_over_bp = self.mean + self.stddev**2/float(self.mean+1)
 
@@ -237,7 +240,7 @@ class Path(object):
             problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
 
         try:
-            print problem.solve()
+            problem.solve()
         except : #PulpSolverError:
             print 'Could not solve LP, printing instance:'
             print 'Objective:'
@@ -253,7 +256,7 @@ class Path(object):
         for v in problem.variables():
             try:
                 optimal_gap_solution[int( v.name)] = v.varValue
-                print v.name, "=", v.varValue
+                #print v.name, "=", v.varValue
             except ValueError:
                 pass
 
@@ -395,7 +398,7 @@ if __name__ == '__main__':
 
     # negative gaps test case here:
 
-
+ 
     mean = 1500
     stddev = 500
     read_len = 100

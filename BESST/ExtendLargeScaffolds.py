@@ -292,8 +292,10 @@ def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_lengt
 #            print path
         if len(all_paths_sorted_wrt_score) > 0:
             #all_paths_sorted_wrt_score = ExtendScaffolds(all_paths_sorted_wrt_score)
-            return(all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][1], all_paths_sorted_wrt_score[-1][0], all_paths_sorted_wrt_score[-1][3]) #return(all_paths_sorted_wrt_score) #
-    return([], 0, 0, 0)
+            return all_paths_sorted_wrt_score
+            #return(all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][1], all_paths_sorted_wrt_score[-1][0], all_paths_sorted_wrt_score[-1][3]) #return(all_paths_sorted_wrt_score) #
+    return []
+    #return([], 0, 0, 0)
 
 if __name__ == '__main__':
     import Scaffold

@@ -462,18 +462,52 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             data_observation = (nr_links_ * param.mean_ins_size - sum_obs) / float(nr_links_)
             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
-            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
+            #high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
+            all_paths_sorted_wrt_score = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
 
+            if not all_paths_sorted_wrt_score:
+                continue
+
+            # if all_paths_sorted_wrt_score[-1][1] != 0:
+            #     sublist = all_paths_sorted_wrt_score[-1]
+            #     bad_links = sublist[1]
+            #     score = sublist[0]
+            #     path_len = sublist[3]
+            #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+
+            # # for sublist in reversed(all_paths_sorted_wrt_score):
+            # #     path = sublist[2]
+            # #     bad_links = sublist[1]
+            # #     score = sublist[0]
+            # #     path_len = sublist[3]
+            # #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+
+            high_score_path, score = all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][0]
             if high_score_path and score >= 0.0:
 
                 ##################### v1.0.4.5 
                 ## modified improved path gap estimation here!!
+
                 high_score_path_copy = copy.deepcopy(high_score_path)
                 G_ = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
                 G.remove_edge(start, end)
                 G.add_edges_from(G_.edges(data=True))
-                #print G_.edges(data=True)
                 G_prime.remove_nodes_from(high_score_path[1:-1])
+
+                # also remove the edges from inner ends of the large scaffolds so they can't be
+                # involved in creating paths in "between scaffolds"
+
+                G_prime.remove_node(high_score_path[0])
+                G_prime.remove_node(high_score_path[-1])
+                if high_score_path[0][1] == 'L':
+                    G_prime.add_edge(high_score_path[0],(high_score_path[0][0],'R'),nr_links=None)
+                else:
+                    G_prime.add_edge(high_score_path[0],(high_score_path[0][0],'L'),nr_links=None)
+                if high_score_path[-1][1] == 'L':
+                    G_prime.add_edge(high_score_path[-1],(high_score_path[-1][0],'R'),nr_links=None)
+                else:
+                    G_prime.add_edge(high_score_path[-1],(high_score_path[-1][0],'L'),nr_links=None)
+
                 # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
                 small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
                 for item in small_scafs:
