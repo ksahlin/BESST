@@ -489,27 +489,29 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
                 ## modified improved path gap estimation here!!
 
                 high_score_path_copy = copy.deepcopy(high_score_path)
-                G_ = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
+                G_, path = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
+                del path[0]
+                del path[-1]
                 G.remove_edge(start, end)
                 G.add_edges_from(G_.edges(data=True))
-                G_prime.remove_nodes_from(high_score_path[1:-1])
+                G_prime.remove_nodes_from(path[1:-1])
 
                 # also remove the edges from inner ends of the large scaffolds so they can't be
                 # involved in creating paths in "between scaffolds"
 
-                G_prime.remove_node(high_score_path[0])
-                G_prime.remove_node(high_score_path[-1])
-                if high_score_path[0][1] == 'L':
-                    G_prime.add_edge(high_score_path[0],(high_score_path[0][0],'R'),nr_links=None)
+                G_prime.remove_node(path[0])
+                G_prime.remove_node(path[-1])
+                if path[0][1] == 'L':
+                    G_prime.add_edge(path[0],(path[0][0],'R'),nr_links=None)
                 else:
-                    G_prime.add_edge(high_score_path[0],(high_score_path[0][0],'L'),nr_links=None)
-                if high_score_path[-1][1] == 'L':
-                    G_prime.add_edge(high_score_path[-1],(high_score_path[-1][0],'R'),nr_links=None)
+                    G_prime.add_edge(path[0],(path[0][0],'L'),nr_links=None)
+                if path[-1][1] == 'L':
+                    G_prime.add_edge(path[-1],(path[-1][0],'R'),nr_links=None)
                 else:
-                    G_prime.add_edge(high_score_path[-1],(high_score_path[-1][0],'L'),nr_links=None)
+                    G_prime.add_edge(path[-1],(path[-1][0],'L'),nr_links=None)
 
                 # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
-                small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
+                small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
                 for item in small_scafs:
                     scaf_obj = small_scaffolds[item[0]]
                     Scaffolds[item[0]] = scaf_obj
@@ -553,11 +555,19 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
     return()
 
 
+def other_end(node):
+    if node[1] == 'L':
+        return (node[0],'R')
+    elif node[1] == 'R':
+        return (node[0],'L')
+    else:
+        print 'Node is not properly declared (has not right or left end)'
+        sys.exit()
 
-def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
+def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     ## ACCURATE GAP EST HERE
 
-    # print G_prime.subgraph(path).edges(data=True)
+    #print G_prime.subgraph(path).edges(data=True)
     sub_graph = G_prime.subgraph(path)
     #print G_prime.subgraph(path).edges(data=True)
     sub_graph_reduced = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] in sub_graph[x[0]][x[1]] , sub_graph.edges())
@@ -578,12 +588,27 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
         #print 'lool', [sub_graph[c1][c2]['obs']/ float(sub_graph[c1][c2]['nr_links'])]*sub_graph[c1][c2]['nr_links']
         #print ' obs:',sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']
         observations[(c1,c2)] = [sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
-    #print observations
+    
+
+    for c1,c2 in observations:
+        if (other_end(c2),other_end(c1)) in observations:
+            print observations 
     #print path
+
+
+    #########################
+    ##########################
+    ## Now we have all info that we need to send to module for calculating optimal path
+    current_path = copy.deepcopy(path)
+    ## algm here
+
+    ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+
+
     contigs_to_indexes = {}
     indexes_to_contigs = {}
     index = 0
-    for ctg in path:
+    for ctg in current_path:
         if ctg[0] in contigs_to_indexes:
             continue
         else:
@@ -604,8 +629,8 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
     #print contig_lengths
     ctg_lengths_sorted = map(lambda x: x[1], sorted(contig_lengths, key=lambda x: x[0]))
     #print ctg_lengths_sorted
-    index_observations = {}
-    for c1,c2 in observations:
+    index_observations = {}     
+    for c1,c2 in observations:    
         i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
         index_observations[(i1,i2)] = observations[(c1,c2)]
         #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
@@ -614,11 +639,19 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
     #print index_observations
     #print ctg_lengths_sorted
     #print index_observations
+
+    ## 2 Get optimal LP solution for given path order
     result_path = pathgaps.main(ctg_lengths_sorted, index_observations, param.mean_ins_size, param.std_dev_ins_size, param.read_len)
 
+    ## 3 Check of current path is better than previous
+    ## if result_path_score > final_path_score: 
+    final_path = copy.deepcopy(current_path)
+    ## 4 Permute path and redo calculations or decide that we have good enough path
+
+
+    ## 5 Calculate some stats on the path that we have chosen
+
     param.path_gaps_estimated += len(result_path.gaps)
-
-
     path_dict_index = result_path.make_path_dict_for_besst()
     path_dict = map(lambda x: (indexes_to_contigs[x[0].index],indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)
     #print path_dict
@@ -628,9 +661,9 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
     #     ctg.position
 
     G_ = nx.Graph()
-    path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
-    path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
-    G_.add_edges_from(zip(path[::1], path[1::]))
+    final_path.insert(0, (final_path[0][0], 'R')) if final_path[0][1] == 'L' else final_path.insert(0, (final_path[0][0], 'L'))
+    final_path.insert(len(final_path), (final_path[-1][0], 'R'))  if final_path[-1][1] == 'L' else final_path.insert(len(final_path), (final_path[-1][0], 'L'))
+    G_.add_edges_from(zip(final_path[::1], final_path[1::]))
 
     #print G_.edges()
     for c1,c2,gap in path_dict:
@@ -647,7 +680,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param):
             sys.exit()
     #print G_.edges(data=True)
 
-    return(G_)
+    return(G_, final_path)
 
 
 def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information):
@@ -849,7 +882,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         ## the above dublette checking function to work
 
 
-        G_ = estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param)
+        G_, path = estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param)
 
 
         # #make the path a small linear graph

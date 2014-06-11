@@ -22,10 +22,13 @@
 import copy
 import math
 import random
+from collections import Counter
 
 from pulp import *
 from mathstats.normaldist.normal import normpdf
 from mathstats.normaldist.truncatedskewed import param_est as GC
+
+
 
 
 class Contig(object):
@@ -201,12 +204,10 @@ class Path(object):
             exp_means_gapest[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
             #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
-        #print exp_means_gapest
 
         #exp_mean_over_bp = self.mean + self.stddev**2/float(self.mean+1)
 
         #calculate individual exp_mean over each edge given observation with gapest??
-
 
         gap_vars= []
         for i in range(len(self.ctgs)-1):
@@ -217,11 +218,21 @@ class Path(object):
         for (i,j) in self.observations:
             help_variables[(i,j)] = LpVariable("z_"+str(i)+'_'+str(j), None, None,cat='Integer')
 
+        # # variables to penalize negative gaps
+        # penalize_variables = {}
+        # for i in range(len(self.gaps)):
+        #     penalize_variables[i] =  LpVariable("r_"+str(i)+'_'+str(j), None, 0,cat='Integer')
+
+        # PENALIZE_CONSTANT = Counter()
+        # for (i,j) in self.observations:
+        #     for k in range(i,j-1): # all gaps between contig i and j
+        #         # we penalize with the count of all observations spanning over the gap
+        #         PENALIZE_CONSTANT[k] += self.observations[(i,j)][1] # number of observations spanning over the gap 
 
         problem = LpProblem("PathProblem",LpMinimize)
 
-        problem += lpSum( [ help_variables[(i,j)]*self.observations[(i,j)][1] for (i,j) in self.observations] ), "objective"
-
+        problem += lpSum( [ help_variables[(i,j)]*self.observations[(i,j)][1] for (i,j) in self.observations] ) , "objective"
+        # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
         for (i,j) in self.observations:
@@ -238,6 +249,11 @@ class Path(object):
 
         for (i,j) in self.observations:
             problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
+
+        # # Adding constraints induced from introducing a negative gap penalizer
+        # for i in range(len(self.gaps)):
+        #     problem += penalize_variables[i] - gap_vars[i]  <= 0 ,  "neg_gap_contraint_"+str(i)
+
 
         try:
             problem.solve()
@@ -260,6 +276,7 @@ class Path(object):
             except ValueError:
                 pass
 
+        #print optimal_gap_solution
         return optimal_gap_solution
 
     def __str__(self):

@@ -39,7 +39,8 @@ class parameter(object):
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
-                 path_gaps_estimated =0, parameter_gap_estimations = []):
+                 path_gaps_estimated =0, parameter_gap_estimations = [],
+                 contamination_mean=None, contamination_stddev = None, contamination_ratio=0):
 
         # Library information
         # Contig information
@@ -80,6 +81,11 @@ class parameter(object):
         # related to gap distances
         self.path_gaps_estimated = path_gaps_estimated
         self.gap_estimations = parameter_gap_estimations
+
+        # If MP library (PE contamination)
+        self.contamination_ratio = contamination_ratio
+        self.contamination_mean = contamination_mean
+        self.contamination_stddev = contamination_stddev
 
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,
