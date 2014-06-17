@@ -132,9 +132,10 @@ def main(options):
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
 
         param.first_lib = False   #not the first lib any more
-        if G == None:
+        #print G, not G == None, not None, None == False
+        if not G:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
-            break
+            
         elapsed = time() - start
         print >> Information, 'Time elapsed for creating graph, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
         start = time()
@@ -169,7 +170,10 @@ def main(options):
             shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
             destination.close()
             os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
-            os.remove( "{0}/repeats.fa".format(param.output_directory, str(i+1) ) )
+    
+
+    if not options.separate_repeats:
+        os.remove( "{0}/repeats.fa".format(param.output_directory ) )
 
     ### Calculate stats for last scaffolding step    
     scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]

@@ -484,6 +484,9 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             # #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
             high_score_path, score = all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][0]
+            #print 'Highest scoring path:{0}'.format(high_score_path)
+            #print 'Score: {0}'.format(score)
+
             if high_score_path and score >= 0.0:
 
                 ##################### v1.0.4.5 
@@ -585,7 +588,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
     contigs_to_indexes = {}
     indexes_to_contigs = {}
     index = 0
-    print 'CURNNNT PATH_',current_path
+    #print 'CURNNNT PATH_',current_path
     for ctg in current_path:
         if ctg[0] in contigs_to_indexes:
             continue
@@ -611,13 +614,13 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
     for c1,c2 in observations:    
         if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
             PE = 1
-            print 'PE link!!',c1,c2
+            #print 'PE link!!',c1,c2
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 1
-            print 'PE link!!',c1,c2
+            #print 'PE link!!',c1,c2
         else:
             PE = 0
-            print 'MP link!!',c1,c2
+            #print 'MP link!!',c1,c2
         i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
         index_observations[(i1,i2,PE)] = observations[(c1,c2)]
         #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
@@ -666,7 +669,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     if len(path) <= 4:
         final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
         final_path = path
-        print final_path
+        #print final_path
         
     ## algm here
     else:
@@ -704,11 +707,19 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
     param.path_gaps_estimated += len(final_path_instance.gaps)
     path_dict_index = final_path_instance.make_path_dict_for_besst()
-    print 'FINAL:', final_path
+    #print 'FINAL:', final_path
+    # for ctg in final_path:
+    #     if ctg[0] in Scaffolds:
+    #         for c in Scaffolds[ctg[0]].contigs:
+    #             print 'ctg name, scaffold{0}: {1}'.format(ctg[0],c.name)
+    #     else:
+    #         print 'small ctg name:', small_scaffolds[ctg[0]].contigs[0].name
+
+
     #print final_path_instance
     #print path_dict_index
     path_dict = map(lambda x: (final_indexes_to_contigs[x[0].index],final_indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)
-    print path_dict
+    #print path_dict
     # for ctg in final_path_instance.ctgs:
     #     contig = indexes_to_contigs[ctg.index]
     #     ctg.length
@@ -947,53 +958,54 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         start_end_node_update_storage[path[0]] = 0
         start_end_node_update_storage[path[-1]] = 0
 
-        for edge in G_.edges():
-            try:
-                G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-            except KeyError:
-                print >> Information, path
-                try:
-                    Scaffolds[edge[0][0]]
-                    print >> Information, edge[0][0] , 'is in Scaffolds'
-                except KeyError:
-                    print >> Information, edge[0][0] , 'is not in Scaffolds'
-                try:
-                    Scaffolds[edge[1][0]]
-                    print >> Information, edge[1][0] , 'is in Scaffolds'
-                except KeyError:
-                    print >> Information, edge[1][0] , 'is not in Scaffolds'
+        # for edge in G_.edges():
+        #     try:
+        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
+        #     except KeyError:
+        #         print >> Information, path
+        #         try:
+        #             Scaffolds[edge[0][0]]
+        #             print >> Information, edge[0][0] , 'is in Scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[0][0] , 'is not in Scaffolds'
+        #         try:
+        #             Scaffolds[edge[1][0]]
+        #             print >> Information, edge[1][0] , 'is in Scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[1][0] , 'is not in Scaffolds'
 
-                try:
-                    small_scaffolds[edge[0][0]]
-                    print >> Information, edge[0][0] , 'is in small_scaffolds'
-                except KeyError:
-                    print >> Information, edge[0][0] , 'is not in small_scaffolds'
-                try:
-                    small_scaffolds[edge[1][0]]
-                    print >> Information, edge[1][0] , 'is in small_scaffolds'
-                except KeyError:
-                    print >> Information, edge[1][0] , 'is not in small_scaffolds'
+        #         try:
+        #             small_scaffolds[edge[0][0]]
+        #             print >> Information, edge[0][0] , 'is in small_scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[0][0] , 'is not in small_scaffolds'
+        #         try:
+        #             small_scaffolds[edge[1][0]]
+        #             print >> Information, edge[1][0] , 'is in small_scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[1][0] , 'is not in small_scaffolds'
 
-                try:
-                    G_prime[edge[0]]
-                    print >> Information, edge[0] , 'is in G_prime'
-                    print >> Information, G_prime[edge[0]]
-                except KeyError:
-                    print >> Information, edge[0] , 'is not in G_prime'
-                try:
-                    G_prime[edge[1]]
-                    print >> Information, edge[1] , 'is in G_prime'
-                    print >> Information, G_prime[edge[1]]
-                except KeyError:
-                    print >> Information, edge[1] , 'is not in G_prime'
-                G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-                sys.exit()
+        #         try:
+        #             G_prime[edge[0]]
+        #             print >> Information, edge[0] , 'is in G_prime'
+        #             print >> Information, G_prime[edge[0]]
+        #         except KeyError:
+        #             print >> Information, edge[0] , 'is not in G_prime'
+        #         try:
+        #             G_prime[edge[1]]
+        #             print >> Information, edge[1] , 'is in G_prime'
+        #             print >> Information, G_prime[edge[1]]
+        #         except KeyError:
+        #             print >> Information, edge[1] , 'is not in G_prime'
+        #         print edge[0], edge[1]
+        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
+        #         sys.exit()
 
-            try:
-                G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
-            except KeyError:
-                #may be the two different sides of a contig (has no gap dist)
-                pass
+        #     try:
+        #         G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
+        #     except KeyError:
+        #         #may be the two different sides of a contig (has no gap dist)
+        #         pass
 
         start = path[0]
         end = path[-1]

@@ -83,7 +83,7 @@ class Path(object):
             
 
         self.observations = obs_dict
-        print self.observations
+        #print self.observations
 
         # for c1,c2 in self.observations:
         #     if self.observations[(c1,c2)][0] > 1500:
@@ -179,17 +179,16 @@ class Path(object):
 
     def LP_solve_gaps(self):
         exp_means_gapest = {}
-        print self.contamination_mean, self.contamination_stddev
-        print self.mean, self.stddev
+
         for (i,j,is_PE_link) in self.observations:
             mean_obs = self.observations[(i,j,is_PE_link)][0]
             if is_PE_link:
                 exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
-                print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                #print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
 
             else:
                 exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
-                print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                #print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
 
         #exp_mean_over_bp = self.mean + self.stddev**2/float(self.mean+1)
@@ -266,12 +265,12 @@ class Path(object):
         for v in problem.variables():
             try:
                 optimal_gap_solution[int( v.name)] = v.varValue
-                print v.name, "=", v.varValue
+                #print v.name, "=", v.varValue
             except ValueError:
                 pass
 
         self.objective = value(problem.objective)
-        print self.objective
+        #print self.objective
         #print optimal_gap_solution
         return optimal_gap_solution
 
