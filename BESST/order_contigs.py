@@ -50,11 +50,14 @@ class Path(object):
     of links. Instead, we take the average link obervation between all contigs. This will not give true ML 
     estimates but speeds up calculation with thousands of x order. In practice, using average link obervation 
     For ML estimation will give a fairly good prediction. For this cheat, see comment approx 15 lines below.  """
-    def __init__(self, ctg_lengths, observations, mean, stddev,read_len):
+    def __init__(self, ctg_lengths, observations, param):
         super(Path, self).__init__()
-        self.mean = mean
-        self.stddev = stddev
-        self.read_len = read_len
+        self.mean = param.mean_ins_size
+        self.stddev = param.std_dev_ins_size
+        self.read_len = param.read_len
+        self.contamination_ratio = param.contamination_ratio
+        self.contamination_mean = param.contamination_mean
+        self.contamination_stddev = param.contamination_stddev
         self.ctgs = []
         for i,length in enumerate(ctg_lengths):
             self.ctgs.append(Contig(i, length))
@@ -68,13 +71,19 @@ class Path(object):
         # onservations we calculate the ikelihood for them average (mean) of the
         # observations and weight it with the number of observations
         obs_dict = {}
-        for c1,c2 in observations:
-            nr_obs = len(observations[(c1,c2)])
-            mean_obs = sum(observations[(c1,c2)])/nr_obs
-            obs_dict[(c1,c2)] = (mean_obs,nr_obs)
+        for c1,c2,is_PE_link in observations:
+            nr_obs = len(observations[(c1,c2,is_PE_link)])
+            if is_PE_link:
+                PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
+                mean_obs = sum( PE_obs)/nr_obs
+                obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
+            else:
+                mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
+                obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
             
 
         self.observations = obs_dict
+        #print self.observations
 
         # for c1,c2 in self.observations:
         #     if self.observations[(c1,c2)][0] > 1500:
@@ -95,52 +104,24 @@ class Path(object):
     def get_inferred_isizes(self):
         self.isizes = {}
 
-        for (c1,c2) in self.observations:
+        for (c1,c2,is_PE_link) in self.observations:
             gap = self.ctgs[c2].position - (self.ctgs[c1].position + self.ctgs[c1].length) - (c2-c1) # last thing is an index thing
             #x = map(lambda obs: obs[0] + gap , self.observations[(c1,c2)]) # inferr isizes
-            x = self.observations[(c1,c2)][0] + gap
-            self.isizes[(c1,c2)] = x
+            x = self.observations[(c1,c2,is_PE_link)][0] + gap
+            self.isizes[(c1,c2,is_PE_link)] = x
 
     def get_GapEst_isizes(self):
         self.gapest_predictions = {}
-        for (i,j) in self.observations:
-            mean_obs = self.observations[(i,j)][0]
-            self.gapest_predictions[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+        for (i,j,is_PE_link) in self.observations:
+            mean_obs = self.observations[(i,j,is_PE_link)][0]
+            if is_PE_link:
+                self.gapest_predictions[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+            else:
+                self.gapest_predictions[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+
             #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
 
-    def propose_new_state_MCMC(self,mean,stddev):
-        """
-            This function proposes (by random sampling) an edge between two contigs c1 and c2 in the contig path
-            that we will change the gap size for.
-            Currently, we change the gap to expected_mean_obs - mean_observation, e.g. a
-            semi-naive estimation. More variablity in the proposal function is required for coming 
-            closer to true ML gap sizes in a path. This can be achieved for example by, not only 
-            sampling the edge, but also sample the gap with e.g. a N(expected_mean_obs - mean_observation, stddev/sqrt(nr_obs))
-            distribution.
-
-            However, getting high accuracy in gap for all contigs in a path can require many samples in the MCMC chain and we have
-            many paths to estimate. Also, in practice ML_gap_naive is often a decent proposal.
-
-        """
-        path_proposed = copy.deepcopy(self) # create a new state
-        #(index,gap) = random.choice([(i,gap) for i,gap in enumerate(self.gaps)]) # choose a gap to change
-        (c1,c2) = random.choice(self.observations.keys())
-        mean_obs = self.observations[(c1,c2)][0] # take out observations and
-
-        #obs = self.observations[(index,index+1)] # take out observations and
-        exp_mean_over_bp = mean + stddev**2/float(mean+1)
-        #mean_obs = sum(obs)/float(len(obs)) # get the mean
-        proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
-        #print 'CHOSEN:', (c1,c2), 'mean_obs:', mean_obs, 'proposed distance:', proposed_distance
-        (total_contig_length, total_gap_length, index_adjusting) = self.get_distance(c1+1,c2)
-        #print 'total ctg length, gap_lenght,index adjust', (total_contig_length, total_gap_length, index_adjusting)
-        avg_suggested_gap = (proposed_distance - total_contig_length) / (c2-c1)
-        #print avg_suggested_gap, proposed_distance, total_contig_length, c2-c1
-        for index in range(c1,c2):
-            path_proposed.gaps[index] = avg_suggested_gap
-        #path_proposed.gaps[index] = proposed_distance
-        return path_proposed
 
     def new_state_for_ordered_search(self,start_contig,stop_contig,mean,stddev):
         """
@@ -153,7 +134,7 @@ class Path(object):
         """
         new_path = copy.deepcopy(self) # create a new state
         (c1,c2) = (start_contig,stop_contig)
-        mean_obs = self.observations[(c1,c2)][0] # take out observations and
+        mean_obs = self.observations[(c1,c2,0)][0] if (c1,c2,0) in self.observations else self.observations[(c1,c2,1)][0]  # take out observations and
         exp_mean_over_bp = mean + stddev**2/float(mean+1)
         proposed_distance = exp_mean_over_bp - mean_obs # choose what value to set between c1 and c2 
 
@@ -168,22 +149,21 @@ class Path(object):
         return new_path
 
 
-    def calc_log_likelihood(self,mean,stddev):
-        log_likelihood_value = 0
-        exp_mean_over_bp = mean + stddev**2/float(mean+1)
-        for (c1,c2) in self.isizes:
-            log_likelihood_value += math.log( normpdf(self.isizes[(c1,c2)],exp_mean_over_bp, stddev) ) * self.observations[(c1,c2)][1]
-            #for isize in self.isizes[(c1,c2)]:
-            #    log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
+    # def calc_log_likelihood(self,mean,stddev):
+    #     log_likelihood_value = 0
+    #     exp_mean_over_bp = mean + stddev**2/float(mean+1)
+    #     for (c1,c2) in self.isizes:
+    #         log_likelihood_value += math.log( normpdf(self.isizes[(c1,c2)],exp_mean_over_bp, stddev) ) * self.observations[(c1,c2)][1]
+    #         #for isize in self.isizes[(c1,c2)]:
+    #         #    log_likelihood_value += math.log( normpdf(isize,mean,stddev) )
             
-        return log_likelihood_value
+    #     return log_likelihood_value
 
     def calc_dist_objective(self):
         objective_value = 0
         self.get_GapEst_isizes()
-        for (c1,c2) in self.isizes:
-
-            objective_value += abs(self.gapest_predictions[(c1,c2)] - self.isizes[(c1,c2)]) * self.observations[(c1,c2)][1]
+        for (c1,c2, is_PE_link) in self.isizes:
+            objective_value += abs(self.gapest_predictions[(c1,c2,is_PE_link)] - self.isizes[(c1,c2,is_PE_link)]) * self.observations[(c1,c2,is_PE_link)][1]
             #for isize in self.isizes[(c1,c2)]:
             #    objective_value += math.log( normpdf(isize,mean,stddev) )
             
@@ -199,10 +179,16 @@ class Path(object):
 
     def LP_solve_gaps(self):
         exp_means_gapest = {}
-        for (i,j) in self.observations:
-            mean_obs = self.observations[(i,j)][0]
-            exp_means_gapest[(i,j)] = self.observations[(i,j)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
-            #print mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+
+        for (i,j,is_PE_link) in self.observations:
+            mean_obs = self.observations[(i,j,is_PE_link)][0]
+            if is_PE_link:
+                exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                #print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+
+            else:
+                exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                #print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
 
         #exp_mean_over_bp = self.mean + self.stddev**2/float(self.mean+1)
@@ -215,8 +201,8 @@ class Path(object):
 
         # help variables because objective function is an absolute value
         help_variables = {}
-        for (i,j) in self.observations:
-            help_variables[(i,j)] = LpVariable("z_"+str(i)+'_'+str(j), None, None,cat='Integer')
+        for (i,j,is_PE_link) in self.observations:
+            help_variables[(i,j,is_PE_link)] = LpVariable("z_"+str(i)+'_'+str(j)+'_'+str(is_PE_link), None, None,cat='Integer')
 
         # # variables to penalize negative gaps
         # penalize_variables = {}
@@ -231,24 +217,30 @@ class Path(object):
 
         problem = LpProblem("PathProblem",LpMinimize)
 
-        problem += lpSum( [ help_variables[(i,j)]*self.observations[(i,j)][1] for (i,j) in self.observations] ) , "objective"
+        problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
-        for (i,j) in self.observations:
-            problem += exp_means_gapest[(i,j)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
+        for (i,j,is_PE_link) in self.observations:
+            problem += exp_means_gapest[(i,j,is_PE_link)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
-        for (i,j) in self.observations:
-            problem += - exp_means_gapest[(i,j)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
+        for (i,j,is_PE_link) in self.observations:
+            problem += - exp_means_gapest[(i,j,is_PE_link)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
 
         # adding distance constraints
 
-        for (i,j) in self.observations:
-            problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= self.mean +4*self.stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
+        for (i,j,is_PE_link) in self.observations:
+            if is_PE_link:
+                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
+            else:
+                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.mean +4*self.stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
-        for (i,j) in self.observations:
-            problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
+        for (i,j,is_PE_link) in self.observations:
+            if is_PE_link:
+                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+            else:
+                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.mean +4*self.stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
         # # Adding constraints induced from introducing a negative gap penalizer
         # for i in range(len(self.gaps)):
@@ -258,6 +250,7 @@ class Path(object):
         try:
             problem.solve()
         except : #PulpSolverError:
+            problem.solve()
             print 'Could not solve LP, printing instance:'
             print 'Objective:'
             print problem.objective
@@ -276,6 +269,8 @@ class Path(object):
             except ValueError:
                 pass
 
+        self.objective = value(problem.objective)
+        #print self.objective
         #print optimal_gap_solution
         return optimal_gap_solution
 
@@ -286,57 +281,6 @@ class Path(object):
 
         return string
 
-
-def MCMC(path, mean,stddev):
-    
-    path.get_inferred_isizes()
-    iteration = 0 
-    curr_state_count = 1 # how many iterations we have remained in state
-    while True:
-        # print 'CURRENT PATH:'
-        # print path
-        # print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)
-
-        # change gaps
-            # MCMC based sampling:
-            # take the most deviant mean insert size observation (x_hat = o_hat + current_gap)
-            # given the current positioning. 
-            # Adjust the current_gap to new_gap so that o_hat + new_gap = mean
-
-        suggested_path = path.propose_new_state_MCMC(mean,stddev)
-        suggested_path.update_positions()
-        suggested_path.get_inferred_isizes()
-        suggested_path.calc_log_likelihood(mean,stddev)
-
-        # print 'SUGGESTED PATH:'
-        # print suggested_path
-        # print 'Suggested path likelihood: ', suggested_path.calc_log_likelihood(mean,stddev)
-        # compare likelihood values ML value for path
-        if suggested_path.calc_log_likelihood(mean,stddev) > path.calc_log_likelihood(mean,stddev):
-            #print "SWITCHED PATH TO SUGGESTED PATH!!"
-            path = suggested_path
-            curr_state_count = 1
-        else:
-            #print 'PATH not taken!'
-            curr_state_count += 1
-
-            
-
-
-        # see if "converged" or not
-        if curr_state_count >= 10:
-            break
-
-        
-        iteration += 1
-        if iteration >= 100:
-            break
-      
-    # print 'FINAL PATH:'
-    # print path
-    # print 'With likelihood: ', path.calc_log_likelihood(mean,stddev)  
-
-    return path
         
 def ordered_search(path):
 
@@ -365,14 +309,14 @@ def ordered_search(path):
 
     return path
 
-def main(contig_lenghts, observations, mean, stddev, read_len):
+def main(contig_lenghts, observations, param):
     """
     contig_lenghts: Ordered list of integers which is contig lengths (ordered as contigs comes in the path)
     observations:  dictionary oflist of observations, eg for contigs c1,c2,c3
                     we can have [(c1,c2):[23, 33, 21],(c1,c3):[12,14,11],(c2,c3):[11,34,32]]
     """
 
-    path = Path(contig_lenghts,observations, mean, stddev, read_len)
+    path = Path(contig_lenghts,observations, param)
 
     # ML_path = MCMC(path,mean,stddev)
     # ML_path = ordered_search(path,mean,stddev)

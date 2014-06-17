@@ -60,6 +60,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     print >> Information, 'Nr of contigs/scaffolds included in scaffolding: ' + str(len(Scaffolds)) #,Scaffolds.keys()
     if len(Scaffolds) == 0:
+        repeat_file = open(param.output_directory + '/repeats.fa', 'w')
         return(G, G_prime)
 
     ### initialize graph objects two nodes per contig "left" and "right" node. ###    

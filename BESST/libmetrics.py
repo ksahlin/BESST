@@ -57,6 +57,7 @@ def get_metrics(bam_file, param, Information):
         print >> Information, '-T', param.ins_size_threshold, '-t', param.contig_threshold
 
     if not param.mean_ins_size: # user has not specified mean and std dev. (and no thresholds)
+        #total_reads_iterated_through = 0
         counter = 1
         ins_size_reads = []
         for index in largest_contigs_indexes:
@@ -66,7 +67,12 @@ def get_metrics(bam_file, param, Information):
                 sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
                 sys.exit(0)
             for read in iter_:
-                if read.flag in informative_pair and read.rname == read.mrnm  and not read.mate_is_unmapped and not read.is_unmapped and read.mapq > 10: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
+                #total_reads_iterated_through += 1
+                if (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm) or \
+                    (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm ) \
+                    and not read.mate_is_unmapped and read.mapq > 10:
+
+                #if read.flag in informative_pair and read.rname == read.mrnm  and not read.mate_is_unmapped and not read.is_unmapped and read.mapq > 10: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
                     ins_size_reads.append(abs(read.tlen))
                     counter += 1
                 if counter > 1000000:
@@ -104,6 +110,9 @@ def get_metrics(bam_file, param, Information):
 
         param.mean_ins_size = mean_isize
         param.std_dev_ins_size = std_dev_isize
+    else:
+        total_reads_iterated_through = None
+
     if not param.ins_size_threshold:
         param.ins_size_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
         if param.extend_paths:
@@ -111,9 +120,83 @@ def get_metrics(bam_file, param, Information):
         else:
             param.contig_threshold = param.mean_ins_size + (param.std_dev_ins_size / float(param.mean_ins_size)) * param.std_dev_ins_size
 
+
+
+
+
+
+    ## finally, get a PE read contamination distribution from the MP library if it exists
+
+    iter_threshold = 1000000
+    counter_total= 0
+    count_contamine = 0
+
+    contamination_reads = []
+    counter = 0
+
+    for index in largest_contigs_indexes:
+        try:
+            iter_ = bam_file.fetch(cont_names[index])
+        except ValueError:
+            sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+            sys.exit(0)
+        for read in iter_:
+            counter += 1
+
+            # all reads mapping
+            if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
+                counter_total += 1
+
+            # contamination reads (mapped in reverse complemented orientation)
+            if (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm) or \
+            (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm ) \
+            and not read.mate_is_unmapped and read.mapq > 10:
+                #read.flag in [161,145] and read.rname == read.mrnm and read.mapq > 10 and not read.mate_is_unmapped: #
+                # <----   ----->
+                #print read.tlen, read.is_reverse, read.mate_is_reverse, read.is_read2
+                contamination_reads.append(abs(read.tlen)+2*param.read_len)
+                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
+                if counter >= iter_threshold:
+                    break
+            if counter >= iter_threshold:
+                    break
+
+    ## SMOOTH OUT contamine distribution here by removing extreme observations## 
+    n_contamine = float(len(contamination_reads))
+    mean_isize = sum(contamination_reads) / n_contamine
+    std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
+    print >> Information, 'Contamine mean before filtering :', mean_isize
+    print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
+    extreme_obs_occur = True
+    while extreme_obs_occur:
+        extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
+        n_contamine = float(len(filtered_list))
+        mean_isize = sum(filtered_list) / n_contamine
+        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+        contamination_reads = filtered_list
+    print >> Information, 'Contamine mean converged:', mean_isize
+    print >> Information, 'Contamine std_est converged: ', std_dev_isize
+
+    param.contamination_mean = mean_isize
+    param.contamination_stddev = std_dev_isize
+
+
+    param.contamination_ratio = count_contamine / float(counter_total)
+
+
+
+
     print >> Information, ''
+    print >> Information, 'LIBRARY STATISTICS'
     print >> Information, 'Mean of library set to:', param.mean_ins_size
     print >> Information, 'Standard deviation of library set to: ', param.std_dev_ins_size
+    print >> Information, 'MP library PE contamination:'
+    print >> Information, 'Contamine rate (rev comp oriented) estimated to: ',  param.contamination_ratio
+    print >> Information, 'lib contamine mean (avg fragmentation size): ', param.contamination_mean
+    print >> Information, 'lib contamine stddev: ', param.contamination_stddev 
+    print >> Information, 'Number of contamined reads used for this calculation: ', n_contamine
+
+
     print >> Information, '-T (library insert size threshold) set to: ', param.ins_size_threshold
     print >> Information, '-k set to (Scaffolding with contigs larger than): ', param.contig_threshold
     print >> Information, 'Number of links required to create an edge: ', param.edgesupport
