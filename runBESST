@@ -54,6 +54,9 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
             temp += line.strip()
     cont_dict[accession] = temp
 
+    # for contig in cont_dict.keys():
+    #     print 'Initial length:', len(cont_dict[contig])
+
     if contig_filter_length:
         singled_out = 0
         for contig in cont_dict.keys():

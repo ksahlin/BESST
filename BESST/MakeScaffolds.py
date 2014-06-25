@@ -618,11 +618,22 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 1
             #print 'PE link!!',c1,c2
-        else:
+        elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 0
             #print 'MP link!!',c1,c2
-        i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
-        index_observations[(i1,i2,PE)] = observations[(c1,c2)]
+        elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
+            PE = 0
+            #print 'MP link!!',c1,c2           
+        else:
+            PE = -1
+            print 'Spurious link!!',c1,c2
+
+        if PE == -1:
+            # we dont want to have a spurious link to contiribute to the LP objective value
+            continue
+        else:
+            i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
+            index_observations[(i1,i2,PE)] = observations[(c1,c2)]
         #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
     #observations =  map(lambda x: (contigs_to_indexes[x[0][0]], contigs_to_indexes[x[1][0]]) = observations[x], observations)   
 
@@ -684,12 +695,12 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             ctg_to_move = path[i][0]
             contig_after = path[i-2][0]
             current_path  = permute_path(current_path, ctg_to_move, contig_after)
-            #print current_path
+            print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
             current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
 
         ## 3 Check of current path is better than previous
-            #print current_path_instance.objective, final_path_instance.objective
+            print current_path_instance.objective, final_path_instance.objective
             if current_path_instance.objective < final_path_instance.objective:
                 final_path = copy.deepcopy(current_path)
                 final_path_instance = copy.deepcopy(current_path_instance)
@@ -707,7 +718,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
     param.path_gaps_estimated += len(final_path_instance.gaps)
     path_dict_index = final_path_instance.make_path_dict_for_besst()
-    #print 'FINAL:', final_path
+    print 'FINAL:', final_path
     # for ctg in final_path:
     #     if ctg[0] in Scaffolds:
     #         for c in Scaffolds[ctg[0]].contigs:

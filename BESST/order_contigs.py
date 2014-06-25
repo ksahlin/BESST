@@ -197,7 +197,7 @@ class Path(object):
 
         gap_vars= []
         for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), None, self.mean + 4*self.stddev, cat='Integer'))
+            gap_vars.append( LpVariable(str(i), -100, self.mean + 2*self.stddev, cat='Integer'))
 
         # help variables because objective function is an absolute value
         help_variables = {}
@@ -231,6 +231,7 @@ class Path(object):
         # adding distance constraints
 
         for (i,j,is_PE_link) in self.observations:
+            # print 'order:',(i,j,is_PE_link)
             if is_PE_link:
                 problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
             else:
@@ -267,6 +268,7 @@ class Path(object):
                 optimal_gap_solution[int( v.name)] = v.varValue
                 #print v.name, "=", v.varValue
             except ValueError:
+                #print v.name, "=", v.varValue
                 pass
 
         self.objective = value(problem.objective)

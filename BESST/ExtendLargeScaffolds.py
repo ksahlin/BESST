@@ -119,7 +119,7 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
             except ZeroDivisionError:
                 weight = 2 ** 16
                 #print 'contig_weight: inf (no bad edges)'
-            if weight < 2.0:
+            if weight < 1.0:
                 return 0, 0
 
         try:
