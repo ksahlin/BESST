@@ -218,6 +218,8 @@ class Path(object):
         problem = LpProblem("PathProblem",LpMinimize)
 
         problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+
+        # problem += lpSum( [ is_PE_link*0.2* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*0.8* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
@@ -230,18 +232,18 @@ class Path(object):
 
         # adding distance constraints
 
-        for (i,j,is_PE_link) in self.observations:
-            # print 'order:',(i,j,is_PE_link)
-            if is_PE_link:
-                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
-            else:
-                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.mean +4*self.stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        # for (i,j,is_PE_link) in self.observations:
+        #     # print 'order:',(i,j,is_PE_link)
+        #     if is_PE_link:
+        #         problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
+        #     else:
+        #         problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.mean +4*self.stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
-        for (i,j,is_PE_link) in self.observations:
-            if is_PE_link:
-                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-            else:
-                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.mean +4*self.stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        # for (i,j,is_PE_link) in self.observations:
+        #     if is_PE_link:
+        #         problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        #     else:
+        #         problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.mean +4*self.stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
         # # Adding constraints induced from introducing a negative gap penalizer
         # for i in range(len(self.gaps)):
@@ -266,9 +268,9 @@ class Path(object):
         for v in problem.variables():
             try:
                 optimal_gap_solution[int( v.name)] = v.varValue
-                #print v.name, "=", v.varValue
+                print v.name, "=", v.varValue,
             except ValueError:
-                #print v.name, "=", v.varValue
+                print v.name, "=", v.varValue,
                 pass
 
         self.objective = value(problem.objective)
