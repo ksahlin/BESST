@@ -197,7 +197,7 @@ class Path(object):
 
         gap_vars= []
         for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), -100, self.mean + 2*self.stddev, cat='Integer'))
+            gap_vars.append( LpVariable(str(i), None, self.mean + 2*self.stddev, cat='Integer'))
 
         # help variables because objective function is an absolute value
         help_variables = {}
@@ -217,9 +217,9 @@ class Path(object):
 
         problem = LpProblem("PathProblem",LpMinimize)
 
-        problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+        #problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
 
-        # problem += lpSum( [ is_PE_link*0.2* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*0.8* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+        problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
