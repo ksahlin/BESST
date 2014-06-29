@@ -584,7 +584,7 @@ def permute_path(path, ctg_to_move, contig_after):
     return path
 
 
-def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param):
+def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,initial_path):
     contigs_to_indexes = {}
     indexes_to_contigs = {}
     index = 0
@@ -648,7 +648,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
     #print index_observations
 
     ## 2 Get optimal LP solution for given path order
-    result_path = order_contigs.main(ctg_lengths_sorted, index_observations, param)
+    result_path = order_contigs.main(ctg_lengths_sorted, index_observations, param, initial_path)
     if not result_path:
         return None,None,None,None
 
@@ -686,7 +686,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
     # only one contig, nothing to permute
     if len(path) <= 4 or not param.contamination_ratio:
-        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param,True)
         final_path = path
         #print final_path
         
@@ -694,7 +694,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     else:
         #print 'ENTER HERE'
         #print path
-        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
         final_path = copy.deepcopy(path)
         original_path = copy.deepcopy(path)
         #print 'WORK IS DONE'
@@ -707,7 +707,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             current_path  = permute_path(current_path, ctg_to_move, contig_after)
             print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
-            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
+            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
             if not current_path_instance:
                 continue
         ## 3 Check of current path is better than previous
