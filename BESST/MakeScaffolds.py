@@ -649,6 +649,8 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
 
     ## 2 Get optimal LP solution for given path order
     result_path = order_contigs.main(ctg_lengths_sorted, index_observations, param)
+    if not result_path:
+        return None,None,None,None
 
     return result_path, contigs_to_indexes, indexes_to_contigs, index_observations
 
@@ -683,7 +685,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
 
     # only one contig, nothing to permute
-    if len(path) <= 4:
+    if len(path) <= 4 or not param.contamination_ratio:
         final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
         final_path = path
         #print final_path
@@ -706,7 +708,8 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
             current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
-
+            if not current_path_instance:
+                continue
         ## 3 Check of current path is better than previous
             print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
             if current_path_instance.objective < final_path_instance.objective:

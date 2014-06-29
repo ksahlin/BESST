@@ -77,6 +77,9 @@ class Path(object):
                 PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
+                if mean_obs > self.contamination_mean + 6 * self.contamination_stddev:
+                    self.observations = None
+                    return None
             else:
                 mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
@@ -321,6 +324,9 @@ def main(contig_lenghts, observations, param):
     """
 
     path = Path(contig_lenghts,observations, param)
+    
+    if path.observations == None:
+        return None
 
     # ML_path = MCMC(path,mean,stddev)
     # ML_path = ordered_search(path,mean,stddev)
