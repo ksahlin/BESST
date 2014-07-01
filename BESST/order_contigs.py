@@ -271,9 +271,9 @@ class Path(object):
         for v in problem.variables():
             try:
                 optimal_gap_solution[int( v.name)] = v.varValue
-                print v.name, "=", v.varValue,
+                #print v.name, "=", v.varValue,
             except ValueError:
-                print v.name, "=", v.varValue,
+                #print v.name, "=", v.varValue,
                 pass
 
         self.objective = value(problem.objective)

@@ -642,7 +642,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
         #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
     #observations =  map(lambda x: (contigs_to_indexes[x[0][0]], contigs_to_indexes[x[1][0]]) = observations[x], observations)   
 
-    print 'MP LINK RATIO:{0}, tot_links:{1}'.format(mp_links/float(tot_links), tot_links)
+    #print 'MP LINK RATIO:{0}, tot_links:{1}'.format(mp_links/float(tot_links), tot_links)
     #print index_observations
     #print ctg_lengths_sorted
     #print index_observations
@@ -705,13 +705,13 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             ctg_to_move = original_path[i][0]
             contig_after = original_path[i-2][0]
             current_path  = permute_path(current_path, ctg_to_move, contig_after)
-            print 'Current path:',current_path
+            #print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
             current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
             if not current_path_instance:
                 continue
         ## 3 Check of current path is better than previous
-            print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+            #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
             if current_path_instance.objective < final_path_instance.objective:
                 final_path = copy.deepcopy(current_path)
                 final_path_instance = copy.deepcopy(current_path_instance)
@@ -748,8 +748,8 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
     param.path_gaps_estimated += len(final_path_instance.gaps)
     path_dict_index = final_path_instance.make_path_dict_for_besst()
-    print 'FINAL:', final_path
-    print 'OBJECTIVE: {0}'.format(final_path_instance.objective)
+    #print 'FINAL:', final_path
+    #print 'OBJECTIVE: {0}'.format(final_path_instance.objective)
 
     # for ctg in final_path:
     #     if ctg[0] in Scaffolds:
