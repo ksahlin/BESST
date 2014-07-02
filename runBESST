@@ -56,7 +56,6 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
 
     # for contig in cont_dict.keys():
     #     print 'Initial length:', len(cont_dict[contig])
-
     if contig_filter_length:
         singled_out = 0
         for contig in cont_dict.keys():
@@ -64,7 +63,6 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
                 del cont_dict[contig]
                 singled_out += 1
         print >> Information, 'Number of contigs discarded from further analysis (with -filter_contigs set to {0}): {1}'.format(contig_filter_length,singled_out)
-
     return(cont_dict)
 
 def main(options):
@@ -87,6 +85,9 @@ def main(options):
     param.scaffold_indexer = 1 # global indicator for scaffolds, used to index scaffolds when they are created
     param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
+    param.no_score = options.no_score
+
+
     param.development = options.devel
     options.output = options.output + '/BESST_output'
 
@@ -287,6 +288,10 @@ other.add_argument("-q", dest="multiprocess", action="store_true",
                 help="Parallellize work load of path finder module in case of multiple processors available.\
                   ",)
 
+other.add_argument("--no_score", dest="no_score", action="store_true",
+                help="Statistical scoring is not performed. BESST instead searches for paths between contigs.\
+                  ",)
+
 other.add_argument("-devel", action="store_true",
                   help="Run in development mode (bug checking and memory usage etc.)")
 
@@ -321,7 +326,6 @@ errorhandle.parse_check(args, parser)
 
 if args.devel:
     import guppy
-
 
 if args.plots:
     try:

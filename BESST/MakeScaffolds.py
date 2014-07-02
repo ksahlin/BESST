@@ -77,12 +77,14 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     G = RemoveIsolatedContigs(G, Information)     #step1
     plot = 'G'
-    RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
-    G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
-    G, Contigs, Scaffolds = RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param)    #step4    
-    #The contigs that made it to proper scaffolds
-    (Contigs, Scaffolds, param) = NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)   #step5
-    ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
+    
+    if not param.no_score:
+        RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
+        G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
+        G, Contigs, Scaffolds = RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param)    #step4    
+        #The contigs that made it to proper scaffolds
+        (Contigs, Scaffolds, param) = NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)   #step5
+        ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
 
     if param.extend_paths:
         print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
