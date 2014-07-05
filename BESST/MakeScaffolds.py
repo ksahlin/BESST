@@ -77,7 +77,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     G = RemoveIsolatedContigs(G, Information)     #step1
     plot = 'G'
-    
+
     if not param.no_score:
         RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
         G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
@@ -707,6 +707,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             ctg_to_move = original_path[i][0]
             contig_after = original_path[i-2][0]
             current_path  = permute_path(current_path, ctg_to_move, contig_after)
+
             #print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
             current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
@@ -714,6 +715,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
                 continue
         ## 3 Check of current path is better than previous
             #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+            
             if current_path_instance.objective < final_path_instance.objective:
                 final_path = copy.deepcopy(current_path)
                 final_path_instance = copy.deepcopy(current_path_instance)

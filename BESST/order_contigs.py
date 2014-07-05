@@ -180,6 +180,22 @@ class Path(object):
         return path_dict
 
 
+    def calc_probability_of_LP_solution(self, help_variables):
+        log_prob = 0
+        for (i,j,is_PE_link),variable in help_variables.iteritems():
+            print self.contamination_ratio * self.observations[(i,j,is_PE_link)][1] * normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)
+            if is_PE_link:
+                try:
+                    log_prob += math.log(self.contamination_ratio * self.observations[(i,j,is_PE_link)][1] * normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)) 
+                except ValueError:
+                    log_prob += - float("inf")
+            else:
+                try:
+                    log_prob += math.log((1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1]* normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)) 
+                except ValueError:
+                    log_prob += - float("inf")
+        return log_prob
+
     def LP_solve_gaps(self):
         exp_means_gapest = {}
 
@@ -277,6 +293,8 @@ class Path(object):
                 pass
 
         self.objective = value(problem.objective)
+        #prob = self.calc_probability_of_LP_solution(help_variables)
+
         #print self.objective
         #print optimal_gap_solution
         return optimal_gap_solution

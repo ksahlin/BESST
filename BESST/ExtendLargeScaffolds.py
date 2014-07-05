@@ -112,15 +112,15 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score, para
 
         #print 'Edges good/bad:',good_edges_count,bad_edges_count,'links good/bad:', good_link_weight, bad_link_weight
         #print 'contig weights:'
-        for key in link_weights:
-            try:
-                weight = link_weights[key]['good'] / link_weights[key]['bad']
-                #print 'contig_weight:', weight
-            except ZeroDivisionError:
-                weight = 2 ** 16
-                #print 'contig_weight: inf (no bad edges)'
-            if weight < 1.0:
-                return 0, 0
+        # for key in link_weights:
+        #     try:
+        #         weight = link_weights[key]['good'] / link_weights[key]['bad']
+        #         #print 'contig_weight:', weight
+        #     except ZeroDivisionError:
+        #         weight = 2 ** 16
+        #         #print 'contig_weight: inf (no bad edges)'
+        #     if weight < 1.0:
+        #         return 0, 0
 
         try:
             score = good_link_weight / float(bad_link_weight)
@@ -140,9 +140,9 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score, para
         path_len = path_[1]
         #calculate spanning score s_ci
         score, bad_link_weight = CalculateConnectivity(path, G)
-        if param.no_score:
+        if param.no_score and score > 1:
             Insert_path(all_paths_sorted_wrt_score, score, path , bad_link_weight, path_len)
-        elif len(path) > 2 and score > 0: #startnode and end node are not directly connected
+        elif len(path) > 2 and score > 1: #startnode and end node are not directly connected
             Insert_path(all_paths_sorted_wrt_score, score, path , bad_link_weight, path_len)
 
 #        if len(path) > 2: #startnode and end node are not directly connected
