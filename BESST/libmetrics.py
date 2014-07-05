@@ -177,11 +177,14 @@ def get_metrics(bam_file, param, Information):
     print >> Information, 'Contamine mean converged:', mean_isize
     print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
-    param.contamination_mean = mean_isize
-    param.contamination_stddev = std_dev_isize
-
-
-    param.contamination_ratio = count_contamine / float(counter_total)
+    if mean_isize > param.mean_ins_size or count_contamine == 0:
+        param.contamination_ratio  = False      
+        param.contamination_mean = 0
+        param.contamination_stddev = 0
+    else:
+        param.contamination_mean = mean_isize
+        param.contamination_stddev = std_dev_isize
+        param.contamination_ratio = count_contamine / float(counter_total)
 
 
 

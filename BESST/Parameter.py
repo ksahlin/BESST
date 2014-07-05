@@ -40,7 +40,8 @@ class parameter(object):
                  parameter_fosmidpool=None, parameter_extend_paths=None,
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
                  path_gaps_estimated =0, parameter_gap_estimations = [],
-                 contamination_mean=None, contamination_stddev = None, contamination_ratio=0):
+                 contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
+                 no_score=None):
 
         # Library information
         # Contig information
@@ -77,6 +78,7 @@ class parameter(object):
         self.development = parameter_development
         self.plots = parameter_plots
         self.path_threshold = parameter_path_threshold
+        self.no_score = no_score
 
         # related to gap distances
         self.path_gaps_estimated = path_gaps_estimated

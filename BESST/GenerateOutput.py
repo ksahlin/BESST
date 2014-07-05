@@ -101,7 +101,6 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
             pos = scaf[i][2]
             length = scaf[i][3]
             sequence = scaf[i][4]
-
 #            #Get the number of left and right links            
 #            if i-1>=0:
 #                left_name=scaf[i-1][0]

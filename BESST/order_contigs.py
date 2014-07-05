@@ -50,7 +50,7 @@ class Path(object):
     of links. Instead, we take the average link obervation between all contigs. This will not give true ML 
     estimates but speeds up calculation with thousands of x order. In practice, using average link obervation 
     For ML estimation will give a fairly good prediction. For this cheat, see comment approx 15 lines below.  """
-    def __init__(self, ctg_lengths, observations, param):
+    def __init__(self, ctg_lengths, observations, param, initial_path=False):
         super(Path, self).__init__()
         self.mean = param.mean_ins_size
         self.stddev = param.std_dev_ins_size
@@ -77,6 +77,9 @@ class Path(object):
                 PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
+                if mean_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                    self.observations = None
+                    return None
             else:
                 mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
@@ -177,6 +180,22 @@ class Path(object):
         return path_dict
 
 
+    def calc_probability_of_LP_solution(self, help_variables):
+        log_prob = 0
+        for (i,j,is_PE_link),variable in help_variables.iteritems():
+            print self.contamination_ratio * self.observations[(i,j,is_PE_link)][1] * normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)
+            if is_PE_link:
+                try:
+                    log_prob += math.log(self.contamination_ratio * self.observations[(i,j,is_PE_link)][1] * normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)) 
+                except ValueError:
+                    log_prob += - float("inf")
+            else:
+                try:
+                    log_prob += math.log((1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1]* normpdf(variable.varValue,self.contamination_mean,self.contamination_stddev)) 
+                except ValueError:
+                    log_prob += - float("inf")
+        return log_prob
+
     def LP_solve_gaps(self):
         exp_means_gapest = {}
 
@@ -197,7 +216,7 @@ class Path(object):
 
         gap_vars= []
         for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), None, self.mean + 4*self.stddev, cat='Integer'))
+            gap_vars.append( LpVariable(str(i), None, self.mean + 2*self.stddev, cat='Integer'))
 
         # help variables because objective function is an absolute value
         help_variables = {}
@@ -217,7 +236,9 @@ class Path(object):
 
         problem = LpProblem("PathProblem",LpMinimize)
 
-        problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+        #problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+
+        problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
@@ -230,17 +251,18 @@ class Path(object):
 
         # adding distance constraints
 
-        for (i,j,is_PE_link) in self.observations:
-            if is_PE_link:
-                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
-            else:
-                problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.mean +4*self.stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        # for (i,j,is_PE_link) in self.observations:
+        #     # print 'order:',(i,j,is_PE_link)
+        #     if is_PE_link:
+        #         problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)                
+        #     else:
+        #         problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= self.mean +4*self.stddev,  "dist_constraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
-        for (i,j,is_PE_link) in self.observations:
-            if is_PE_link:
-                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-            else:
-                problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.mean +4*self.stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        # for (i,j,is_PE_link) in self.observations:
+        #     if is_PE_link:
+        #         problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.contamination_mean +4*self.contamination_stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+        #     else:
+        #         problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0]  <= - self.mean +4*self.stddev,  "dist_constraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
 
         # # Adding constraints induced from introducing a negative gap penalizer
         # for i in range(len(self.gaps)):
@@ -265,11 +287,14 @@ class Path(object):
         for v in problem.variables():
             try:
                 optimal_gap_solution[int( v.name)] = v.varValue
-                #print v.name, "=", v.varValue
+                #print v.name, "=", v.varValue,
             except ValueError:
+                #print v.name, "=", v.varValue,
                 pass
 
         self.objective = value(problem.objective)
+        #prob = self.calc_probability_of_LP_solution(help_variables)
+
         #print self.objective
         #print optimal_gap_solution
         return optimal_gap_solution
@@ -309,14 +334,17 @@ def ordered_search(path):
 
     return path
 
-def main(contig_lenghts, observations, param):
+def main(contig_lenghts, observations, param, initial_path):
     """
     contig_lenghts: Ordered list of integers which is contig lengths (ordered as contigs comes in the path)
     observations:  dictionary oflist of observations, eg for contigs c1,c2,c3
                     we can have [(c1,c2):[23, 33, 21],(c1,c3):[12,14,11],(c2,c3):[11,34,32]]
     """
 
-    path = Path(contig_lenghts,observations, param)
+    path = Path(contig_lenghts,observations, param, initial_path=initial_path)
+    
+    if path.observations == None:
+        return None
 
     # ML_path = MCMC(path,mean,stddev)
     # ML_path = ordered_search(path,mean,stddev)
