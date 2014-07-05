@@ -65,7 +65,7 @@ def Insert_path(a, x, path, bad_link_weight, path_len, lo=0, hi=None):
         a.insert(lo, [x, bad_link_weight, path, path_len])
     return ()
 
-def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
+def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score, param):
     if len(paths) == 0:
         return ()
 
@@ -112,23 +112,25 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
 
         #print 'Edges good/bad:',good_edges_count,bad_edges_count,'links good/bad:', good_link_weight, bad_link_weight
         #print 'contig weights:'
-        for key in link_weights:
-            try:
-                weight = link_weights[key]['good'] / link_weights[key]['bad']
-                #print 'contig_weight:', weight
-            except ZeroDivisionError:
-                weight = 2 ** 16
-                #print 'contig_weight: inf (no bad edges)'
-            if weight < 2.0:
-                return 0, 0
+        # for key in link_weights:
+        #     try:
+        #         weight = link_weights[key]['good'] / link_weights[key]['bad']
+        #         #print 'contig_weight:', weight
+        #     except ZeroDivisionError:
+        #         weight = 2 ** 16
+        #         #print 'contig_weight: inf (no bad edges)'
+        #     if weight < 1.0:
+        #         return 0, 0
 
         try:
             score = good_link_weight / float(bad_link_weight)
         except ZeroDivisionError:
             score = good_link_weight
 
-        #return score, bad_link_weight
-        return good_link_weight - bad_link_weight, bad_link_weight
+        #print 'SCOOOOORE HERE:', score
+        #print 'OK:', good_link_weight - bad_link_weight
+        return score, bad_link_weight
+        #return good_link_weight - bad_link_weight, bad_link_weight
         #return good_edges_count - bad_edges_count, bad_link_weight
 
 
@@ -138,7 +140,9 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths_sorted_wrt_score):
         path_len = path_[1]
         #calculate spanning score s_ci
         score, bad_link_weight = CalculateConnectivity(path, G)
-        if len(path) > 2 and score > 0: #startnode and end node are not directly connected
+        if param.no_score and score > 1:
+            Insert_path(all_paths_sorted_wrt_score, score, path , bad_link_weight, path_len)
+        elif len(path) > 2 and score > 1: #startnode and end node are not directly connected
             Insert_path(all_paths_sorted_wrt_score, score, path , bad_link_weight, path_len)
 
 #        if len(path) > 2: #startnode and end node are not directly connected
@@ -256,7 +260,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     print 'Entering "find_all_paths_for_start_node" '
     iter_threshold = 0
     cnter = 0
-    while len(iter_nodes) > 0 and iter_threshold <= 100000:
+    while len(iter_nodes) > 0 and iter_threshold <= 1000000:
         iter_threshold += 1
         start_node = iter_nodes.pop()
         #print 'START NODE: ', start_node 
@@ -267,7 +271,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         paths = find_all_paths_for_start_node(G_prime, start_node, end.difference(set([start_node])), nodes_present_in_path, already_visited, 0, 2 ** 32, param)
         already_visited.add(start_node)
         #print 'START NODE: ', start_node, 'Tot nr of paths for this start node: ', len(paths)
-        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths_sorted_wrt_score)
+        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths_sorted_wrt_score, param)
         #print  all_paths_sorted_wrt_score
     all_paths_sorted_wrt_score = ExtendScaffolds(all_paths_sorted_wrt_score)
 #    all_paths_found = [all_paths_sorted_wrt_score[i][2] for i in range(0,len(all_paths_sorted_wrt_score))]
@@ -287,13 +291,15 @@ def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_lengt
     already_visited.add(end_node)
     #print paths
     if len(paths) > 1:
-        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths_sorted_wrt_score)
+        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths_sorted_wrt_score,param)
 #        for path in all_paths_sorted_wrt_score:
 #            print path
         if len(all_paths_sorted_wrt_score) > 0:
             #all_paths_sorted_wrt_score = ExtendScaffolds(all_paths_sorted_wrt_score)
-            return(all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][1], all_paths_sorted_wrt_score[-1][0], all_paths_sorted_wrt_score[-1][3]) #return(all_paths_sorted_wrt_score) #
-    return([], 0, 0, 0)
+            return all_paths_sorted_wrt_score
+            #return(all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][1], all_paths_sorted_wrt_score[-1][0], all_paths_sorted_wrt_score[-1][3]) #return(all_paths_sorted_wrt_score) #
+    return []
+    #return([], 0, 0, 0)
 
 if __name__ == '__main__':
     import Scaffold

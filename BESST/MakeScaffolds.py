@@ -22,6 +22,7 @@
 import sys
 from collections import defaultdict
 import time
+import copy
 
 import networkx as nx
 from networkx import algorithms
@@ -34,6 +35,7 @@ from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 import haplotypes as HR
 import plots
+import order_contigs
 
 
 def constant_large():
@@ -75,17 +77,27 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
     G = RemoveIsolatedContigs(G, Information)     #step1
     plot = 'G'
-    RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
-    G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
-    G, Contigs, Scaffolds = RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param)    #step4    
-    #The contigs that made it to proper scaffolds
-    (Contigs, Scaffolds, param) = NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)   #step5
-    ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
+
+    if not param.no_score:
+        RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot) #step2
+        G = RemoveIsolatedContigs(G, Information) #there are probably new isolated nodes created from step 2
+        G, Contigs, Scaffolds = RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param)    #step4    
+        #The contigs that made it to proper scaffolds
+        (Contigs, Scaffolds, param) = NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited)   #step5
+        ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
 
     if param.extend_paths:
         print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
         PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
         print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
+        print >> Information, 'Number of gaps estimated by GapEst-LP module pathgaps in this step is: {0}'.format(param.path_gaps_estimated)
+
+    if param.plots:
+        if len(param.gap_estimations) > 0:
+            plots.histogram(param.gap_estimations, param, bins=50, x_label='gap size', y_label='Frequency', title='GapPredictions', nr_obs = len(param.gap_estimations))
+
+ ## TODO: Look if we can use the new pathgaps theory to include these isolated 
+ ## regions of small contigs in the scaffolding
 
 #
 #        for node in G_prime.nodes():
@@ -383,44 +395,51 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
 
                 G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         else:
-            #calculate gap to next scaffold
-            sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
-            nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
-            data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
-            mean_obs = sum_obs / float(nr_links)
-            #try:
-            c1_len = Scaffolds[scaf].s_length
-            #except KeyError:
-            #    c1_len=small_scaffolds[scaf].s_length
-            #try:
-            c2_len = Scaffolds[nbr_scaf].s_length
-            #except KeyError:
-            #   c2_len=small_scaffolds[nbr_scaf].s_length
-            #do fancy gap estimation by the bias estimator formula
-            if param.std_dev_ins_size and nr_links >= 5:
-                #pre calculated value in lookup table 
-                if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
-                    #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
-                    try:
-                        avg_gap = dValuesTable[int(round(data_observation, 0))]
-                    except KeyError:
+            if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
+                #calculate gap to next scaffold
+                sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
+                nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
+                data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
+                mean_obs = sum_obs / float(nr_links)
+                #try:
+                c1_len = Scaffolds[scaf].s_length
+                #except KeyError:
+                #    c1_len=small_scaffolds[scaf].s_length
+                #try:
+                c2_len = Scaffolds[nbr_scaf].s_length
+                #except KeyError:
+                #   c2_len=small_scaffolds[nbr_scaf].s_length
+                #do fancy gap estimation by the bias estimator formula
+                if param.std_dev_ins_size and nr_links >= 5:
+                    #pre calculated value in lookup table 
+                    if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
+                        #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
+                        try:
+                            avg_gap = dValuesTable[int(round(data_observation, 0))]
+                        except KeyError:
+                            avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                            #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
+                    #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
+                    elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
                         avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
-                        #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
-                #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
-                elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
-                    avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                    else:
+                        #print 'now', 2 * param.std_dev_ins_size + param.read_len
+                        avg_gap = int(data_observation)
+                        param.gap_estimations.append( avg_gap )
+                    #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                    #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
+                    #contigs contained in other contigs
+                #do naive gap estimation
                 else:
-                    #print 'now', 2 * param.std_dev_ins_size + param.read_len
                     avg_gap = int(data_observation)
-                #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
-                #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
-                #contigs contained in other contigs
-            #do naive gap estimation
+                    param.gap_estimations.append( avg_gap )
             else:
-                avg_gap = int(data_observation)
-            if avg_gap < 0:
+                avg_gap = G[(scaf, side)][(nbr_scaf, nbr_side)]['avg_gap']
+                param.gap_estimations.append( avg_gap )
+
+            if avg_gap <= 1:
                 #TODO: Eventually implement SW algm to find ML overlap
-                avg_gap = 0
+                avg_gap = 1
 
             pos += int(avg_gap)
             G.remove_node((scaf, side))
@@ -446,39 +465,333 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             data_observation = (nr_links_ * param.mean_ins_size - sum_obs) / float(nr_links_)
             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
-            high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
-            if len(high_score_path) > 1:
-                if score >= 0.0:
-                    #loc_count += 1
-                    #remove edge in G to fill in the small scaffolds
-                    G.remove_edge(start, end)
-                    #add small scaffolds to G
-                    for i in range(0, len(high_score_path) - 1):
-                        nr_lin = G_prime[high_score_path[i]][high_score_path[i + 1]]['nr_links']
-                        try:
-                            total_dist = G_prime[high_score_path[i]][high_score_path[i + 1]]['obs']
-                            G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin, obs=total_dist)
-                        except KeyError:
-                            G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin)
-                    #remove the small contigs from G_prime
-                    G_prime.remove_nodes_from(high_score_path[1:-1])
-                    # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
-                    small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
-                    for item in small_scafs:
-                        scaf_obj = small_scaffolds[item[0]]
-                        Scaffolds[item[0]] = scaf_obj
-                        cont_objects = scaf_obj.contigs
-                        for obj_ in cont_objects:
-                            ctg_name = obj_.name
-                            Contigs[ctg_name] = obj_
-                            del small_contigs[ctg_name]
-                        del small_scaffolds[item[0]]
+            #high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
+            all_paths_sorted_wrt_score = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
+
+            if not all_paths_sorted_wrt_score:
+                continue
+
+            # if all_paths_sorted_wrt_score[-1][1] != 0:
+            #     sublist = all_paths_sorted_wrt_score[-1]
+            #     bad_links = sublist[1]
+            #     score = sublist[0]
+            #     path_len = sublist[3]
+            #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+
+            # # for sublist in reversed(all_paths_sorted_wrt_score):
+            # #     path = sublist[2]
+            # #     bad_links = sublist[1]
+            # #     score = sublist[0]
+            # #     path_len = sublist[3]
+            # #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+
+            high_score_path, score = all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][0]
+            #print 'Highest scoring path:{0}'.format(high_score_path)
+            #print 'Score: {0}'.format(score)
+
+            if high_score_path and score >= 0.0:
+
+                ##################### v1.0.4.5 
+                ## modified improved path gap estimation here!!
+
+                high_score_path_copy = copy.deepcopy(high_score_path)
+                G_, path = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
+                del path[0]
+                del path[-1]
+                G.remove_edge(start, end)
+                G.add_edges_from(G_.edges(data=True))
+                G_prime.remove_nodes_from(path[1:-1])
+
+                # also remove the edges from inner ends of the large scaffolds so they can't be
+                # involved in creating paths in "between scaffolds"
+
+                G_prime.remove_node(path[0])
+                G_prime.remove_node(path[-1])
+                if path[0][1] == 'L':
+                    G_prime.add_edge(path[0],(path[0][0],'R'),nr_links=None)
+                else:
+                    G_prime.add_edge(path[0],(path[0][0],'L'),nr_links=None)
+                if path[-1][1] == 'L':
+                    G_prime.add_edge(path[-1],(path[-1][0],'R'),nr_links=None)
+                else:
+                    G_prime.add_edge(path[-1],(path[-1][0],'L'),nr_links=None)
+
+                # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
+                small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
+                for item in small_scafs:
+                    scaf_obj = small_scaffolds[item[0]]
+                    Scaffolds[item[0]] = scaf_obj
+                    cont_objects = scaf_obj.contigs
+                    for obj_ in cont_objects:
+                        ctg_name = obj_.name
+                        Contigs[ctg_name] = obj_
+                        del small_contigs[ctg_name]
+                    del small_scaffolds[item[0]]
+                #sys.exit()
+                ######################################
+
+
+
+                # #loc_count += 1
+                # #remove edge in G to fill in the small scaffolds
+                # G.remove_edge(start, end)
+                # #add small scaffolds to G
+                # for i in range(0, len(high_score_path) - 1):
+                #     nr_lin = G_prime[high_score_path[i]][high_score_path[i + 1]]['nr_links']
+                #     try:
+                #         total_dist = G_prime[high_score_path[i]][high_score_path[i + 1]]['obs']
+                #         G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin, obs=total_dist)
+                #     except KeyError:
+                #         G.add_edge(high_score_path[i], high_score_path[i + 1], nr_links=nr_lin)
+                # #remove the small contigs from G_prime
+                # G_prime.remove_nodes_from(high_score_path[1:-1])
+                # # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
+                # small_scafs = map(lambda i: high_score_path[i], filter(lambda i: i % 2 == 1, range(len(high_score_path) - 1)))
+                # for item in small_scafs:
+                #     scaf_obj = small_scaffolds[item[0]]
+                #     Scaffolds[item[0]] = scaf_obj
+                #     cont_objects = scaf_obj.contigs
+                #     for obj_ in cont_objects:
+                #         ctg_name = obj_.name
+                #         Contigs[ctg_name] = obj_
+                #         del small_contigs[ctg_name]
+                #     del small_scaffolds[item[0]]
 
     ####################################################################
     return()
 
 
+def other_end(node):
+    if node[1] == 'L':
+        return (node[0],'R')
+    elif node[1] == 'R':
+        return (node[0],'L')
+    else:
+        print 'Node is not properly declared (has not right or left end)'
+        sys.exit()
 
+def permute_path(path, ctg_to_move, contig_after):
+    pos_ctg_to_move_left = path.index((ctg_to_move,'L'))
+    pos_ctg_to_move_right = path.index((ctg_to_move,'R'))
+
+    path = filter(lambda x: x[0] != ctg_to_move, path)
+    pos_of_ctg_after = map(lambda x: x[0],path).index(contig_after)
+    if pos_ctg_to_move_right < pos_ctg_to_move_left:
+        path.insert(pos_of_ctg_after, (ctg_to_move,'L') )
+        path.insert(pos_of_ctg_after, (ctg_to_move,'R') )
+    else:
+        path.insert(pos_of_ctg_after, (ctg_to_move,'R') )
+        path.insert(pos_of_ctg_after, (ctg_to_move,'L') )
+
+    return path
+
+
+def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,initial_path):
+    contigs_to_indexes = {}
+    indexes_to_contigs = {}
+    index = 0
+    #print 'CURNNNT PATH_',current_path
+    for ctg in current_path:
+        if ctg[0] in contigs_to_indexes:
+            continue
+        else:
+            contigs_to_indexes[ctg[0]] = index
+            indexes_to_contigs[index] =  ctg[0]
+
+            index += 1
+
+    contig_lengths = []
+    for ctg in contigs_to_indexes:
+        try:
+            contig_lengths.append((contigs_to_indexes[ctg], Scaffolds[ctg].s_length))
+        except KeyError:
+            contig_lengths.append((contigs_to_indexes[ctg], small_scaffolds[ctg].s_length))
+
+    #contig_lengths2 = map(lambda x: (contigs_to_indexes[x], Scaffolds[x].s_length), contigs_to_indexes) 
+
+    #print contig_lengths
+    ctg_lengths_sorted = map(lambda x: x[1], sorted(contig_lengths, key=lambda x: x[0]))
+    #print ctg_lengths_sorted
+    tot_links = 0
+    mp_links = 0
+    index_observations = {}     
+    for c1,c2 in observations:  
+        tot_links += len(observations[(c1,c2)])  
+        if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
+            PE = 1
+            #print 'PE link!!',c1,c2
+        elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
+            PE = 1
+            #print 'PE link!!',c1,c2
+        elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
+            PE = 0
+            mp_links += len(observations[(c1,c2)])
+            #print 'MP link!!',c1,c2
+        elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
+            mp_links += len(observations[(c1,c2)])
+            PE = 0
+            #print 'MP link!!',c1,c2           
+        else:
+            PE = -1
+            print 'Spurious link!!',c1,c2
+
+        if PE == -1:
+            # we dont want to have a spurious link to contiribute to the LP objective value
+            continue
+        else:
+            i1, i2 = min(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]]), max(contigs_to_indexes[c1[0]], contigs_to_indexes[c2[0]])
+            index_observations[(i1,i2,PE)] = observations[(c1,c2)]
+        #print i1,i2 #'OBSLIST_', observations[(c1,c2)]
+    #observations =  map(lambda x: (contigs_to_indexes[x[0][0]], contigs_to_indexes[x[1][0]]) = observations[x], observations)   
+
+    #print 'MP LINK RATIO:{0}, tot_links:{1}'.format(mp_links/float(tot_links), tot_links)
+    #print index_observations
+    #print ctg_lengths_sorted
+    #print index_observations
+
+    ## 2 Get optimal LP solution for given path order
+    result_path = order_contigs.main(ctg_lengths_sorted, index_observations, param, initial_path)
+    if not result_path:
+        return None,None,None,None
+
+    return result_path, contigs_to_indexes, indexes_to_contigs, index_observations
+
+
+def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
+    ## ACCURATE GAP EST HERE
+
+    #print G_prime.subgraph(path).edges(data=True)
+    sub_graph = G_prime.subgraph(path)
+
+
+    #print G_prime.subgraph(path).edges(data=True)
+    sub_graph_reduced = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] in sub_graph[x[0]][x[1]] , sub_graph.edges())
+
+    observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
+    sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
+    for c1,c2 in sub_graph_small_to_large_ctgs:
+        observations[(c1,c2)] = [sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
+    
+
+    # for c1,c2 in observations:
+    #     if (other_end(c2),other_end(c1)) in observations:
+    #         print observations
+    # print param.contamination_ratio 
+
+
+
+    #########################
+    ##########################
+    ## Now we have all info that we need to send to module for calculating optimal path
+
+
+
+    # only one contig, nothing to permute
+    if len(path) <= 4 or not param.contamination_ratio:
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param,True)
+        final_path = path
+        #print final_path
+        
+    ## algm here
+    else:
+        #print 'ENTER HERE'
+        #print path
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
+        final_path = copy.deepcopy(path)
+        original_path = copy.deepcopy(path)
+        #print 'WORK IS DONE'
+
+        for i in range(3, len(path) - 1, 2):
+            # switch positions of two contigs
+            current_path = copy.deepcopy(final_path)
+            ctg_to_move = original_path[i][0]
+            contig_after = original_path[i-2][0]
+            current_path  = permute_path(current_path, ctg_to_move, contig_after)
+
+            #print 'Current path:',current_path
+        ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
+            if not current_path_instance:
+                continue
+        ## 3 Check of current path is better than previous
+            #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+            
+            if current_path_instance.objective < final_path_instance.objective:
+                final_path = copy.deepcopy(current_path)
+                final_path_instance = copy.deepcopy(current_path_instance)
+                final_contigs_to_indexes = current_contigs_to_indexes 
+                final_indexes_to_contigs = current_indexes_to_contigs
+                final_index_observations = current_index_observations
+
+
+        # for i in range(1,len(path) - 3, 2):
+        #     #final_path = copy.deepcopy(path)
+        #     for j in range(i+2, len(path) - 1, 2):
+        #         # switch positions of two contigs
+        #         current_path = copy.deepcopy(final_path)
+        #         ctg_to_move = final_path[j][0]
+        #         current_pos_examined_contig = final_path[i][0]
+        #         current_path  = permute_path(current_path, ctg_to_move, current_pos_examined_contig)
+        #         print 'Current path:',current_path
+        #     ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+        #         current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param)
+
+        #     ## 3 Check of current path is better than previous
+        #         print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+        #         if current_path_instance.objective < final_path_instance.objective:
+        #             final_path = copy.deepcopy(current_path)
+        #             final_path_instance = copy.deepcopy(current_path_instance)
+        #             final_contigs_to_indexes = current_contigs_to_indexes 
+        #             final_indexes_to_contigs = current_indexes_to_contigs
+        #             final_index_observations = current_index_observations
+
+
+
+
+    ## 5 Calculate some stats on the path that we have chosen
+
+    param.path_gaps_estimated += len(final_path_instance.gaps)
+    path_dict_index = final_path_instance.make_path_dict_for_besst()
+    #print 'FINAL:', final_path
+    #print 'OBJECTIVE: {0}'.format(final_path_instance.objective)
+
+    # for ctg in final_path:
+    #     if ctg[0] in Scaffolds:
+    #         for c in Scaffolds[ctg[0]].contigs:
+    #             print 'ctg name, scaffold{0}: {1}'.format(ctg[0],c.name)
+    #     else:
+    #         print 'small ctg name:', small_scaffolds[ctg[0]].contigs[0].name
+
+
+    #print final_path_instance
+    #print path_dict_index
+    path_dict = map(lambda x: (final_indexes_to_contigs[x[0].index],final_indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)
+    #print path_dict
+    # for ctg in final_path_instance.ctgs:
+    #     contig = indexes_to_contigs[ctg.index]
+    #     ctg.length
+    #     ctg.position
+
+    G_ = nx.Graph()
+    final_path.insert(0, (final_path[0][0], 'R')) if final_path[0][1] == 'L' else final_path.insert(0, (final_path[0][0], 'L'))
+    final_path.insert(len(final_path), (final_path[-1][0], 'R'))  if final_path[-1][1] == 'L' else final_path.insert(len(final_path), (final_path[-1][0], 'L'))
+    G_.add_edges_from(zip(final_path[::1], final_path[1::]))
+
+    for c1,c2,gap in path_dict:
+        if (c2,'L') in G_[(c1,'L')]:
+            G_[(c1,'L')][(c2,'L')]['avg_gap'] = gap 
+        elif (c2,'R') in G_[(c1,'L')]:
+            G_[(c1,'L')][(c2,'R')]['avg_gap'] = gap
+        elif (c2,'L') in G_[(c1,'R')]:
+            G_[(c1,'R')][(c2,'L')]['avg_gap'] = gap
+        elif (c2,'R') in G_[(c1,'R')]:
+            G_[(c1,'R')][(c2,'R')]['avg_gap'] = gap
+        else:
+            print 'Could not find edge!'
+            sys.exit()
+    #print G_.edges(data=True)
+
+    return(G_, final_path)
 
 
 def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information):
@@ -679,72 +992,67 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         ## in another path, we need to update "Scaffolds" structure here along as we go in order for
         ## the above dublette checking function to work
 
-        #make the path a small linear graph
-        G_ = nx.Graph()
-#        if path[0][1] == 'L':
-#            path.insert(0,(path[0][0],'R')) 
-#        else: 
-#            path.insert(0,(path[0][0],'L'))
-#        if path[len(path)-1][1] == 'L':
-#            path.insert(len(path),(path[len(path)-1][0],'R'))  
-#        else:
-#            path.insert(len(path),(path[len(path)-1][0],'L'))
 
-        path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
-        path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
+        G_, path = estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param)
 
+
+        # #make the path a small linear graph
+        # G_ = nx.Graph()
+        # path.insert(0, (path[0][0], 'R')) if path[0][1] == 'L' else path.insert(0, (path[0][0], 'L'))
+        # path.insert(len(path), (path[-1][0], 'R'))  if path[-1][1] == 'L' else path.insert(len(path), (path[-1][0], 'L'))
+        # G_.add_edges_from(zip(path[::1], path[1::]))
 
         start_end_node_update_storage[path[0]] = 0
         start_end_node_update_storage[path[-1]] = 0
-        G_.add_edges_from(zip(path[::1], path[1::]))
 
-        for edge in G_.edges():
-            try:
-                G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-            except KeyError:
-                print >> Information, path
-                try:
-                    Scaffolds[edge[0][0]]
-                    print >> Information, edge[0][0] , 'is in Scaffolds'
-                except KeyError:
-                    print >> Information, edge[0][0] , 'is not in Scaffolds'
-                try:
-                    Scaffolds[edge[1][0]]
-                    print >> Information, edge[1][0] , 'is in Scaffolds'
-                except KeyError:
-                    print >> Information, edge[1][0] , 'is not in Scaffolds'
+        # for edge in G_.edges():
+        #     try:
+        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
+        #     except KeyError:
+        #         print >> Information, path
+        #         try:
+        #             Scaffolds[edge[0][0]]
+        #             print >> Information, edge[0][0] , 'is in Scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[0][0] , 'is not in Scaffolds'
+        #         try:
+        #             Scaffolds[edge[1][0]]
+        #             print >> Information, edge[1][0] , 'is in Scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[1][0] , 'is not in Scaffolds'
 
-                try:
-                    small_scaffolds[edge[0][0]]
-                    print >> Information, edge[0][0] , 'is in small_scaffolds'
-                except KeyError:
-                    print >> Information, edge[0][0] , 'is not in small_scaffolds'
-                try:
-                    small_scaffolds[edge[1][0]]
-                    print >> Information, edge[1][0] , 'is in small_scaffolds'
-                except KeyError:
-                    print >> Information, edge[1][0] , 'is not in small_scaffolds'
+        #         try:
+        #             small_scaffolds[edge[0][0]]
+        #             print >> Information, edge[0][0] , 'is in small_scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[0][0] , 'is not in small_scaffolds'
+        #         try:
+        #             small_scaffolds[edge[1][0]]
+        #             print >> Information, edge[1][0] , 'is in small_scaffolds'
+        #         except KeyError:
+        #             print >> Information, edge[1][0] , 'is not in small_scaffolds'
 
-                try:
-                    G_prime[edge[0]]
-                    print >> Information, edge[0] , 'is in G_prime'
-                    print >> Information, G_prime[edge[0]]
-                except KeyError:
-                    print >> Information, edge[0] , 'is not in G_prime'
-                try:
-                    G_prime[edge[1]]
-                    print >> Information, edge[1] , 'is in G_prime'
-                    print >> Information, G_prime[edge[1]]
-                except KeyError:
-                    print >> Information, edge[1] , 'is not in G_prime'
-                G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-                sys.exit()
+        #         try:
+        #             G_prime[edge[0]]
+        #             print >> Information, edge[0] , 'is in G_prime'
+        #             print >> Information, G_prime[edge[0]]
+        #         except KeyError:
+        #             print >> Information, edge[0] , 'is not in G_prime'
+        #         try:
+        #             G_prime[edge[1]]
+        #             print >> Information, edge[1] , 'is in G_prime'
+        #             print >> Information, G_prime[edge[1]]
+        #         except KeyError:
+        #             print >> Information, edge[1] , 'is not in G_prime'
+        #         print edge[0], edge[1]
+        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
+        #         sys.exit()
 
-            try:
-                G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
-            except KeyError:
-                #may be the two different sides of a contig (has no gap dist)
-                pass
+        #     try:
+        #         G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
+        #     except KeyError:
+        #         #may be the two different sides of a contig (has no gap dist)
+        #         pass
 
         start = path[0]
         end = path[-1]
@@ -756,6 +1064,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         (G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
+        print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         Scaffolds[S.name] = S        #include in scaffold library
         #add the new scaffold object to G_prime

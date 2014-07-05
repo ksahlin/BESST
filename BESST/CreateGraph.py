@@ -60,6 +60,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     print >> Information, 'Nr of contigs/scaffolds included in scaffolding: ' + str(len(Scaffolds)) #,Scaffolds.keys()
     if len(Scaffolds) == 0:
+        repeat_file = open(param.output_directory + '/repeats.fa', 'w')
         return(G, G_prime)
 
     ### initialize graph objects two nodes per contig "left" and "right" node. ###    
@@ -98,6 +99,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         except ValueError:
             continue
 
+        # if contig1 == 'c66,pos:95500-98500,rc:1' and contig2 == 'c65,pos:95000-95500,rc:0' or contig1 == 'c65,pos:95000-95500,rc:0' and contig2 == 'c66,pos:95500-98500,rc:1':
+        #     print alignedread.pos, alignedread.mpos
+        #     print 'c66,pos:95500-98500,rc:1',alignedread.pos
+        # if contig1 == 'c67,pos:98500-99000,rc:1' or contig2 == 'c67,pos:98500-99000,rc:1':
+        #     print 'c67,pos:98500-99000,rc:1', alignedread.pos
         #TODO:Repeats (and haplotypes) may have been singled out, we need this statement (or a smarter version of it)
         if (contig1 in Contigs or contig1 in small_contigs) and (contig2 in Contigs or contig2 in small_contigs):
             pass
@@ -419,9 +425,9 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     #Calculate NG50 and LG 50
     param.tot_assembly_length = sum(cont_lengths)
     sorted_lengths = sorted(cont_lengths, reverse=True)
-    NG50, LG50 = CalculateStats(sorted_lengths, [], param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
+    param.current_L50 = L50
+    param.current_N50 = N50
     #extend_paths = param.extend_paths
     counter = 0
     start = time()
@@ -476,8 +482,8 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
     scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
     NG50, LG50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    param.current_L50 = L50
+    param.current_N50 = N50
     for scaffold_ in Scaffolds.keys(): #iterate over keys in hash, so that we can remove keys while iterating over it
         if Scaffolds[scaffold_].s_length < param.contig_threshold:
             ###  Switch from Scaffolds to small_scaffolds (they can still be used in the path extension)
@@ -554,25 +560,25 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
 def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, Information):
     cur_length = 0
     nr_conts = 0
-    LG50 = 0
-    NG50 = 0
+    L50 = 0
+    N50 = 0
     for contig_length in sorted_contig_lengths:
         cur_length += contig_length
         nr_conts += 1
         if cur_length >= param.tot_assembly_length / 2.0:
-            LG50 = contig_length
-            NG50 = nr_conts
+            N50 = contig_length
+            L50 = nr_conts
             break
-    if LG50 == 0:
+    if N50 == 0:
         for contig_length in sorted_contig_lengths_small:
             cur_length += contig_length
             nr_conts += 1
             if cur_length >= param.tot_assembly_length / 2.0:
-                LG50 = contig_length
-                NG50 = nr_conts
+                N50 = contig_length
+                L50 = nr_conts
                 break
-    print >> Information, 'LG50: ', LG50, 'NG50: ', NG50, 'Initial contig assembly length: ', param.tot_assembly_length
-    return(NG50, LG50)
+    print >> Information, 'L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length
+    return(N50, L50)
 
 def CalculateMeanCoverage(Contigs, Information, param):
     # tuples like (cont lenght, contig name)

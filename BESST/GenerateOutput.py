@@ -70,7 +70,7 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
         pass
     #contigs_before=len(C_dict)
     contigs_after = len(F)
-    ## this is the madness reverse complement table that needs to be specified when working with AbySS...
+    ## reverse complement table
     rev_nuc = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'a':'t', 'c':'g', 'g':'c', 't':'a', 'N':'N', 'X':'X', 'n':'n', 'Y':'R', 'R':'Y', 'K':'M', 'M':'K', 'S':'S', 'W':'W', 'B':'V', 'V':'B', 'H':'D', 'D':'H', 'y':'r', 'r':'y', 'k':'m', 'm':'k', 's':'s', 'w':'w', 'b':'v', 'v':'b', 'h':'d', 'd':'h'}
     out_scaf_file = open(param.output_directory + '/pass' + str(pass_nr) + '/scaffold_info-pass' + str(pass_nr), 'w')
     #print >>Information, 'Contigs before scaffolding: '+ str(contigs_before)+'\n'
@@ -101,7 +101,6 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
             pos = scaf[i][2]
             length = scaf[i][3]
             sequence = scaf[i][4]
-
 #            #Get the number of left and right links            
 #            if i-1>=0:
 #                left_name=scaf[i-1][0]
@@ -122,7 +121,13 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
 #                nr_links_right=0
 
             gap = pos - prev_pos
-            N_seq = 'N' * gap
+
+            if gap == 1:
+                N_seq = 'n'
+            else:
+                N_seq = 'N' * gap
+
+
             if gap < 0: #remove a part of the last contig so we can append the next one (overwrite it's sequence)
                 last_contig = print_list.pop()
                 last_contig = last_contig[0:gap]

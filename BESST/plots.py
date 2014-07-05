@@ -14,8 +14,8 @@ except ImportError, RuntimeError:
     pass
 
 
-def histogram(x_, param, bins=20, x_label='x', y_label='y', title='Histogram'):
-    x = x_[:10000] # If many contigs/edges we only plot 10 000 for time and visuability purposes
+def histogram(x_, param, bins=20, x_label='x', y_label='y', title='Histogram',nr_obs = 10000):
+    x = x_[:nr_obs] # If many contigs/edges we only plot 10 000 (default) for time and visuability purposes
     dest = os.path.join(param.output_directory, 'plots', title + '.png')
     plt.hist(x, bins)
     plt.xlabel(x_label)
