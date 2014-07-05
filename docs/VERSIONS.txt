@@ -91,7 +91,9 @@ V1.0.4.2
 * Fixed bug in removing 0 score edges i G_prime. Now all edges in G are also removed in G_prime when searching for paths. This is an important fix.
 
 V1.1
-* Gap size estimations in  non linear scaffold regions are now estimated with a LP module toghether with GapEst. Since the theory of gapest (analytic derivation, hence the speed) only works for one gap between two scaffolds, all gaps were previously estimated one by one with GapEst. Now, in nonlinear regions, gaps between all pairs of scaffolds are estimated. These estimations are then given as input in the objective function for an linear programming instance. The onbejtive is to minimize the total distance of a current solution to the LP, given GapEst estimated ones. This will give more robust esitmations in case where short contigs and few links by making use of more information simultaneosly.
+* Added LP solution to fix errors in orderings of small contigs when PE contamination in MP libraries are present. This is a big weakness in earlier versions (for fragmented assemblies scaffolded with MP libraries with considerable amount of PE contamination). 
+
+* Gap size estimations in non linear scaffold regions are now estimated with a LP module toghether with GapEst. Since the theory of gapest (analytic derivation, hence the speed) only works for one gap between two scaffolds, all gaps were previously estimated one by one with GapEst. Now, in nonlinear regions, gaps between all pairs of scaffolds are estimated. These estimations are then given as input in the objective function for an linear programming instance. The onbejtive is to minimize the total distance of a current solution to the LP, given GapEst estimated ones. This will give more robust esitmations in case where short contigs and few links by making use of more information simultaneosly.
 
 * Added a histogram of estimated gap distribution in cas -plots are specified.
 
@@ -100,3 +102,8 @@ V1.1
 * pulp (Linear programming module for python) is added as required packages
 
 * added parameter --separate_repeats to separate potential repeats (inferred by BESST) into a file "repeats.fa". This was default output for BESST in earlier versions. Now, default output is a single file in each scaffolding step Scaffolds_passX.fa.
+
+* added parameter -filter_contigs <int> . This parameter with remove att contigs smaller than <int> from all scaffolding (and scaffold output). 
+
+* added parameter --no_score. If specified, statistical scoring is not used to scaffold. BESST instead relies soley on the new LP module to search for paths between contigs. The effect of this is not thouroughly tested so far but preliminary results hint that it is slower but gives slightly better results.
+

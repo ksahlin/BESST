@@ -184,9 +184,9 @@ def main(options):
     sorted_lengths = sorted(scaf_lengths, reverse=True)
     scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
-    NG50, LG50 = CG.CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    N50, L50 = CG.CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
+    param.current_L50 = L50
+    param.current_N50 = N50
 
     elapsed = time() - tot_start
     print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'

@@ -33,7 +33,7 @@ class parameter(object):
                  parameter_edgesupport=None, parameter_contig_threshold=None,
                  parameter_scaffold_indexer=0, parameter_first_lib=None,
                  parameter_cov_cutoff=None, parameter_tot_assembly_length=None,
-                 parameter_current_NG50=None, parameter_current_LG50=None,
+                 parameter_current_N50=None, parameter_current_L50=None,
                  parameter_hapl_ratio=None, parameter_hapl_threshold=None,
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
@@ -65,8 +65,8 @@ class parameter(object):
         self.first_lib = parameter_first_lib
         self.cov_cutoff = parameter_cov_cutoff
         self.tot_assembly_length = parameter_tot_assembly_length
-        self.current_NG50 = parameter_current_NG50
-        self.current_LG50 = parameter_current_LG50
+        self.current_N50 = parameter_current_N50
+        self.current_L50 = parameter_current_L50
         self.hapl_ratio = parameter_hapl_ratio
         self.hapl_threshold = parameter_hapl_threshold
         self.detect_haplotype = parameter_detect_haplotype
