@@ -163,19 +163,20 @@ def get_metrics(bam_file, param, Information):
 
     ## SMOOTH OUT contamine distribution here by removing extreme observations## 
     n_contamine = float(len(contamination_reads))
-    mean_isize = sum(contamination_reads) / n_contamine
-    std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
-    print >> Information, 'Contamine mean before filtering :', mean_isize
-    print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
-    extreme_obs_occur = True
-    while extreme_obs_occur:
-        extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
-        n_contamine = float(len(filtered_list))
-        mean_isize = sum(filtered_list) / n_contamine
-        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
-        contamination_reads = filtered_list
-    print >> Information, 'Contamine mean converged:', mean_isize
-    print >> Information, 'Contamine std_est converged: ', std_dev_isize
+    if count_contamine > 2:
+        mean_isize = sum(contamination_reads) / n_contamine
+        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
+        print >> Information, 'Contamine mean before filtering :', mean_isize
+        print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
+        extreme_obs_occur = True
+        while extreme_obs_occur:
+            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
+            n_contamine = float(len(filtered_list))
+            mean_isize = sum(filtered_list) / n_contamine
+            std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+            contamination_reads = filtered_list
+        print >> Information, 'Contamine mean converged:', mean_isize
+        print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
     if mean_isize > param.mean_ins_size or count_contamine == 0:
         param.contamination_ratio  = False      
