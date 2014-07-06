@@ -481,7 +481,7 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
     sorted_lengths = sorted(scaf_lengths, reverse=True)
     scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
-    NG50, LG50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
+    N50, L50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
     param.current_L50 = L50
     param.current_N50 = N50
     for scaffold_ in Scaffolds.keys(): #iterate over keys in hash, so that we can remove keys while iterating over it

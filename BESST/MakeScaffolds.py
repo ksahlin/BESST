@@ -617,10 +617,10 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
     index_observations = {}     
     for c1,c2 in observations:  
         tot_links += len(observations[(c1,c2)])  
-        if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
+        if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0 and param.contamination_ratio:
             PE = 1
             #print 'PE link!!',c1,c2
-        elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
+        elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1 and param.contamination_ratio:
             PE = 1
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
@@ -633,7 +633,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
             #print 'MP link!!',c1,c2           
         else:
             PE = -1
-            print 'Spurious link!!',c1,c2
+            #print 'Spurious link!!',c1,c2
 
         if PE == -1:
             # we dont want to have a spurious link to contiribute to the LP objective value

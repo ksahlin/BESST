@@ -237,8 +237,11 @@ class Path(object):
         problem = LpProblem("PathProblem",LpMinimize)
 
         #problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+        if self.contamination_ratio:
+            problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+        else:
+            problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
 
-        problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
 
         # adding constraints induced by the absolute value of objective function
