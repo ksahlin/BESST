@@ -27,7 +27,7 @@ def check_module(module):
         sys.stdout.write('Please install ' + module + ' using one of the two provided commands from terminal:\n \
         pip install ' + module + '\n \
         easy_install ' + module + '\n')
-        sys.exit()
+        sys.exit(1)
 
 
 
