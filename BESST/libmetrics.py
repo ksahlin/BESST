@@ -163,6 +163,7 @@ def get_metrics(bam_file, param, Information):
 
     ## SMOOTH OUT contamine distribution here by removing extreme observations## 
     n_contamine = float(len(contamination_reads))
+    mean_isize = 0
     if count_contamine > 2:
         mean_isize = sum(contamination_reads) / n_contamine
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5

@@ -166,7 +166,7 @@ def main(options):
 
 
         GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
-       
+
         if not options.separate_repeats:
             destination = open("{0}/pass{1}/Scaffolds_pass{1}.fa".format(param.output_directory, str(i+1) ), 'wb')
             #destination = open(outfile,'wb')
@@ -302,7 +302,7 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
                   help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
                   not included in the main scaffolding output file with this flag specified.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.1.1')
+other.add_argument('--version', action='version', version='%(prog)s 1.1.2')
 
 
 

@@ -21,6 +21,7 @@
 
 
 import sys
+import os
 from collections import defaultdict
 from math import pi
 from time import time
@@ -60,7 +61,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     print >> Information, 'Nr of contigs/scaffolds included in scaffolding: ' + str(len(Scaffolds)) #,Scaffolds.keys()
     if len(Scaffolds) == 0:
-        repeat_file = open(param.output_directory + '/repeats.fa', 'w')
+        if not os.path.isfile(param.output_directory + '/repeats.fa'):
+            repeat_file = open(param.output_directory + '/repeats.fa', 'w')
         return(G, G_prime)
 
     ### initialize graph objects two nodes per contig "left" and "right" node. ###    
