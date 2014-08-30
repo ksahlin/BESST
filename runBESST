@@ -26,7 +26,7 @@ import argparse
 import shutil
 
 from BESST import errorhandle
-
+from BESST import decide_approach
 
 def mkdir_p(path):
     try:
@@ -131,7 +131,7 @@ def main(options):
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
             libmetrics.get_metrics(bam_file, param, Information)
-
+            decide_approach.decide_scaffolding_procedure(C_dict, param)
             #create graph
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
 
