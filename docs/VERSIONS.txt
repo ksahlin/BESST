@@ -106,4 +106,3 @@ V1.1
 * added parameter -filter_contigs <int> . This parameter with remove att contigs smaller than <int> from all scaffolding (and scaffold output). 
 
 * added parameter --no_score. If specified, statistical scoring is not used to scaffold. BESST instead relies soley on the new LP module to search for paths between contigs. The effect of this is not thouroughly tested so far but preliminary results hint that it is slower but gives slightly better results.
-
