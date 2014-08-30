@@ -31,21 +31,30 @@ def get_metrics(bam_file, param, Information):
 
     if not param.read_len: # user has not specified read len  
         #get read length
-        try:
-            iter_ = bam_file.fetch(cont_names[largest_contigs_indexes[0]])
-        except ValueError:
-            sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
-            sys.exit(0)
         nr_reads = 0
         tot_read_len = 0
-        for read in iter_:
-            if read.rlen != 0:
-                tot_read_len += read.rlen
-                nr_reads += 1
-            else:
-                tot_read_len += read.alen
-                nr_reads += 1
-        param.read_len = tot_read_len / float(nr_reads)
+        for index in largest_contigs_indexes:
+            try:
+                iter_ = bam_file.fetch(cont_names[index])
+            except ValueError:
+                sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+                sys.exit(0)
+
+            for read in iter_:
+                if read.rlen != 0:
+                    tot_read_len += read.rlen
+                    nr_reads += 1
+                else:
+                    tot_read_len += read.alen
+                    nr_reads += 1
+            if nr_reads >= 100:
+                param.read_len = tot_read_len / float(nr_reads)
+                break        
+        else:
+            sys.stderr.write('Did not get sufficient readmappings to calculate\
+             read_length from mappings. Got {0} mappings. Please provide this parameter or more importantly\
+             check why almost no reads are mapping to the contigs.\nterminating..\n'.format(nr_reads))
+            sys.exit(0)
 
 
     if param.mean_ins_size and param.std_dev_ins_size and not param.ins_size_threshold: # user has specified mean and std dev but no thresholds
