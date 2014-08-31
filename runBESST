@@ -136,7 +136,6 @@ def main(options):
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
             decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
-        param.first_lib = False   #not the first lib any more
         #print G, not G == None, not None, None == False
         if not G:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
@@ -175,7 +174,8 @@ def main(options):
             shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
             destination.close()
             os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
-    
+        
+        param.first_lib = False   #not the first lib any more    
 
     if not options.separate_repeats:
         os.remove( "{0}/repeats.fa".format(param.output_directory ) )
