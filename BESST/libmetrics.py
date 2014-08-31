@@ -9,18 +9,104 @@ import sys
 from heapq import nlargest
 
 from mathstats.normaldist.normal import MaxObsDistr
+import bam_parser
+
+
+def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
+    k = MaxObsDistr(len(insert_list), 0.95)
+    filtered_list = list(filter((lambda x : (x < mean_insert + k * std_dev_insert and x > mean_insert - k * std_dev_insert)), insert_list))
+    if len(insert_list) > len(filtered_list):
+        return(True, filtered_list)
+    else:
+        return(False, filtered_list)
+
+def remove_outliers(ins_size_reads):
+    ## SMOOTH OUT THE MEAN HERE by removing extreme observations
+    if not ins_size_reads:
+        return 0,0
+    n = float(len(ins_size_reads))
+    mean_isize = sum(ins_size_reads) / n
+    std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
+    extreme_obs_occur = True
+    while extreme_obs_occur:
+        extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, ins_size_reads)
+        n = float(len(filtered_list))
+        mean_isize = sum(filtered_list) / n
+        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n - 1)) ** 0.5
+        ins_size_reads = filtered_list
+    n = float(len(ins_size_reads))
+    mean_isize = sum(ins_size_reads) / n
+    std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
+    return mean_isize, std_dev_isize
+
+def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, param, Information):
+    iter_threshold = 1000000
+    counter_total= 0
+    count_contamine = 0
+
+    contamination_reads = []
+    counter = 0
+
+    for index in largest_contigs_indexes:
+        try:
+            iter_ = bam_file.fetch(cont_names[index])
+        except ValueError:
+            sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+            sys.exit(0)
+        for read in iter_:
+            counter += 1
+
+            # all reads mapping
+            if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
+                counter_total += 1
+
+            # contamination reads (mapped in reverse complemented orientation)
+            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
+                contamination_reads.append(abs(read.tlen)+2*param.read_len)
+                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
+            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
+                contamination_reads.append(abs(read.tlen))
+                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
+                if counter >= iter_threshold:
+                    break
+            if counter >= iter_threshold:
+                    break
+
+    ## SMOOTH OUT contamine distribution here by removing extreme observations## 
+    n_contamine = float(len(contamination_reads))
+    mean_isize = 0
+    if count_contamine > 2:
+        mean_isize = sum(contamination_reads) / n_contamine
+        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
+        print >> Information, 'Contamine mean before filtering :', mean_isize
+        print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
+        extreme_obs_occur = True
+        while extreme_obs_occur:
+            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
+            n_contamine = float(len(filtered_list))
+            mean_isize = sum(filtered_list) / n_contamine
+            std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+            contamination_reads = filtered_list
+        print >> Information, 'Contamine mean converged:', mean_isize
+        print >> Information, 'Contamine std_est converged: ', std_dev_isize
+
+    if mean_isize > param.mean_ins_size or count_contamine == 0:
+        param.contamination_ratio  = False      
+        param.contamination_mean = 0
+        param.contamination_stddev = 0
+    else:
+        param.contamination_mean = mean_isize
+        param.contamination_stddev = std_dev_isize
+        param.contamination_ratio = count_contamine / float(counter_total)
+
+    return n_contamine
+
+
 
 #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
 
 def get_metrics(bam_file, param, Information):
-    def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
-        k = MaxObsDistr(len(insert_list), 0.95)
-        filtered_list = list(filter((lambda x : (x < mean_insert + k * std_dev_insert and x > mean_insert - k * std_dev_insert)), insert_list))
-        if len(insert_list) > len(filtered_list):
-            return(True, filtered_list)
-        else:
-            return(False, filtered_list)
-    informative_pair = set([147, 163]) #161,145,129,177,
+    #informative_pair = set([147, 163]) #161,145,129,177,
     cont_names = bam_file.references
     cont_lengths = bam_file.lengths
     #cont_lengths=[int(nr) for nr in cont_lengths]  #convert long to int object
@@ -76,13 +162,11 @@ def get_metrics(bam_file, param, Information):
                 sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
                 sys.exit(0)
             for read in iter_:
-                #total_reads_iterated_through += 1
-                if (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm) or \
-                    (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm ) \
-                    and not read.mate_is_unmapped and read.mapq > 10:
-
-                #if read.flag in informative_pair and read.rname == read.mrnm  and not read.mate_is_unmapped and not read.is_unmapped and read.mapq > 10: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
+                if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read):
                     ins_size_reads.append(abs(read.tlen))
+                    counter += 1
+                if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read):
+                    ins_size_reads.append(abs(read.tlen) + 2*param.read_len)
                     counter += 1
                 if counter > 1000000:
                     break
@@ -129,75 +213,8 @@ def get_metrics(bam_file, param, Information):
         else:
             param.contig_threshold = param.mean_ins_size + (param.std_dev_ins_size / float(param.mean_ins_size)) * param.std_dev_ins_size
 
-
-
-
-
-
-    ## finally, get a PE read contamination distribution from the MP library if it exists
-
-    iter_threshold = 1000000
-    counter_total= 0
-    count_contamine = 0
-
-    contamination_reads = []
-    counter = 0
-
-    for index in largest_contigs_indexes:
-        try:
-            iter_ = bam_file.fetch(cont_names[index])
-        except ValueError:
-            sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
-            sys.exit(0)
-        for read in iter_:
-            counter += 1
-
-            # all reads mapping
-            if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
-                counter_total += 1
-
-            # contamination reads (mapped in reverse complemented orientation)
-            if (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm) or \
-            (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm ) \
-            and not read.mate_is_unmapped and read.mapq > 10:
-                #read.flag in [161,145] and read.rname == read.mrnm and read.mapq > 10 and not read.mate_is_unmapped: #
-                # <----   ----->
-                #print read.tlen, read.is_reverse, read.mate_is_reverse, read.is_read2
-                contamination_reads.append(abs(read.tlen)+2*param.read_len)
-                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
-                if counter >= iter_threshold:
-                    break
-            if counter >= iter_threshold:
-                    break
-
-    ## SMOOTH OUT contamine distribution here by removing extreme observations## 
-    n_contamine = float(len(contamination_reads))
-    mean_isize = 0
-    if count_contamine > 2:
-        mean_isize = sum(contamination_reads) / n_contamine
-        std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
-        print >> Information, 'Contamine mean before filtering :', mean_isize
-        print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
-        extreme_obs_occur = True
-        while extreme_obs_occur:
-            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
-            n_contamine = float(len(filtered_list))
-            mean_isize = sum(filtered_list) / n_contamine
-            std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
-            contamination_reads = filtered_list
-        print >> Information, 'Contamine mean converged:', mean_isize
-        print >> Information, 'Contamine std_est converged: ', std_dev_isize
-
-    if mean_isize > param.mean_ins_size or count_contamine == 0:
-        param.contamination_ratio  = False      
-        param.contamination_mean = 0
-        param.contamination_stddev = 0
-    else:
-        param.contamination_mean = mean_isize
-        param.contamination_stddev = std_dev_isize
-        param.contamination_ratio = count_contamine / float(counter_total)
-
-
+    ## finally, get a reverse complemented read contamination distribution from the MP library if it exists
+    n_contamine = get_contamination_metrics(largest_contigs_indexes,bam_file, cont_names, param, Information)
 
 
     print >> Information, ''

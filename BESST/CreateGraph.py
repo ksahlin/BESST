@@ -131,7 +131,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 scaf_obj2 = Scaffolds[cont_obj2.scaffold]
 
             if scaf_obj2.name != scaf_obj1.name:
-                (side1, side2) = CheckDir(cont_obj1, cont_obj2, alignedread)
+                (side1, side2) = CheckDir(cont_obj1, cont_obj2, alignedread,param)
                 #get scaffold name for contig
                 s1 = Contigs[contig1].scaffold if contig1 in Contigs else small_contigs[contig1].scaffold
                 s2 = Contigs[contig2].scaffold if contig2 in Contigs else small_contigs[contig2].scaffold
@@ -371,12 +371,16 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
 
 
-def CheckDir(cont_obj1, cont_obj2, alignedread):
+def CheckDir(cont_obj1, cont_obj2, alignedread, param):
     (read_dir, mate_dir) = (not alignedread.is_reverse, not alignedread.mate_is_reverse)
     cont_dir1 = cont_obj1.direction  #if pos : L if neg: R
     #position2 cont2/scaf2                        
     cont_dir2 = cont_obj2.direction
-    (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+    if param.orientation == 'fr':
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+    else:
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorMP(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+
     return(scaf_side1, scaf_side2)
 
 def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
@@ -519,7 +523,11 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
     matepos = alignedread.mpos
     cont2_len = cont_obj2.length
     s2len = scaf_obj2.s_length
-    (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+    if param.orientation == 'fr':
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+    else:
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorMP(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+
     if obs1 == counter.prev_obs1 and obs2 == counter.prev_obs2:
         counter.nr_of_duplicates += 1
         if param.detect_duplicate:
@@ -688,42 +696,55 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
 def PosDirCalculatorPE(cont_dir1, read_dir, cont1pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2pos, matepos, s2len, cont2_len, read_len):
     if cont_dir1 and read_dir:
         obs1 = s1len - cont1pos - readpos
-        read_side1 = 'R'
+        scaf_side1 = 'R'
     if cont_dir2 and mate_dir:
         obs2 = s2len - cont2pos - matepos
-        read_side2 = 'R'
+        scaf_side2 = 'R'
     if (not cont_dir1) and read_dir:
         obs1 = cont1pos + (cont1_len - readpos)
-        read_side1 = 'L'
+        scaf_side1 = 'L'
     if (not cont_dir2) and mate_dir:
         obs2 = cont2pos + (cont2_len - matepos)
-        read_side2 = 'L'
+        scaf_side2 = 'L'
     if cont_dir1 and not read_dir:
         obs1 = cont1pos + readpos + read_len
-        read_side1 = 'L'
+        scaf_side1 = 'L'
     if cont_dir2 and not mate_dir:
         obs2 = cont2pos + matepos + read_len
-        read_side2 = 'L'
+        scaf_side2 = 'L'
     if not cont_dir1 and not read_dir:
         obs1 = s1len - cont1pos - (cont1_len - readpos - read_len)
-        read_side1 = 'R'
+        scaf_side1 = 'R'
     if not cont_dir2 and not mate_dir:
         obs2 = s2len - cont2pos - (cont2_len - matepos - read_len)
-        read_side2 = 'R'
-
-    if read_side1 == 'L':
-        scaf_side1 = 'L'
-    if read_side2 == 'L':
-        scaf_side2 = 'L'
-    if read_side1 == 'R':
-        scaf_side1 = 'R'
-    if read_side2 == 'R':
         scaf_side2 = 'R'
     return(int(obs1), int(obs2), scaf_side1, scaf_side2)
 
-
-
-
-
+def PosDirCalculatorMP(cont_dir1, read_dir, cont1pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2pos, matepos, s2len, cont2_len, read_len):
+    if cont_dir1 and not read_dir:
+        obs1 = s1len - cont1pos - readpos
+        scaf_side1 = 'R'
+    if cont_dir2 and not mate_dir:
+        obs2 = s2len - cont2pos - matepos
+        scaf_side2 = 'R'
+    if (not cont_dir1) and not read_dir:
+        obs1 = cont1pos + (cont1_len - readpos)
+        scaf_side1 = 'L'
+    if (not cont_dir2) and not mate_dir:
+        obs2 = cont2pos + (cont2_len - matepos)
+        scaf_side2 = 'L'
+    if cont_dir1 and read_dir:
+        obs1 = cont1pos + readpos + read_len
+        scaf_side1 = 'L'
+    if cont_dir2 and mate_dir:
+        obs2 = cont2pos + matepos + read_len
+        scaf_side2 = 'L'
+    if not cont_dir1 and read_dir:
+        obs1 = s1len - cont1pos - (cont1_len - readpos - read_len)
+        scaf_side1 = 'R'
+    if not cont_dir2 and mate_dir:
+        obs2 = s2len - cont2pos - (cont2_len - matepos - read_len)
+        scaf_side2 = 'R'
+    return(int(obs1), int(obs2), scaf_side1, scaf_side2)
 
 

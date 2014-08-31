@@ -111,6 +111,7 @@ def main(options):
     for i in xrange(len(options.bamfiles)):
         start = time()
         param.bamfile = options.bamfiles[i]
+        param.orientation = options.orientation[i] if options.orientation != None else 'fr'
         param.mean_ins_size = options.mean[i] if options.mean != None else None
         param.ins_size_threshold = options.threshold[i] if options.threshold != None else None
         param.edgesupport = options.edgesupport[i] if options.edgesupport != None else 5
@@ -131,11 +132,10 @@ def main(options):
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
             libmetrics.get_metrics(bam_file, param, Information)
-            decide_approach.decide_scaffolding_procedure(C_dict, param)
             #create graph
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
+            decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
-        param.first_lib = False   #not the first lib any more
         #print G, not G == None, not None, None == False
         if not G:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
@@ -174,7 +174,8 @@ def main(options):
             shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
             destination.close()
             os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
-    
+        
+        param.first_lib = False   #not the first lib any more    
 
     if not options.separate_repeats:
         os.remove( "{0}/repeats.fa".format(param.output_directory ) )
@@ -269,6 +270,9 @@ haplotypes.add_argument("-g", dest="haplotype", action="store_true",
 
 ## other 
 
+required.add_argument("--orientation", dest="orientation", type=str, nargs='+',
+                      help="Mapped orientation for each library given with -f option. Valid input is either fr (forward reverse orientation) or rf (reverse forward orientation).")
+
 other.add_argument("-o", dest="output", type=str, default='.',
                   help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")
 
@@ -302,7 +306,7 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
                   help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
                   not included in the main scaffolding output file with this flag specified.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.1.3')
+other.add_argument('--version', action='version', version='%(prog)s 1.2')
 
 
 
