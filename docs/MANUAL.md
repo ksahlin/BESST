@@ -1,10 +1,11 @@
-BESST
+BESST v1.2
 ======
 
 OBS:
 ----
 Common pitfall:
-BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
+If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
+In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
 
  
 INPUT:
@@ -17,11 +18,18 @@ Required arguments:
 
 * -o < path to location for the output >
 
+Highly reccomended argument:
+
+* --orientation < fr/rf one for each library >
+
 EXAMPLE RUN:
 -----------
+For scaffolding with one PE and one MP library:
 ```sh
-runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output 
+runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output --orientation fr rf
 ```
+If the mate pair library was reversed complemented before it was aligned, '--orientation fr fr' should be specified.
+
 Optional arguments:
 -------------------
 

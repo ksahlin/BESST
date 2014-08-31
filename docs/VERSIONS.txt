@@ -106,3 +106,13 @@ V1.1
 * added parameter -filter_contigs <int> . This parameter with remove att contigs smaller than <int> from all scaffolding (and scaffold output). 
 
 * added parameter --no_score. If specified, statistical scoring is not used to scaffold. BESST instead relies soley on the new LP module to search for paths between contigs. The effect of this is not thouroughly tested so far but preliminary results hint that it is slower but gives slightly better results.
+
+V1.2
+* BESST can now parse alignments of both forward reverse and reverse forward orientation. To specify the orientation of the alignments, a parameter --orientation is added. --orientation takes a string 'rf' or 'fr' for each library that is povided with the -f option to BESST. If --orientation is not specified, BESST throws a warning that orientations are not specified and proceeds by assuming that the alignemts are done with fr orientation irregardless of library (as is done in previous versions). This is done not to break old pipelines.
+
+* Added automatic check for which scaffolding approach that are the most sound/beneficial given the library and the fragmentation level of the assembly (statistical scoring or pathsearching immediately).
+
+* relaxed dependency criterion on pysam. Now, all versions >=0.7 works (bug when installing with pysam v0.7 reported by Shaun Jackman).
+
+* Some minor bugs and fixes implemented by Rayan Chikhi, Jan van Haarst and Mattias Frånberg.
+
