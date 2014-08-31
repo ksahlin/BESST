@@ -4,8 +4,11 @@ BESST v1.2
 OBS:
 ----
 Common pitfall:
-If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
-In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
+For versions 1.2 and later:
+If --orientation is not specified, BESST assumes that all libraries were aligned in fr orientation. This parameter is therefore highly recommended to specify (see Input section).  
+
+For versions older than 1.2:
+BESST  can only parse mates aligned in fr orientation, i.e. --->  <---. Thus, matepairs need to be reverse complemented before aligned.
 
  
 INPUT:
