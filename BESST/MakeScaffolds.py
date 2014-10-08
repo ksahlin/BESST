@@ -290,7 +290,13 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
 
         prev_node = ('', '')
         pos = 0
-        (G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        values = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        #print values
+        while len(values) !=3:
+            values = UpdateInfo(*values)
+            print len(values)
+        #(G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        (G, contig_list, scaffold_length) = values[0],values[1],values[2]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
         Scaffolds[S.name] = S        #include in scaffold library
@@ -364,7 +370,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #    pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+                return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+
+                #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
 
             else:  #Contig/scaffold need to change orientation as well as modify orientation in this case
                 #try:
@@ -393,7 +401,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+                return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+
+#                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         else:
             if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
                 #calculate gap to next scaffold
@@ -449,7 +459,8 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
             del Scaffolds[scaf] #finally, delete the old scaffold object
             #except KeyError:
             #    del small_scaffolds[scaf] #finally, delete the old scaffold object
-            G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+            return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+            #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
     return(G, contig_list, scaffold_length)
 
 def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited):
@@ -1061,8 +1072,18 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         scaffold_length = 0
         contig_list = []
         param.scaffold_indexer += 1
-        (G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+
+        values = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        #print values
+        while len(values) !=3:
+            values = UpdateInfo(*values)
+    
+        (G, contig_list, scaffold_length) = values[0],values[1],values[2]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
+
+
+        #(G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        #S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
         print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
