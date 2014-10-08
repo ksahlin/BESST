@@ -95,16 +95,20 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     staart = time()
 
     for alignedread in bam_file:
+        # try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
+        #     contig1 = bam_file.getrname(alignedread.rname)
+        #     contig2 = bam_file.getrname(alignedread.mrnm)
+        # except ValueError:
+        #     continue
+        
         try:
-            contig1 = param.contig_index[alignedread.tid]
+            contig1 = param.contig_index[alignedread.rname]
             contig2 = param.contig_index[alignedread.mrnm]
+            #assert contig1 == contig1_old
+            #assert contig2 == contig2_old
         except KeyError:
             continue
-        # if contig1 == 'c66,pos:95500-98500,rc:1' and contig2 == 'c65,pos:95000-95500,rc:0' or contig1 == 'c65,pos:95000-95500,rc:0' and contig2 == 'c66,pos:95500-98500,rc:1':
-        #     print alignedread.pos, alignedread.mpos
-        #     print 'c66,pos:95500-98500,rc:1',alignedread.pos
-        # if contig1 == 'c67,pos:98500-99000,rc:1' or contig2 == 'c67,pos:98500-99000,rc:1':
-        #     print 'c67,pos:98500-99000,rc:1', alignedread.pos
+
         #TODO:Repeats (and haplotypes) may have been singled out, we need this statement (or a smarter version of it)
         if (contig1 in Contigs or contig1 in small_contigs) and (contig2 in Contigs or contig2 in small_contigs):
             pass
