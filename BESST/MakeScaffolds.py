@@ -294,7 +294,7 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
         #print values
         while len(values) !=3:
             values = UpdateInfo(*values)
-            print len(values)
+            #print len(values)
         #(G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         (G, contig_list, scaffold_length) = values[0],values[1],values[2]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 

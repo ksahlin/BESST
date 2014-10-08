@@ -90,9 +90,9 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
-    if mean_isize > param.mean_ins_size or count_contamine <= 1000:
+    if mean_isize > param.mean_ins_size or n_contamine <= 1000:
         # either contamine mean is higher than MP lb mean which means it's spurious alignments -> no true contamine
-        # or we have less than 0.1% of contamine reads, then we skip dealing with them since they introduce more complexity
+        # or we have less than 0.2% of contamine reads, then we skip dealing with them since they introduce more complexity
         # when orienting scaffolds in pathfinder module
         param.contamination_ratio  = False      
         param.contamination_mean = 0
