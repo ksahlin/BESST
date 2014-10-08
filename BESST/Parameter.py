@@ -41,10 +41,11 @@ class parameter(object):
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
-                 no_score=None, orientation = None):
+                 no_score=None, orientation = None, contig_index= None):
 
         # Library information
         # Contig information
+        self.contig_index = contig_index
         # Algorithm parameters
         # Assembly information
         # Algorithm information

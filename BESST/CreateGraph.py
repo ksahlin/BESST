@@ -95,12 +95,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     staart = time()
 
     for alignedread in bam_file:
-        try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
-            contig1 = bam_file.getrname(alignedread.rname)
-            contig2 = bam_file.getrname(alignedread.mrnm)
-        except ValueError:
+        try:
+            contig1 = param.contig_index[alignedread.tid]
+            contig2 = param.contig_index[alignedread.mrnm]
+        except KeyError:
             continue
-
         # if contig1 == 'c66,pos:95500-98500,rc:1' and contig2 == 'c65,pos:95000-95500,rc:0' or contig1 == 'c65,pos:95000-95500,rc:0' and contig2 == 'c66,pos:95500-98500,rc:1':
         #     print alignedread.pos, alignedread.mpos
         #     print 'c66,pos:95500-98500,rc:1',alignedread.pos
@@ -534,18 +533,6 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             return(1)
 
     if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:
-        if scaf_side1 == 'R':
-            scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-            scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-        if scaf_side1 == 'L':
-            scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-            scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-        if scaf_side2 == 'R':
-            scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 < scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] and scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] > 0 else scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-            scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 > scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] else scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-        if scaf_side2 == 'L':
-            scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 < scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] and scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] > 0 else scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-            scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 > scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] else scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)]
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2

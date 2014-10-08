@@ -24,6 +24,7 @@ import errno
 from time import time
 import argparse
 import shutil
+from itertools import izip
 
 from BESST import errorhandle
 from BESST import decide_approach
@@ -131,6 +132,11 @@ def main(options):
 
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
+            #if param.first_lib:
+            #print bam_file.references
+            #print map(bam_file.gettid, bam_file.references)
+            param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
+            #print param.contig_index
             libmetrics.get_metrics(bam_file, param, Information)
             #create graph
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F

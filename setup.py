@@ -24,7 +24,7 @@ setup(
     long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
     install_requires=['pysam>=0.7',
                       'networkx>=1.4',
-                      'mathstats>=0.1.2',
+                      'mathstats>=0.1.3.1',
                       'scipy>=0.9',
                       'pulp>=1.4'],
 )
