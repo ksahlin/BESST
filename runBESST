@@ -312,7 +312,7 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
                   help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
                   not included in the main scaffolding output file with this flag specified.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.2')
+other.add_argument('--version', action='version', version='%(prog)s 1.2.4')
 
 
 
