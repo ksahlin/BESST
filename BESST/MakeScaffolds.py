@@ -242,22 +242,22 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 #### After the proceure above, we hope that the graph is almost perfectly linear but we can still be encountering cycles (because of repeats or haplotypic contigs that has slipped through our conditions). Thus we finally search for loops
     print >> Information, 'Contigs/scaffolds left:', len(G.nodes()) / 2
     print >> Information, 'Remove remaining cycles...'
-    graphs = nx.connected_component_subgraphs(G)
+    #graphs = nx.connected_component_subgraphs(G)
     #print 'Nr connected components',len(graphs)
     counter = 0
-    for graph in graphs:
-        list_of_cycles = algorithms.cycles.cycle_basis(graph)
-        for cycle in list_of_cycles:
-            print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
-            print >> Information, 'A cycle in the scaffold graph: ' + str(cycle), graph.edges()
-            counter += 1
-            for node in cycle:
-                if node in G:
-                    #we split up the whole cycle into separate contigs and send them to F
-                    scaffold_ = node[0]
-                    G.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
-                    if param.extend_paths:
-                        G_prime.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
+    #for graph in graphs:
+    list_of_cycles = algorithms.cycles.cycle_basis(G)
+    for cycle in list_of_cycles:
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle)
+        counter += 1
+        for node in cycle:
+            if node in G:
+                #we split up the whole cycle into separate contigs and send them to F
+                scaffold_ = node[0]
+                G.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
+                if param.extend_paths:
+                    G_prime.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
 #                    S_obj=Scaffolds[scaffold_]
 #                    list_of_contigs=S_obj.contigs   #list of contig objects contained in scaffold object
 #                    Contigs, F = GO.WriteToF(F,Contigs,list_of_contigs)
