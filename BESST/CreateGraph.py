@@ -19,7 +19,6 @@
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
-
 import sys
 import os
 from collections import defaultdict
@@ -37,7 +36,6 @@ import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
 import errorhandle
 import plots
-
 
 
 
@@ -251,7 +249,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
 
     return(G, G_prime)
-
 
 
 def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):

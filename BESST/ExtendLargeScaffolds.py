@@ -252,7 +252,6 @@ def ExtendScaffolds(all_paths_sorted_wrt_score):
 
 
 
-
 def BetweenScaffolds(G_prime, end, iter_nodes, param):
     # here we should have a for loop looping over all start nodes. Start nodes already examined should be removed in a nice way to skip over counting
     already_visited = set()

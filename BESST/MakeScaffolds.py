@@ -265,6 +265,7 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
     print >> Information, str(counter) + ' cycles removed from graph.'
     return(G, Contigs, Scaffolds)
 
+
 def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited):
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
     new_scaffolds_ = [ G.subgraph(c) for c in nx.connected_components(G)]
@@ -292,11 +293,11 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
         pos = 0
         values = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         #print values
-        while len(values) !=3:
-            values = UpdateInfo(*values)
+        while len(values) !=2:
+            values = UpdateInfo(G,*values)
             #print len(values)
         #(G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-        (G, contig_list, scaffold_length) = values[0],values[1],values[2]
+        contig_list, scaffold_length = values[0],values[1]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
         Scaffolds[S.name] = S        #include in scaffold library
@@ -344,7 +345,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
         G.remove_node((scaf, side))
 #        except KeyError:
 #            del small_scaffolds[scaf] #finally, delete the old scaffold object
-        return(G, contig_list, scaffold_length)
+        return(contig_list, scaffold_length)
     else:
         nbr_node = G.neighbors((scaf, side))
         nbr_scaf = nbr_node[0][0]
@@ -370,7 +371,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #    pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+                return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
 
                 #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
 
@@ -401,7 +402,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+                return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
 
 #                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         else:
@@ -459,9 +460,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
             del Scaffolds[scaf] #finally, delete the old scaffold object
             #except KeyError:
             #    del small_scaffolds[scaf] #finally, delete the old scaffold object
-            return G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+            return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
             #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-    return(G, contig_list, scaffold_length)
+    return( contig_list, scaffold_length)
 
 def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited):
     #loc_count = 0
@@ -1075,10 +1076,10 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
 
         values = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         #print values
-        while len(values) !=3:
-            values = UpdateInfo(*values)
+        while len(values) !=2:
+            values = UpdateInfo(G_,*values)
     
-        (G, contig_list, scaffold_length) = values[0],values[1],values[2]
+        (contig_list, scaffold_length) = values[0],values[1]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
 
