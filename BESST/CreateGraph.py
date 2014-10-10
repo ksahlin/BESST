@@ -175,11 +175,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                     scaf_obj2 = Scaffolds[cont_obj2.scaffold]
                     value2 = 0
                 if value1 and value2 and scaf_obj1 != scaf_obj2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
                 elif value1 and not value2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2,save_obs=False)
                 elif not value1 and value2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2,save_obs=False)
 
 
             elif contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
@@ -233,8 +233,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     plot = 'G'
     GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
-    plot = 'G_prime'
-    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
+    #plot = 'G_prime'
+    #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
 
     #Remove all edges with link support less than 3 to be able to compute statistics: 
@@ -302,12 +302,17 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
             try:
                 l1 = G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
+                del G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
             except KeyError:
                 l1 = G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
+                del G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
             try:
                 l2 = G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
+                del G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
             except KeyError:
                 l2 = G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
+                del G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
+
 
             l1.sort()
             n_obs = len(l1)
@@ -342,6 +347,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 sys.stderr.write(str(std_dev) + ' ' + str(std_dev_d_eq_0) + ' ' + str(span_score) + '\n')
 
             G[edge[0]][edge[1]]['score'] = std_dev_score + span_score if std_dev_score > 0.5 and span_score > 0.5 else 0
+
             if param.plots:
                 span_score_obs.append(span_score)
                 std_dev_score_obs.append(std_dev_score)
@@ -505,7 +511,7 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
     print >> Information, 'Nr of contigs/scaffolds that was singeled out due to length constraints ' + str(singeled_out)
     return()
 
-def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2):
+def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2, save_obs=True):
     if alignedread.mapq == 0:
         counter.non_unique_for_scaf += 1
     counter.count += 1
@@ -537,14 +543,20 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
-            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
-            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
-        else:
+            if save_obs:
+                G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
+                G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
+        elif save_obs:
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name].append(obs1)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name].append(obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+        else:
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+
     else:
         counter.reads_with_too_long_insert += 1
 

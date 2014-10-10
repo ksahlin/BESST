@@ -137,7 +137,6 @@ def main(options):
             #print bam_file.references
             #print map(bam_file.gettid, bam_file.references)
             param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
-            #print param.contig_index
             libmetrics.get_metrics(bam_file, param, Information)
             #create graph
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
