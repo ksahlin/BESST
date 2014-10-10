@@ -74,6 +74,7 @@ def main(options):
     from BESST import MakeScaffolds as MS
     from BESST import GenerateOutput as GO
     from BESST import libmetrics
+    from BESST import bam_parser
     from BESST.diploid import get_haplotype_regions
 
     tot_start = time()

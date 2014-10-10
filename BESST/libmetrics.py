@@ -9,7 +9,7 @@ import sys
 from heapq import nlargest
 
 from mathstats.normaldist.normal import MaxObsDistr
-import bam_parser
+from BESST import bam_parser
 
 
 def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
