@@ -225,10 +225,10 @@ required.add_argument("-f", dest="bamfiles", type=str, nargs='+', required=True,
 libstats.add_argument("-r", dest="readlen", type=int, nargs='+',
                   help="Mean read length of libraries. ")
 
-libstats.add_argument("-m", dest="mean", type=int, nargs='+',
+libstats.add_argument("-m", dest="mean", type=float, nargs='+',
                   help="Mean insert size of libraries.")
 
-libstats.add_argument("-s", dest="stddev", type=int, nargs='+',
+libstats.add_argument("-s", dest="stddev", type=float, nargs='+',
                   help="Estimated standard deviation of libraries.")
 
 libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',

@@ -156,7 +156,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 if param.extend_paths and not is_dupl:
                     counter.prev_obs1 = -1
                     counter.prev_obs2 = -1
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
             elif param.extend_paths:
                 try:
                     cont_obj1 = small_contigs[contig1]
@@ -232,7 +232,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     ## Score edges in graph
     plot = 'G'
     GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
-
     #plot = 'G_prime'
     #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
