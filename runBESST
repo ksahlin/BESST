@@ -161,7 +161,6 @@ def main(options):
                 h = guppy.hpy()
                 after_ctg_graph = h.heap()
                 print 'After contig graph\n{0}\n'.format(after_ctg_graph)
-                sys.exit()
 
         #print G, not G == None, not None, None == False
         if not G:
