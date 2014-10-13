@@ -92,6 +92,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'Reading bam file and creating scaffold graph...'
     staart = time()
 
+    if args.devel:
+        h = guppy.hpy()
+        before_ctg_graph = h.heap()
+        print 'Just before creating contig graph:\n{0}\n'.format(before_ctg_graph)
+
     for alignedread in bam_file:
         # try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
         #     contig1 = bam_file.getrname(alignedread.rname)

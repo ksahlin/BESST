@@ -89,6 +89,11 @@ def main(options):
     param.multiprocess = options.multiprocess
     param.no_score = options.no_score
 
+    if args.devel:
+        h = guppy.hpy()
+        initial = h.heap()
+        print 'Initial:\n{0}'.format(initial)
+
 
     param.development = options.devel
     options.output = options.output + '/BESST_output'
@@ -104,6 +109,11 @@ def main(options):
     #Read in the sequences of the contigs in memory
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
     print 'Number of initial contigs:', len(C_dict)
+    if args.devel:
+        h = guppy.hpy()
+        after_ctgs = h.heap()
+        print 'After ctg seqs:\n{0}'.format(after_ctgs)
+
     if options.haplotype:
         get_haplotype_regions.main(options.output, C_dict, options.kmer, options.mmer, 0.8)
         sys.exit()
@@ -138,9 +148,20 @@ def main(options):
             #print map(bam_file.gettid, bam_file.references)
             param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
             libmetrics.get_metrics(bam_file, param, Information)
+            if args.devel:
+                h = guppy.hpy()
+                after_libmetrics = h.heap()
+                print 'After libmetrics\n{0}\n'.format(after_libmetrics)
+
             #create graph
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
             decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
+
+            if args.devel:
+                h = guppy.hpy()
+                after_ctg_graph = h.heap()
+                print 'After contig graph\n{0}\n'.format(after_ctg_graph)
+                sys.exit()
 
         #print G, not G == None, not None, None == False
         if not G:
@@ -353,5 +374,9 @@ main(args)
 
 if args.devel:
     h = guppy.hpy()
-    print h.heap()
+    at_end= h.heap()
+
+    print 'At end:\n{0}\n'.format(at_end)
+
+
 
