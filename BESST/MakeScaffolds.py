@@ -38,11 +38,11 @@ import plots
 import order_contigs
 
 
-def constant_large():
-    return 2 ** 32
+# def constant_large():
+#     return 2 ** 32
 
-def constant_small():
-    return -1
+# def constant_small():
+#     return -1
 
 
 def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param):
@@ -298,7 +298,7 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
             #print len(values)
         #(G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         contig_list, scaffold_length = values[0],values[1]
-        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
+        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
 
         Scaffolds[S.name] = S        #include in scaffold library
 
@@ -1080,7 +1080,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             values = UpdateInfo(G_,*values)
     
         (contig_list, scaffold_length) = values[0],values[1]
-        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
+        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
 
 
         #(G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)

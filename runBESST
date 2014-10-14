@@ -167,7 +167,6 @@ def main(options):
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
             elapsed = time() - start
             print >> Information, 'Total time for CreateGraph-module, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
-
             decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
             if args.devel:

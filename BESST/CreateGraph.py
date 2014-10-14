@@ -429,10 +429,10 @@ def InitializeGraph(dict_with_scaffolds, graph, Information):
         cnt += 1
     return()
 
-def constant_large():
-    return 2 ** 32
-def constant_small():
-    return -1
+# def constant_large():
+#     return 2 ** 32
+# def constant_small():
+#     return -1
 
 def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime, small_contigs, small_scaffolds, C_dict):
     singeled_out = 0
@@ -469,7 +469,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
             C.position = 0                  #position always 0
             #C.links = {}
             Contigs[C.name] = C              # Create a dict with name as key and the object container as value
-            S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  # Create object scaffold
+            S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length)  # Create object scaffold
             Scaffolds[S.name] = S
             C.scaffold = S.name
             param.scaffold_indexer += 1
@@ -483,7 +483,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
                 C.direction = True              # always in same direction first, False=reverse
                 C.position = 0                  #position always 0
                 small_contigs[C.name] = C              # Create a dict with name as key and the object container as value
-                S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  # Create object scaffold
+                S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length)  # Create object scaffold
                 small_scaffolds[S.name] = S
                 C.scaffold = S.name
                 param.scaffold_indexer += 1
