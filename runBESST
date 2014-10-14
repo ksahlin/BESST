@@ -107,9 +107,13 @@ def main(options):
     Information = param.information_file
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
+    start = time()
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
+    elapsed = time() - start
+    print >> Information, 'Time elapsed for reading in contig sequences:' + str(elapsed) + '\n'
+
     print 'Number of initial contigs:', len(C_dict)
-    if args.devel:
+    if options.devel:
         h = guppy.hpy()
         after_ctgs = h.heap()
         print 'After ctg seqs:\n{0}'.format(after_ctgs)
@@ -121,7 +125,6 @@ def main(options):
     param.first_lib = True
     param.path_threshold = options.path_threshold
     for i in xrange(len(options.bamfiles)):
-        start = time()
         param.bamfile = options.bamfiles[i]
         param.orientation = options.orientation[i] if options.orientation != None else 'fr'
         param.mean_ins_size = options.mean[i] if options.mean != None else None
@@ -139,22 +142,32 @@ def main(options):
         param.fosmidpool = options.fosmidpool
         param.extend_paths = options.extendpaths
         print >> Information, '\nPASS ' + str(i + 1) + '\n\n'
-        print 'Creating contig graph with library: ', param.bamfile
 
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
             #if param.first_lib:
             #print bam_file.references
             #print map(bam_file.gettid, bam_file.references)
+            start = time()
             param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
             libmetrics.get_metrics(bam_file, param, Information)
+            
+            elapsed = time() - start
+            print >> Information, 'Time elapsed for getting libmetrics, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+
+
             if args.devel:
                 h = guppy.hpy()
                 after_libmetrics = h.heap()
                 print 'After libmetrics\n{0}\n'.format(after_libmetrics)
 
             #create graph
+            print 'Creating contig graph with library: ', param.bamfile
+            start = time()
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
+            elapsed = time() - start
+            print >> Information, 'Total time for CreateGraph-module, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+
             decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
             if args.devel:
@@ -166,16 +179,13 @@ def main(options):
         if not G:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
             
-        elapsed = time() - start
-        print >> Information, 'Time elapsed for creating graph, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
-        start = time()
 
         print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
+        start = time()
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
-
-
         print >> Information, 'Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+
         print 'Writing out scaffolding results for step', i + 1, ' ...'
 
         F = [] #list of (ordered) lists of tuples containing (contig_name, direction, position, length, sequence). The tuple is a contig within a scaffold and the list of tuples is the scaffold.

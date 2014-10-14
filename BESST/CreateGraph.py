@@ -39,6 +39,7 @@ import plots
 
 
 
+
 def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file):
     G = nx.Graph()
     G_prime = nx.Graph()  # If we want to do path extension with small contigs
@@ -92,7 +93,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'Reading bam file and creating scaffold graph...'
     staart = time()
 
-    if args.devel:
+    if param.development:
+        import guppy
         h = guppy.hpy()
         before_ctg_graph = h.heap()
         print 'Just before creating contig graph:\n{0}\n'.format(before_ctg_graph)
