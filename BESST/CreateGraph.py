@@ -98,7 +98,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         h = guppy.hpy()
         before_ctg_graph = h.heap()
         print 'Just before creating contig graph:\n{0}\n'.format(before_ctg_graph)
-        sys.exit()
 
     for alignedread in bam_file:
         # try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
@@ -202,6 +201,10 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if param.detect_duplicate:
         print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
 
+    if param.development:
+        h = guppy.hpy()
+        after_ctg_graph = h.heap()
+        print 'Just after creating contig graph:\n{0}\n'.format(after_ctg_graph)
 
 
 ##### Calc coverage for all contigs with current lib here #####
@@ -226,6 +229,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         sum_x_sq += cont_coverage ** 2
         n += 1
 
+    del cont_aligned_len
+
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
@@ -236,6 +241,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     ### Remove edges created by false reporting of BWA ###
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
+
+    if param.development:
+        h = guppy.hpy()
+        after_coverage = h.heap()
+        print 'Just after creating contig graph:\n{0}\n'.format(after_coverage)
 
     ## Score edges in graph
     plot = 'G'
@@ -253,7 +263,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 cntr_sp += 1
     print >> Information, 'Number of fishy edges in G_prime', cntr_sp
 
-
+    if param.development:
+        h = guppy.hpy()
+        after_scoring = h.heap()
+        print 'After scoring:\n{0}\n'.format(after_scoring)
+        sys.exit()
 
     return(G, G_prime)
 
