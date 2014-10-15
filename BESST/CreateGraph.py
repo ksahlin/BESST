@@ -245,7 +245,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if param.development:
         h = guppy.hpy()
         after_coverage = h.heap()
-        print 'Just after creating contig graph:\n{0}\n'.format(after_coverage)
+        print 'Just after calc coverage:\n{0}\n'.format(after_coverage)
 
     ## Score edges in graph
     plot = 'G'
@@ -267,7 +267,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         h = guppy.hpy()
         after_scoring = h.heap()
         print 'After scoring:\n{0}\n'.format(after_scoring)
-        sys.exit()
 
     return(G, G_prime)
 
