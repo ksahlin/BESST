@@ -240,6 +240,7 @@ libstats = parser.add_argument_group('read_library', 'Library parameters that ca
 haplotypes = parser.add_argument_group('diploid', 'Options involving detection of split allele contigs in diploid assemblies.')
 parameters = parser.add_argument_group('parameters', 'Parameters/variables/threshold involved in BESST.')
 other = parser.add_argument_group('other', 'Various other parameters')
+group = parser.add_mutually_exclusive_group(required=False)
 
 ## required
 required.add_argument("-c", dest="contigfile", type=str, required=True,
@@ -320,14 +321,14 @@ other.add_argument("-K", dest="kmer", type=int, default=50,
 other.add_argument("-M", dest="mmer", type=int, default=40,
                   help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
 
-other.add_argument("-y", dest='extendpaths', action="store_false",
+group.add_argument("-y", dest='extendpaths', action="store_false",
                   help="Deactivate pathfinder module for including smaller contigs.")
 
 other.add_argument("-q", dest="multiprocess", action="store_true",
                 help="Parallellize work load of path finder module in case of multiple processors available.\
                   ",)
 
-other.add_argument("--no_score", dest="no_score", action="store_true",
+group.add_argument("--no_score", dest="no_score", action="store_true",
                 help="Statistical scoring is not performed. BESST instead searches for paths between contigs.\
                   ",)
 

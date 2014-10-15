@@ -66,13 +66,20 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     ### initialize graph objects two nodes per contig "left" and "right" node. ###    
     tot_start = time()
-    if param.extend_paths:
-        InitializeGraph(Scaffolds, G, Information)
 
+    if param.no_score:
+        # Only do path search
+        #small contig graph contains all scaffolds
+        InitializeGraph(small_scaffolds, G_prime, Information)
+        InitializeGraph(Scaffolds, G_prime, Information)        
+    elif param.extend_paths:
+        # do scoring and extend paths
+        InitializeGraph(Scaffolds, G, Information)
         #small contig graph contains all scaffolds
         InitializeGraph(small_scaffolds, G_prime, Information)
         InitializeGraph(Scaffolds, G_prime, Information)
     else:
+        # only do scoring
         InitializeGraph(Scaffolds, G, Information)
     print >> Information, 'Total time elapsed for initializing Graph: ', time() - tot_start
 
@@ -159,8 +166,12 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 cont_obj2 = Contigs[contig2]
                 scaf_obj1 = Scaffolds[cont_obj1.scaffold]
                 scaf_obj2 = Scaffolds[cont_obj2.scaffold]
-                is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2)
-                if param.extend_paths and not is_dupl:
+                if not param.no_score:
+                    is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2)
+                else:
+                    is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
+
+                if param.extend_paths and not is_dupl and not param.no_score:
                     counter.prev_obs1 = -1
                     counter.prev_obs2 = -1
                     CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
@@ -249,7 +260,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     ## Score edges in graph
     plot = 'G'
-    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
+    if not param.no_score:
+        GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
     #plot = 'G_prime'
     #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
@@ -426,6 +438,7 @@ def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
                     G.remove_edge(edge_tuple[0], edge_tuple[1])
                     edges_removed += 1
     print >> Information, 'Number of BWA buggy edges removed: ', edges_removed
+    del fishy_edges
     return()
 
 def InitializeGraph(dict_with_scaffolds, graph, Information):
