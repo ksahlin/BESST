@@ -88,4 +88,4 @@ def parse_check(arg, parser):
 
 def unknown_contig(ctg):
     sys.stdout.write('Contig: ' + ctg + ' was seen in BAM file but is not present in contig fasta file.\
-    If this is expected (i.e. due to filtering after alignment), please ignore.')
+    If this is expected (i.e. due to filtering after alignment), please ignore.\n')
