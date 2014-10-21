@@ -74,7 +74,7 @@ def main(options):
     from BESST import MakeScaffolds as MS
     from BESST import GenerateOutput as GO
     from BESST import libmetrics
-    from BESST import bam_parser
+    #from BESST import bam_parser
     from BESST.diploid import get_haplotype_regions
 
     tot_start = time()
@@ -88,6 +88,7 @@ def main(options):
     param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
     param.no_score = options.no_score
+    param.score_cutoff = options.score_cutoff
 
     if args.devel:
         h = guppy.hpy()
@@ -290,6 +291,8 @@ parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int
 parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
                   help="The number of iterations performed in breadth first search for placing smaller contigs. ")
 
+parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, default=1.5,
+                  help="Only store paths with score larger than score_cutoff. ")
 
 ## haplotypes
 

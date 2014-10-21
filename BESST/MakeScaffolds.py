@@ -892,14 +892,16 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
 
     ################################################################
 
+    nr_paths = len(all_paths_sorted_wrt_score)
     start_end_node_update_storage = {}
-    print >> Information, 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
+    print >> Information, '{0} paths detected are with score greater or equal to {1} '.format(nr_paths, param.score_cutoff)
     for sublist in reversed(all_paths_sorted_wrt_score):
         path = sublist[2]
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
-        print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+        if nr_paths <= 100000:
+            print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -1017,54 +1019,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         start_end_node_update_storage[path[0]] = 0
         start_end_node_update_storage[path[-1]] = 0
 
-        # for edge in G_.edges():
-        #     try:
-        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-        #     except KeyError:
-        #         print >> Information, path
-        #         try:
-        #             Scaffolds[edge[0][0]]
-        #             print >> Information, edge[0][0] , 'is in Scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[0][0] , 'is not in Scaffolds'
-        #         try:
-        #             Scaffolds[edge[1][0]]
-        #             print >> Information, edge[1][0] , 'is in Scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[1][0] , 'is not in Scaffolds'
-
-        #         try:
-        #             small_scaffolds[edge[0][0]]
-        #             print >> Information, edge[0][0] , 'is in small_scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[0][0] , 'is not in small_scaffolds'
-        #         try:
-        #             small_scaffolds[edge[1][0]]
-        #             print >> Information, edge[1][0] , 'is in small_scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[1][0] , 'is not in small_scaffolds'
-
-        #         try:
-        #             G_prime[edge[0]]
-        #             print >> Information, edge[0] , 'is in G_prime'
-        #             print >> Information, G_prime[edge[0]]
-        #         except KeyError:
-        #             print >> Information, edge[0] , 'is not in G_prime'
-        #         try:
-        #             G_prime[edge[1]]
-        #             print >> Information, edge[1] , 'is in G_prime'
-        #             print >> Information, G_prime[edge[1]]
-        #         except KeyError:
-        #             print >> Information, edge[1] , 'is not in G_prime'
-        #         print edge[0], edge[1]
-        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-        #         sys.exit()
-
-        #     try:
-        #         G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
-        #     except KeyError:
-        #         #may be the two different sides of a contig (has no gap dist)
-        #         pass
 
         start = path[0]
         end = path[-1]
@@ -1082,11 +1036,8 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         (contig_list, scaffold_length) = values[0],values[1]
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
 
-
-        #(G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-        #S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
-
-        print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+        if nr_paths <= 100000:
+            print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         Scaffolds[S.name] = S        #include in scaffold library
         #add the new scaffold object to G_prime
