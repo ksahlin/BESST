@@ -1,12 +1,15 @@
-BESST v1.2
+BESST v1.3
 ======
 
 OBS:
 ----
-Common pitfall:
+#### Common pitfall: ####
+
 If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
 In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
 
+#### Time and memory requirements: ####
+Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
  
 INPUT:
 ------
@@ -33,7 +36,9 @@ If the mate pair library was reversed complemented before it was aligned, '--ori
 Optional arguments:
 -------------------
 
-The following arguments are computed internally by BESST. It is however good to specify mean and standard deviation if your assembly is very fragmented compared to the library insert size (not enough large contains to compute library statistics on).
+The following arguments are computed internally / set by BESST. It is however good to specify mean and standard deviation if your assembly is very fragmented compared to the library insert size (not enough large contains to compute library statistics on).
+
+#### Library parameters: ####
 
 * -m < the means of the insert sizes of the library, one integer number for each library > (integer numbers)
 
@@ -43,21 +48,40 @@ The following arguments are computed internally by BESST. It is however good to 
 
 * -r < Mean read length for each of the libraries > (integer number) 
 
-* -e < The least amount of witness links that is needed to create a link edge in graph (one for each library) > (integer number) 
+* -z <ints> Coverage cutoff for repeat classification ( e.g. -z 100 says that contigs with coverages over 100 will be discarded from scaffolding). Integer numbers, one for each library) 
 
-* -k < Minimum contig size to include in the scaffolding in each scaffolding step >  (One number for each library (default 0) (integer numbers))
+* -d Check for sequencing duplicates and count only one of them (when computing nr of links) if they are occurring.
 
-* -z < Coverage cutoff for repeat classification > ( e.g. -z 100 says that contigs with coverages over 100 will be discarded from scaffolding. ) (integer numbers, one for each library) 
+#### Contig parameters: ####
+
+* -k <ints> Minimum contig size to be seen as a "large contigs" (for statistical scoring only). One number for each library.
+
+* --filter_contigs <int> Remove contigs smaller than this value from all scaffolding. These contigs are not even incuded in the outpus of BESST.
+
+
+#### Algorithm parameters: ####
+
+* --iter <int> Maximum number of iterations in BFS search for paths between scaffolds.
+
+* --max_extensions <int> Maximum number of extensions performed between contig/scaffold ends.
+
+* -e <int> The least amount of witness links that is needed to create a link edge in graph (one for each library)
+
+* -y Extend scaffolds with smaller contigs (default on).
+
+* --no_score Do not perform statistical scoring, only run path search between contigs.
+
+* --score_cutoff <float> Only consider paths with score > score_cutoff (default 1.5)
+
+
+
+#### Under construction / proven unstable ####
 
 * -g < Haplotype detection function on or off > ( default = 0 (off) <0 or 1> )
 
 * -a < Maximum length difference ratio for merging of haplotypic regions> (float nr)
  
 * -b < Nr of standard deviations over mean/2 of coverage to allow for clasification of haplotype> (integer value) 
- 
-* -d < check for sequencing duplicates and count only one of them (when computing nr of links) if they are occurring> (default on = 1). <0 or 1>  
-
-* -y < 0 or 1 > Extend scaffolds with smaller contains (default on).
 
 * -q < optinal flag > Parallellize work load of path finder module in case of multiple processors available using multiprocessing library for pyhton.
 

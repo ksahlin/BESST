@@ -116,3 +116,10 @@ V1.2
 
 * Some minor bugs and fixes implemented by Rayan Chikhi, Jan van Haarst and Mattias Frånberg.
 
+V1.3
+
+* Major imporvements in runtime and memory consumption.
+
+* Added paramenters --max_extensions, --score_cutoff (see docs/manual.md) 
+
+
