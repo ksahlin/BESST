@@ -89,9 +89,10 @@ class Scaffold(object):
         i = len(end1)
         while i > 0:
             if end1[-i:] == end2[:i]:
-                longest_overlap = i
+                return i
             i -= 1
-        return longest_overlap 
+        return i
+         
     def get_sequence(self, string, direction):
         if direction:
             return string
@@ -114,7 +115,7 @@ class Scaffold(object):
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1])[overlap:])
                     print 'merging {0} bp here'.format(overlap)
                 else:
-                    #print gap
+                    print gap
                     if gap <= 1:
                         fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1]))
                     else:
