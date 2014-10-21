@@ -182,10 +182,17 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     already_visited = set()
     all_paths = []
     print 'Entering "find_all_paths_for_start_node" '
-    iter_threshold = 0
+    iter_count = 0
     cnter = 0
-    while len(iter_nodes) > 0 and iter_threshold <= 1000000:
-        iter_threshold += 1
+    if param.max_extensions:
+        iter_threshold = param.max_extensions
+    else: 
+        iter_threshold = len(end)
+
+    print 'iterating until maximum of {0} extensions.'.format(iter_threshold) 
+
+    while len(iter_nodes) > 0 and iter_count <= iter_threshold:
+        iter_count += 1
         start_node = iter_nodes.pop()
         nodes_present_in_path = {}
         if cnter % 100 == 0:

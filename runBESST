@@ -89,6 +89,7 @@ def main(options):
     param.multiprocess = options.multiprocess
     param.no_score = options.no_score
     param.score_cutoff = options.score_cutoff
+    param.max_extensions = options.max_extensions
 
     if args.devel:
         h = guppy.hpy()
@@ -293,6 +294,10 @@ parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
 
 parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, default=1.5,
                   help="Only store paths with score larger than score_cutoff. ")
+
+parameters.add_argument("--max_extensions", dest="max_extensions", type=int,
+                  help="Maximum number of (large) scaffolds to search for paths extensions with. ")
+
 
 ## haplotypes
 

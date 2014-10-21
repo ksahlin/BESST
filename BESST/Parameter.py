@@ -42,13 +42,14 @@ class parameter(object):
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
                  no_score=None, orientation = None, contig_index= None,
-                 score_cutoff = None ):
+                 score_cutoff = None, max_extensions = None ):
 
         # Library information
         # Contig information
         self.contig_index = contig_index
         # Algorithm parameters
         self.score_cutoff = score_cutoff
+        self.max_extensions = max_extensions
         # Assembly information
         # Algorithm information
         # Output information
