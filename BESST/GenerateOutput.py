@@ -85,14 +85,13 @@ class Scaffold(object):
         self.contigs = map(lambda x: x[0], info_tuple)
 
     def check_kmer_overlap(self,end1,end2):
-        longest_overlap = 0
         i = len(end1)
         while i > 0:
             if end1[-i:] == end2[:i]:
                 return i
             i -= 1
         return i
-         
+
     def get_sequence(self, string, direction):
         if direction:
             return string

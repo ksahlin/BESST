@@ -120,6 +120,8 @@ V1.3
 
 * Major imporvements in runtime and memory consumption.
 
-* Added paramenters --max_extensions, --score_cutoff (see docs/manual.md) 
+* Added paramenters --max_extensions, --score_cutoff. Good to set if millons of contigs in assembly (see docs/manual.md). 
+
+* Added merging of overlapping k-mers in contigs for final output
 
 
