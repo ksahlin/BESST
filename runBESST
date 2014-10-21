@@ -177,7 +177,7 @@ def main(options):
                 print 'After contig graph\n{0}\n'.format(after_ctg_graph)
 
         #print G, not G == None, not None, None == False
-        if not G:
+        if not G and not param.no_score:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
             
 

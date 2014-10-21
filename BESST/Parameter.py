@@ -45,6 +45,9 @@ class parameter(object):
                  score_cutoff = None, max_extensions = None ):
 
         # Library information
+        self.mean_ins_size = parameter_mean_ins_size
+        self.std_dev_ins_size = parameter_std_dev_ins_size
+        
         # Contig information
         self.contig_index = contig_index
         # Algorithm parameters
@@ -55,8 +58,6 @@ class parameter(object):
         # Output information
         self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
-        self.mean_ins_size = parameter_mean_ins_size
-        self.std_dev_ins_size = parameter_std_dev_ins_size
         self.output_directory = parameter_output_directory
         self.bamfile = parameter_bamfile
         self.read_len = parameter_read_len
