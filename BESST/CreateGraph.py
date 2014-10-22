@@ -482,7 +482,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
             print >> Information, 'Time adding 100k keys', time() - start
             start = time()
         if cont_names[i] not in  C_dict:
-            errorhandle.unknown_contig(cont_names[i])
+            #errorhandle.unknown_contig(cont_names[i])
             continue
 
         if cont_lengths[i] >= contig_threshold:

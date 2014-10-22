@@ -26,7 +26,7 @@ from collections import defaultdict
 import multiprocessing as mp
 
 
-def ScorePaths(G, nodes_present_in_path, paths, all_paths, param):
+def ScorePaths(G, paths, all_paths, param):
     if len(paths) == 0:
         return ()
 
@@ -96,7 +96,7 @@ def ScorePaths(G, nodes_present_in_path, paths, all_paths, param):
 
     return ()
 
-def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, already_visited, is_withing_scaf, max_path_length_allowed, param):
+def find_all_paths_for_start_node(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
     path = []
     paths = []
     if start[1] == 'L':
@@ -115,12 +115,11 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         else:
             forbidden.add((element[0], 'L'))
 
-    start_node = start
 
     #TODO: Have length criteria that limits the path lenght due to complecity reasons. Can also identify strange
     #links by looking how many neighbors a contig has and how mych the library actually can span
     path_len = 0
-    queue = [(start, end, path, path_len)]#, sum_path)]
+    queue = [(start, path, path_len)]#, sum_path)]
     #prev_node = start
     counter = 0
     while queue:
@@ -129,12 +128,9 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
         if counter > param.path_threshold or len(path) > 100:
-            #longest_path = 0
-            #if len(paths) > 0:
-            #    longest_path = len(paths[-1][0])
-            #print 'Stopping at', counter, 'iterations..', 'longest path added so far (nr_of_contigs/2 incl in path):', longest_path
             break
-        start, end, path, path_len = queue.pop() #start, end, path, sum_path = queue.pop()  
+            
+        start, path, path_len = queue.pop() #start, end, path, sum_path = queue.pop()  
         try:
             prev_node = path[-1]
         except IndexError:
@@ -150,28 +146,26 @@ def find_all_paths_for_start_node(graph, start, end, nodes_present_in_path, alre
             continue
 
         if start in end:
-            if (start_node, start) in nodes_present_in_path:
-                nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
-            else:
-                nodes_present_in_path[(start_node, start)] = set(path)
-
-            #print 'FOUND', path , path_len#, sum_path
-            #score = ScorePath(G, path)
+            # if (start_node, start) in nodes_present_in_path:
+            #     nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
+            # else:
+            #     nodes_present_in_path[(start_node, start)] = set(path)
             paths.append((path, path_len))
-            #nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
             continue
+
+
         if  prev_node[0] != start[0]:
             if start[1] == 'L' and (start[0], 'R') not in forbidden:
-                queue.append(((start[0], 'R'), end, path, path_len)) #, sum_path + graph[start][(start[0], 'R')]['nr_links']))
+                queue.append(((start[0], 'R'), path, path_len)) #, sum_path + graph[start][(start[0], 'R')]['nr_links']))
             elif start[1] == 'R' and (start[0], 'L') not in forbidden:
-                queue.append(((start[0], 'L'), end, path, path_len))#, sum_path + graph[start][(start[0], 'L')]['nr_links']))                
+                queue.append(((start[0], 'L'), path, path_len))#, sum_path + graph[start][(start[0], 'L')]['nr_links']))                
         else:
             for node in set(graph[start]).difference(path):
                 if node not in forbidden: # and node not in already_visited: 
                     try: # if last node (i.e. "end") it is not present in small_scaffolds and it should not be included in the length
-                        queue.append((node, end, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
+                        queue.append((node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
                     except KeyError:
-                        queue.append((node, end, path, path_len))
+                        queue.append((node, path, path_len))
 
     return paths
 
@@ -194,12 +188,12 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     while len(iter_nodes) > 0 and iter_count <= iter_threshold:
         iter_count += 1
         start_node = iter_nodes.pop()
-        nodes_present_in_path = {}
         if cnter % 100 == 0:
             print 'enter Betwween scaf node: ', cnter
-        paths = find_all_paths_for_start_node(G_prime, start_node, end.difference(set([start_node])), nodes_present_in_path, already_visited, 0, 2 ** 32, param)
+        end.difference_update(set([start_node]))
+        paths = find_all_paths_for_start_node(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
         already_visited.add(start_node)
-        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths, param)
+        ScorePaths(G_prime, paths, all_paths, param)
         cnter += 1
     #all_paths = ExtendScaffolds(all_paths)
     #print all_paths
@@ -211,15 +205,14 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
 def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_length, param):
     end = set()
     end.add(end_node)
-    nodes_present_in_path = {}
     all_paths = []
     already_visited.difference_update(set([start, end_node]))
-    paths = find_all_paths_for_start_node(G_prime, start, end, nodes_present_in_path, already_visited, 1, max_path_length, param)
+    paths = find_all_paths_for_start_node(G_prime, start, end, already_visited, 1, max_path_length, param)
     already_visited.add(start)
     already_visited.add(end_node)
     #print paths
     if len(paths) > 1:
-        ScorePaths(G_prime, nodes_present_in_path, paths, all_paths,param)
+        ScorePaths(G_prime, paths, all_paths,param)
         all_paths.sort(key=lambda list_: list_[0]) 
 
         if len(all_paths) > 0:

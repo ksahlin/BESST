@@ -114,7 +114,7 @@ class Scaffold(object):
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1])[overlap:])
                     print 'merging {0} bp here'.format(overlap)
                 else:
-                    print gap
+                    #print gap
                     if gap <= 1:
                         fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1]))
                     else:
