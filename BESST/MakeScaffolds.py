@@ -628,7 +628,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
     mp_links = 0
     index_observations = {}     
     for c1,c2 in observations:  
-        tot_links += len(observations[(c1,c2)])  
+        tot_links += observations[(c1,c2)][1]  
         if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0 and param.contamination_ratio:
             PE = 1
             #print 'PE link!!',c1,c2
@@ -637,10 +637,10 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 0
-            mp_links += len(observations[(c1,c2)])
+            mp_links += observations[(c1,c2)][1]
             #print 'MP link!!',c1,c2
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
-            mp_links += len(observations[(c1,c2)])
+            mp_links += observations[(c1,c2)][1]
             PE = 0
             #print 'MP link!!',c1,c2           
         else:
@@ -682,7 +682,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
     sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
     for c1,c2 in sub_graph_small_to_large_ctgs:
-        observations[(c1,c2)] = [sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
+        observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
     
 
     # for c1,c2 in observations:

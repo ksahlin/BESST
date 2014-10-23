@@ -72,16 +72,18 @@ class Path(object):
         # observations and weight it with the number of observations
         obs_dict = {}
         for c1,c2,is_PE_link in observations:
-            nr_obs = len(observations[(c1,c2,is_PE_link)])
+            #nr_obs = len(observations[(c1,c2,is_PE_link)])
+            mean_obs, nr_obs = observations[(c1,c2,is_PE_link)]
             if is_PE_link:
-                PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
-                mean_obs = sum( PE_obs)/nr_obs
-                obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
+                mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len 
+                #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
+                #mean_obs = sum( PE_obs)/nr_obs
+                obs_dict[(c1,c2,is_PE_link)] = (mean_PE_obs , nr_obs)
                 if mean_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
                     self.observations = None
                     return None
             else:
-                mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
+                #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
             
 
