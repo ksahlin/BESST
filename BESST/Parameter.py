@@ -18,7 +18,6 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-import subprocess
 
 
 class parameter(object):
@@ -44,10 +43,12 @@ class parameter(object):
                  no_score=None, orientation = None, contig_index= None,
                  score_cutoff = None, max_extensions = None ):
 
+
+
         # Library information
         self.mean_ins_size = parameter_mean_ins_size
         self.std_dev_ins_size = parameter_std_dev_ins_size
-        
+
         # Contig information
         self.contig_index = contig_index
         # Algorithm parameters
@@ -94,6 +95,7 @@ class parameter(object):
         self.contamination_ratio = contamination_ratio
         self.contamination_mean = contamination_mean
         self.contamination_stddev = contamination_stddev
+
 
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,
