@@ -31,8 +31,59 @@ from pulp import *
 from mathstats.normaldist.normal import normpdf
 from mathstats.normaldist.truncatedskewed import param_est as GC
 
-from BESST import lp_solver
-#from BESST import solve_lp
+from BESST.lp_solve import lp_solve
+
+
+class LpForm(object):
+    """docstring for LpForm"""
+    def __init__(self):
+        super(LpForm, self).__init__()
+        self.rows = []
+        self.b = []
+
+    def add_objective(self, obj):
+        self.obj = obj
+
+    def add_constraint(self, expression, value):
+        self.rows.append(expression)
+        self.b.append(value)
+
+    def standard_form(self):
+        """
+         Converts Ax' <=b
+         to Ax = b, b >= 0
+         by introducing slack/surplus variables
+        """
+
+        A = []
+        c = []
+
+        # build full tableau and convert to normal form if negative constants
+        tot_slack_variables = len(self.rows)
+
+        for i in range(len(self.rows)):
+            ident = [0 for r in range(len(self.rows))]
+            
+            # if negative constant
+            if self.b[i] < 0:
+                # add a surplus variable 
+                ident[i] = -1
+                #reverse all other values
+                self.rows[i] = [ -k for k in self.rows[i] ]
+                self.rows[i] += ident 
+                # change sign of constant
+                self.b[i] = -self.b[i]
+
+            # if positive constant
+            else:
+                # add a slack varaible
+                ident[i] = 1
+                self.rows[i] += ident
+            
+        A = self.rows
+
+        c = self.obj + [0]*tot_slack_variables 
+        return A, self.b, c
 
 
 class Contig(object):
@@ -203,23 +254,6 @@ class Path(object):
         return log_prob
 
     def LP_solve_gaps(self,param):
-
-        """
-        max z = 2x + 3y + 2z
-        st
-        2x + y + z <= 4
-        x + 2y + z <= 7
-        z          <= 5
-        x,y,z >= 0
-        """
-
-        t = Tableau()
-        t.add_objective([-2,-3,-2])
-        t.add_constraint([2, 1, 1], 4)
-        t.add_constraint([1, 2, 1], 7)
-        t.add_constraint([0, 0, 1], 5)
-        t.solve()
-
         exp_means_gapest = {}
 
         for (i,j,is_PE_link) in self.observations:
@@ -236,27 +270,46 @@ class Path(object):
         ####### NEW ########
         ####################
         
-        # decide how long rows q gap variables and r help variables
-        n = len(self.ctgs)-1 + len(self.observations)
-        
-        # add  gap variable constraints
+        # convert problem to standard form 
+        #  minimize    z = c' x
+        # subject to  A x = b, x >= 0
+        # b does not neccessarily need to be a positive vector
+
+        # decide how long rows.
+        # we need 2*g gap variables because they can be negative
+        # and r help variables because absolute sign in objective function
+
+        t = LpForm()  
+
+        g = len(self.ctgs)-1
+        r = len(self.observations)
+        n = 2*g+r 
+
+        #A = []
+        #c = []
+        #b = []
+        # add  gap variable constraints g_i = x_i - y_i , x_i,y_i >= 0
         # gap 0 on column 0, gap1 on column 1 etc.
-        for i in range(len(self.ctgs)-1):
+        for i in range(g):
             row = [0]*n
-            row[i] = 1
+            row[2*i] = 1      # x_i
+            row[2*i+1] = -1   # y_i
+            #A.append(row)
+            #b.append(self.mean + 2*self.stddev)
             t.add_constraint(row, self.mean + 2*self.stddev)
 
-        # add r help variable constraints 
+        # add r help variable constraints (for one case in absolute value)
         for h_index,(i,j,is_PE_link) in enumerate(self.observations):
             row = [0]*n
             
-            # q gap variable constants
+            # g gap variable constants
             for k in range(n):
                 if i<= k <j:
-                    row[k] = -1
+                    row[2*k] = -1
+                    row[2*k+1] =  1
             
             # r Help variables
-            row[h_index] = -1
+            row[ 2*g + h_index] = -1
 
             # sum of "inbetween" contig lengths + observation
             constant =   sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
@@ -264,106 +317,69 @@ class Path(object):
 
             t.add_constraint(row, constant - predicted_distance)
 
+        # add r help variable constraints (for the other case in absolute value)
+        for h_index,(i,j,is_PE_link) in enumerate(self.observations):
+            row = [0]*n
+            
+            # q gap variable constants
+            for k in range(n):
+                if i<= k <j:
+                    row[2*k] = 1
+                    row[2*k+1] = -1
+            
+            # r Help variables
+            row[ 2*g + h_index] = -1
 
-            #problem += exp_means_gapest[(i,j,is_PE_link)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
+            # sum of "inbetween" contig lengths + observation
+            constant =   sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
+            predicted_distance = exp_means_gapest[(i,j,is_PE_link)]
+
+            t.add_constraint(row, predicted_distance - constant )
 
         # add objective row
 
 
         if self.contamination_ratio:
-            problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+            obj_row = [0]*n
+            for h_index,(i,j,is_PE_link) in enumerate(self.observations):
+                obj_row[ 2*g + h_index] = is_PE_link * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1]  +  (1-is_PE_link)*(self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
+                t.add_objective(obj_row)
+            #problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         else:
-            for 
-            obj_row = 
-            problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+            obj_row = [0]*n
+            for h_index,(i,j,is_PE_link) in enumerate(self.observations):
+                obj_row[ 2*g + h_index] = self.observations[(i,j,is_PE_link)][1]
+                t.add_objective(obj_row)
+            #problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
+
+        A, b, c = t.standard_form()
+        #t.display()
+
+        # print 'Objective:', c 
+        # for row in A:
+        #     print 'constraint:', row
+        # print 'constnts:', b
+        lpsol = lp_solve(c,A,b,tol=1e-4)
+        optx = lpsol.x
+        # zmin = lpsol.fun
+        # bounded = lpsol.is_bounded
+        # solvable = lpsol.is_solvable
+        # basis = lpsol.basis
+        # print " ---->"
+        # print "optx:",optx
+        # print "zmin:",zmin
+        # print "bounded:",bounded
+        # print "solvable:",solvable
+        # print "basis:",basis
+        # print "-------------------------------------------"
+
+        # transform solutions to gaps back
+        gap_solution = []
+        for i in range(g):
+            gap_solution.append( round (optx[2*i] -optx[2*i +1],0) )           
 
 
-        ########################
-        ########################
-        ########################
-
-        gap_vars= []
-        for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), None, self.mean + 2*self.stddev, cat='Integer'))
-
-
-
-        # help variables because objective function is an absolute value
-        help_variables = {}
-        for (i,j,is_PE_link) in self.observations:
-            help_variables[(i,j,is_PE_link)] = LpVariable("z_"+str(i)+'_'+str(j)+'_'+str(is_PE_link), None, None,cat='Integer')
-
-
-        problem = LpProblem("PathProblem",LpMinimize)
-
-        if self.contamination_ratio:
-            problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
-        else:
-            problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
-
-
-        # adding constraints induced by the absolute value of objective function
-        for (i,j,is_PE_link) in self.observations:
-            problem += exp_means_gapest[(i,j,is_PE_link)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-
-        for (i,j,is_PE_link) in self.observations:
-            problem += - exp_means_gapest[(i,j,is_PE_link)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-
-
-
-        # solve in a new process since pulp uses os.fork() which copies all memory. We
-        # therefore want a fresh (minimal memory) process of python.
-
-
-
-        # cPickle.dump( self, open(os.path.join(param.output_directory,"lp_instance.bin"),'w') )
-        # solver_path = os.path.dirname(os.path.realpath(__file__))
-        # cmd = [ "python", os.path.join(solver_path,"solve_lp.py"), os.path.join(param.output_directory,"lp_instance.bin"), os.path.join(param.output_directory,"result.bin") ]
-        # #os.popen(' '.join(cmd))
-        # subprocess.check_call( cmd )
-        # problem = cPickle.load( open(os.path.join(param.output_directory,"result.bin"),'r') )
-
-        # if not problem:
-        #     print 'Could not solve LP, printing instance:'
-        #     print 'Objective:'
-        #     print problem.objective
-        #     print 'Constraints:'
-        #     print problem.constraints
-
-        #     print 'Solving with ordered_search instead'
-        #     path = ordered_search(self)
-        #     return path.gaps
-
-
-        # try:
-        #     problem.solve()
-        # except : #PulpSolverError:
-        #     problem.solve()
-        #     print 'Could not solve LP, printing instance:'
-        #     print 'Objective:'
-        #     print problem.objective
-        #     print 'Constraints:'
-        #     print problem.constraints
-
-        #     print 'Solving with ordered_search instead'
-        #     path = ordered_search(self)
-        #     return path.gaps
-
-        optimal_gap_solution = [0]*(len(self.ctgs) -1)
-        for v in problem.variables():
-            try:
-                optimal_gap_solution[int( v.name)] = v.varValue
-                #print v.name, "=", v.varValue,
-            except ValueError:
-                #print v.name, "=", v.varValue,
-                pass
-
-        self.objective = value(problem.objective)
-        #prob = self.calc_probability_of_LP_solution(help_variables)
-
-        #print self.objective
-        #print optimal_gap_solution
-        return optimal_gap_solution
+        return gap_solution
 
     def __str__(self):
         string= ''
