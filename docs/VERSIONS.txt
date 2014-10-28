@@ -118,7 +118,9 @@ V1.2
 
 V1.3
 
-* Major imporvements in runtime and memory consumption.
+* MAJOR IMPROVEMENTS IN RUNTIME AND MEMORY CONSUMPTION. It is strongly encourage to update to this version or later for bigger assemblies.
+
+* Removed dependency on PuLP. LP is now solved with module from https://github.com/pv/scipy-work/blob/11c7f50e8b90edb1e74e5f0c6710717b2af6aed6/scipy/optimize/_lp.py  
 
 * Added paramenters --max_extensions, --score_cutoff. Good to set if millons of contigs in assembly (see docs/manual.md). 
 

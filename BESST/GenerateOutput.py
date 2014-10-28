@@ -99,7 +99,7 @@ class Scaffold(object):
             return RevComp(string,rev_nuc)
 
 
-    def make_fasta_string(self,fasta_file,k_mer_overlap=100):
+    def make_fasta_string(self,fasta_file,k_mer_overlap=200):
         fasta = []
         fasta.append('>{0}\n'.format(self.name))
         # first contig
