@@ -101,7 +101,8 @@ class Scaffold(object):
 
     def make_fasta_string(self,fasta_file,k_mer_overlap=200):
         fasta = []
-        fasta.append('>{0}\n'.format(self.name))
+        #fasta.append('>{0}\n'.format(self.name))
+        fasta.append('>'+str(self.name)+'\n')
         # first contig
 
         fasta.append( self.get_sequence(self.seqs[0], self.directions[0]))
