@@ -27,7 +27,6 @@ import cPickle
 import os
 import subprocess
 
-from pulp import *
 from mathstats.normaldist.normal import normpdf
 from mathstats.normaldist.truncatedskewed import param_est as GC
 
