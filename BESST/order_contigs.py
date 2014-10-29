@@ -377,7 +377,8 @@ class Path(object):
         for i in range(g):
             gap_solution.append( round (optx[2*i] -optx[2*i +1],0) )           
 
-
+        self.objective = lpsol.fun
+        
         return gap_solution
 
     def __str__(self):
