@@ -670,6 +670,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
 
 
 def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
+    print "New path!"
     ## ACCURATE GAP EST HERE
 
     #print G_prime.subgraph(path).edges(data=True)
