@@ -64,11 +64,11 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
             if read.rname in largest_contigs_indexes:
                 contamination_reads.append(abs(read.tlen)+2*param.read_len)
-                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
+                count_contamine += 1
         if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
             if read.rname in largest_contigs_indexes:
                 contamination_reads.append(abs(read.tlen))
-                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
+                count_contamine += 1 
         if counter >= iter_threshold:
                 break
 
