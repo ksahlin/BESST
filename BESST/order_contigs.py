@@ -31,7 +31,7 @@ from mathstats.normaldist.normal import normpdf
 from mathstats.normaldist.truncatedskewed import param_est as GC
 
 from BESST.lp_solve import lp_solve
-from pulp import *
+
 
 class LpForm(object):
     """docstring for LpForm"""
@@ -378,51 +378,7 @@ class Path(object):
             gap_solution.append( round (optx[2*i] -optx[2*i +1],0) )           
 
         self.objective = lpsol.fun
-        print self.objective,
-
-
-        #calculate individual exp_mean over each edge given observation with gapest??
-
-        gap_vars= []
-        for i in range(len(self.ctgs)-1):
-            gap_vars.append( LpVariable(str(i), None, self.mean + 2*self.stddev, cat='Integer'))
-
-        # help variables because objective function is an absolute value
-        help_variables = {}
-        for (i,j,is_PE_link) in self.observations:
-            help_variables[(i,j,is_PE_link)] = LpVariable("z_"+str(i)+'_'+str(j)+'_'+str(is_PE_link), None, None,cat='Integer')
-
-        problem = LpProblem("PathProblem",LpMinimize)
-
-        #problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
-        if self.contamination_ratio:
-            problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
-        else:
-            problem += lpSum( [ help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
-
-        # problem += lpSum( [ - penalize_variables[i]*PENALIZE_CONSTANT[i] for i in range(len(self.gaps))] )
-
-        # adding constraints induced by the absolute value of objective function
-        for (i,j,is_PE_link) in self.observations:
-            problem += exp_means_gapest[(i,j,is_PE_link)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j,is_PE_link)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-
-        for (i,j,is_PE_link) in self.observations:
-            problem += - exp_means_gapest[(i,j,is_PE_link)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]  <= help_variables[(i,j,is_PE_link)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)+'_'+str(is_PE_link)
-
-
-        problem.solve()
-
-
-        optimal_gap_solution = [0]*(len(self.ctgs) -1)
-        for v in problem.variables():
-            try:
-                optimal_gap_solution[int( v.name)] = v.varValue
-                #print v.name, "=", v.varValue,
-            except ValueError:
-                #print v.name, "=", v.varValue,
-                pass
-
-        print  value(problem.objective)
+        print self.objective
         
         return gap_solution
 

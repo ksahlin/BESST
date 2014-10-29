@@ -192,6 +192,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
             print 'enter Betwween scaf node: ', cnter
         end.difference_update(set([start_node]))
         paths = find_all_paths_for_start_node(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+        end.add(start_node)
         already_visited.add(start_node)
         ScorePaths(G_prime, paths, all_paths, param)
         cnter += 1
