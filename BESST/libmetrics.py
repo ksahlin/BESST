@@ -54,11 +54,11 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
     #         sys.exit(0)
     for read in bam_file:
-        counter += 1
-
         # all reads mapping
-        if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
-            counter_total += 1
+        if read.rname in largest_contigs_indexes:
+            counter += 1
+            if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
+                counter_total += 1
 
         # contamination reads (mapped in reverse complemented orientation)
         if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
