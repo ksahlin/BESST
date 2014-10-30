@@ -278,8 +278,8 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
 
         ##### Here PathExtension algorithm is called if PRO is activated #####
         if param.extend_paths:
-            PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited)
-
+            #PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited)
+            pass
         for node in new_scaffold_:
             if len(G.neighbors(node)) == 1:
                 start = node
