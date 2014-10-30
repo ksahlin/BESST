@@ -84,9 +84,12 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         while extreme_obs_occur:
             extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
             n_contamine = float(len(filtered_list))
-            mean_isize = sum(filtered_list) / n_contamine
-            std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
-            contamination_reads = filtered_list
+            if n_contamine > 2:
+                mean_isize = sum(filtered_list) / n_contamine
+                std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+                contamination_reads = filtered_list
+            else:
+                break
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
