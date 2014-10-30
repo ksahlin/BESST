@@ -184,7 +184,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         iter_threshold = len(end)
 
     print 'iterating until maximum of {0} extensions.'.format(iter_threshold) 
-
+    print 'nodes:{0}, edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
     while len(iter_nodes) > 0 and iter_count <= iter_threshold:
         iter_count += 1
         start_node = iter_nodes.pop()
@@ -192,7 +192,6 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
             print 'enter Betwween scaf node: ', cnter
         end.difference_update(set([start_node]))
         paths = find_all_paths_for_start_node(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
-        end.add(start_node)
         already_visited.add(start_node)
         ScorePaths(G_prime, paths, all_paths, param)
         cnter += 1
