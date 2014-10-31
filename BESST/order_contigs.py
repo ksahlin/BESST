@@ -133,9 +133,9 @@ class Path(object):
                 #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 #mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_PE_obs , nr_obs)
-                if mean_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
-                    self.observations = None
-                    return None
+                #if mean_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                #    self.observations = None
+                #    return None
             else:
                 #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
@@ -143,6 +143,7 @@ class Path(object):
 
         self.observations = obs_dict
         #print self.observations
+
 
         # for c1,c2 in self.observations:
         #     if self.observations[(c1,c2)][0] > 1500:
@@ -378,7 +379,7 @@ class Path(object):
             gap_solution.append( round (optx[2*i] -optx[2*i +1],0) )           
 
         self.objective = lpsol.fun
-        print self.objective
+        #print self.objective
         
         return gap_solution
 

@@ -602,7 +602,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
     contigs_to_indexes = {}
     indexes_to_contigs = {}
     index = 0
-    print 'CURNNNT PATH_',current_path
+    #print 'CURNNNT PATH_',current_path
     for ctg in current_path:
         if ctg[0] in contigs_to_indexes:
             continue
@@ -670,7 +670,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
 
 
 def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
-    print "New path!"
+    #print "New path!"
     ## ACCURATE GAP EST HERE
 
     #print G_prime.subgraph(path).edges(data=True)
