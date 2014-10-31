@@ -133,7 +133,7 @@ class Path(object):
                 #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 #mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_PE_obs , nr_obs)
-                #if mean_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                #if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
                 #    self.observations = None
                 #    return None
             else:
@@ -342,7 +342,7 @@ class Path(object):
         if self.contamination_ratio:
             obj_row = [0]*n
             for h_index,(i,j,is_PE_link) in enumerate(self.observations):
-                obj_row[ 2*g + h_index] = is_PE_link * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1]  +  (1-is_PE_link)*(self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
+                obj_row[ 2*g + h_index] = is_PE_link * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link)*(self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
                 t.add_objective(obj_row)
             #problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         else:
