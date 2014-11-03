@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.2',
+    version='1.3.0',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -23,8 +23,7 @@ setup(
     license='GPLv3',
     long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
     install_requires=['pysam>=0.7',
-                      'networkx>=1.4',
-                      'mathstats>=0.1.2',
-                      'scipy>=0.9',
-                      'pulp>=1.4'],
+                      'networkx>=1.9',
+                      'mathstats>=0.1.3.1',
+                      'scipy>=0.9'],
 )

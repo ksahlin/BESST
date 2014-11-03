@@ -18,7 +18,6 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-import subprocess
 
 
 class parameter(object):
@@ -41,18 +40,25 @@ class parameter(object):
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
-                 no_score=None, orientation = None):
+                 no_score=None, orientation = None, contig_index= None,
+                 score_cutoff = None, max_extensions = None ):
+
+
 
         # Library information
+        self.mean_ins_size = parameter_mean_ins_size
+        self.std_dev_ins_size = parameter_std_dev_ins_size
+
         # Contig information
+        self.contig_index = contig_index
         # Algorithm parameters
+        self.score_cutoff = score_cutoff
+        self.max_extensions = max_extensions
         # Assembly information
         # Algorithm information
         # Output information
         self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
-        self.mean_ins_size = parameter_mean_ins_size
-        self.std_dev_ins_size = parameter_std_dev_ins_size
         self.output_directory = parameter_output_directory
         self.bamfile = parameter_bamfile
         self.read_len = parameter_read_len
@@ -89,6 +95,7 @@ class parameter(object):
         self.contamination_ratio = contamination_ratio
         self.contamination_mean = contamination_mean
         self.contamination_stddev = contamination_stddev
+
 
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,

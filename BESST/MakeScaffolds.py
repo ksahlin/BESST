@@ -38,11 +38,11 @@ import plots
 import order_contigs
 
 
-def constant_large():
-    return 2 ** 32
+# def constant_large():
+#     return 2 ** 32
 
-def constant_small():
-    return -1
+# def constant_small():
+#     return -1
 
 
 def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param):
@@ -242,22 +242,22 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 #### After the proceure above, we hope that the graph is almost perfectly linear but we can still be encountering cycles (because of repeats or haplotypic contigs that has slipped through our conditions). Thus we finally search for loops
     print >> Information, 'Contigs/scaffolds left:', len(G.nodes()) / 2
     print >> Information, 'Remove remaining cycles...'
-    graphs = nx.connected_component_subgraphs(G)
+    #graphs = nx.connected_component_subgraphs(G)
     #print 'Nr connected components',len(graphs)
     counter = 0
-    for graph in graphs:
-        list_of_cycles = algorithms.cycles.cycle_basis(graph)
-        for cycle in list_of_cycles:
-            print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
-            print >> Information, 'A cycle in the scaffold graph: ' + str(cycle), graph.edges()
-            counter += 1
-            for node in cycle:
-                if node in G:
-                    #we split up the whole cycle into separate contigs and send them to F
-                    scaffold_ = node[0]
-                    G.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
-                    if param.extend_paths:
-                        G_prime.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
+    #for graph in graphs:
+    list_of_cycles = algorithms.cycles.cycle_basis(G)
+    for cycle in list_of_cycles:
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle)
+        counter += 1
+        for node in cycle:
+            if node in G:
+                #we split up the whole cycle into separate contigs and send them to F
+                scaffold_ = node[0]
+                G.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
+                if param.extend_paths:
+                    G_prime.remove_nodes_from([(scaffold_, 'L'), (scaffold_, 'R')])
 #                    S_obj=Scaffolds[scaffold_]
 #                    list_of_contigs=S_obj.contigs   #list of contig objects contained in scaffold object
 #                    Contigs, F = GO.WriteToF(F,Contigs,list_of_contigs)
@@ -265,9 +265,10 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
     print >> Information, str(counter) + ' cycles removed from graph.'
     return(G, Contigs, Scaffolds)
 
+
 def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited):
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
-    new_scaffolds_ = list(nx.connected_component_subgraphs(G))
+    new_scaffolds_ = [ G.subgraph(c) for c in nx.connected_components(G)]
     print >> Information, 'Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_))
     for new_scaffold_ in new_scaffolds_:
         param.scaffold_indexer += 1
@@ -290,8 +291,14 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
 
         prev_node = ('', '')
         pos = 0
-        (G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
+        values = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        #print values
+        while len(values) !=2:
+            values = UpdateInfo(G,*values)
+            #print len(values)
+        #(G, contig_list, scaffold_length) = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        contig_list, scaffold_length = values[0],values[1]
+        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
 
         Scaffolds[S.name] = S        #include in scaffold library
 
@@ -338,7 +345,7 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
         G.remove_node((scaf, side))
 #        except KeyError:
 #            del small_scaffolds[scaf] #finally, delete the old scaffold object
-        return(G, contig_list, scaffold_length)
+        return(contig_list, scaffold_length)
     else:
         nbr_node = G.neighbors((scaf, side))
         nbr_scaf = nbr_node[0][0]
@@ -364,7 +371,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #    pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+                return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+
+                #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
 
             else:  #Contig/scaffold need to change orientation as well as modify orientation in this case
                 #try:
@@ -393,7 +402,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 #except KeyError:
                 #pos+=small_scaffolds[scaf].s_length  #update position before sending it to next scaffold
 
-                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+                return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+
+#                G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
         else:
             if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
                 #calculate gap to next scaffold
@@ -449,8 +460,9 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
             del Scaffolds[scaf] #finally, delete the old scaffold object
             #except KeyError:
             #    del small_scaffolds[scaf] #finally, delete the old scaffold object
-            G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-    return(G, contig_list, scaffold_length)
+            return Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param
+            #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+    return( contig_list, scaffold_length)
 
 def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited):
     #loc_count = 0
@@ -616,7 +628,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
     mp_links = 0
     index_observations = {}     
     for c1,c2 in observations:  
-        tot_links += len(observations[(c1,c2)])  
+        tot_links += observations[(c1,c2)][1]  
         if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0 and param.contamination_ratio:
             PE = 1
             #print 'PE link!!',c1,c2
@@ -625,10 +637,10 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 0
-            mp_links += len(observations[(c1,c2)])
+            mp_links += observations[(c1,c2)][1]
             #print 'MP link!!',c1,c2
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0:
-            mp_links += len(observations[(c1,c2)])
+            mp_links += observations[(c1,c2)][1]
             PE = 0
             #print 'MP link!!',c1,c2           
         else:
@@ -658,6 +670,7 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
 
 
 def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
+    #print "New path!"
     ## ACCURATE GAP EST HERE
 
     #print G_prime.subgraph(path).edges(data=True)
@@ -670,7 +683,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
     sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
     for c1,c2 in sub_graph_small_to_large_ctgs:
-        observations[(c1,c2)] = [sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
+        observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
     
 
     # for c1,c2 in observations:
@@ -880,14 +893,16 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
 
     ################################################################
 
+    nr_paths = len(all_paths_sorted_wrt_score)
     start_end_node_update_storage = {}
-    print >> Information, 'Total number of paths between scaffolds detected:', len(all_paths_sorted_wrt_score)
+    print >> Information, '{0} paths detected are with score greater or equal to {1} '.format(nr_paths, param.score_cutoff)
     for sublist in reversed(all_paths_sorted_wrt_score):
         path = sublist[2]
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
-        print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+        if nr_paths <= 100000:
+            print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -1005,54 +1020,6 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         start_end_node_update_storage[path[0]] = 0
         start_end_node_update_storage[path[-1]] = 0
 
-        # for edge in G_.edges():
-        #     try:
-        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-        #     except KeyError:
-        #         print >> Information, path
-        #         try:
-        #             Scaffolds[edge[0][0]]
-        #             print >> Information, edge[0][0] , 'is in Scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[0][0] , 'is not in Scaffolds'
-        #         try:
-        #             Scaffolds[edge[1][0]]
-        #             print >> Information, edge[1][0] , 'is in Scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[1][0] , 'is not in Scaffolds'
-
-        #         try:
-        #             small_scaffolds[edge[0][0]]
-        #             print >> Information, edge[0][0] , 'is in small_scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[0][0] , 'is not in small_scaffolds'
-        #         try:
-        #             small_scaffolds[edge[1][0]]
-        #             print >> Information, edge[1][0] , 'is in small_scaffolds'
-        #         except KeyError:
-        #             print >> Information, edge[1][0] , 'is not in small_scaffolds'
-
-        #         try:
-        #             G_prime[edge[0]]
-        #             print >> Information, edge[0] , 'is in G_prime'
-        #             print >> Information, G_prime[edge[0]]
-        #         except KeyError:
-        #             print >> Information, edge[0] , 'is not in G_prime'
-        #         try:
-        #             G_prime[edge[1]]
-        #             print >> Information, edge[1] , 'is in G_prime'
-        #             print >> Information, G_prime[edge[1]]
-        #         except KeyError:
-        #             print >> Information, edge[1] , 'is not in G_prime'
-        #         print edge[0], edge[1]
-        #         G_[edge[0]][edge[1]]['nr_links'] = G_prime[edge[0]][edge[1]]['nr_links']
-        #         sys.exit()
-
-        #     try:
-        #         G_[edge[0]][edge[1]]['obs'] = G_prime[edge[0]][edge[1]]['obs']
-        #     except KeyError:
-        #         #may be the two different sides of a contig (has no gap dist)
-        #         pass
 
         start = path[0]
         end = path[-1]
@@ -1061,10 +1028,17 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         scaffold_length = 0
         contig_list = []
         param.scaffold_indexer += 1
-        (G, contig_list, scaffold_length) = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
-        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  #Create the new scaffold object 
 
-        print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
+        values = UpdateInfo(G_, Contigs, small_contigs, Scaffolds, small_scaffolds, start, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
+        #print values
+        while len(values) !=2:
+            values = UpdateInfo(G_,*values)
+    
+        (contig_list, scaffold_length) = values[0],values[1]
+        S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
+
+        if nr_paths <= 100000:
+            print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         Scaffolds[S.name] = S        #include in scaffold library
         #add the new scaffold object to G_prime

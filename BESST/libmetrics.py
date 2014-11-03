@@ -9,7 +9,7 @@ import sys
 from heapq import nlargest
 
 from mathstats.normaldist.normal import MaxObsDistr
-import bam_parser
+from BESST import bam_parser
 
 
 def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
@@ -47,30 +47,30 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     contamination_reads = []
     counter = 0
 
-    for index in largest_contigs_indexes:
-        try:
-            iter_ = bam_file.fetch(cont_names[index])
-        except ValueError:
-            sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
-            sys.exit(0)
-        for read in iter_:
+    # for index in largest_contigs_indexes:
+    #     try:
+    #         iter_ = bam_file.fetch(cont_names[index])
+    #     except ValueError:
+    #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+    #         sys.exit(0)
+    for read in bam_file:
+        # all reads mapping
+        if read.rname in largest_contigs_indexes:
             counter += 1
-
-            # all reads mapping
             if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
                 counter_total += 1
 
-            # contamination reads (mapped in reverse complemented orientation)
-            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
+        # contamination reads (mapped in reverse complemented orientation)
+        if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
+            if read.rname in largest_contigs_indexes:
                 contamination_reads.append(abs(read.tlen)+2*param.read_len)
-                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
-            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
+                count_contamine += 1
+        if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
+            if read.rname in largest_contigs_indexes:
                 contamination_reads.append(abs(read.tlen))
-                count_contamine += 2 # 2 reads in a read pair, only read2 reach inside this if statement
-                if counter >= iter_threshold:
-                    break
-            if counter >= iter_threshold:
-                    break
+                count_contamine += 1 
+        if counter >= iter_threshold:
+                break
 
     ## SMOOTH OUT contamine distribution here by removing extreme observations## 
     n_contamine = float(len(contamination_reads))
@@ -84,13 +84,19 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         while extreme_obs_occur:
             extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
             n_contamine = float(len(filtered_list))
-            mean_isize = sum(filtered_list) / n_contamine
-            std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
-            contamination_reads = filtered_list
+            if n_contamine > 2:
+                mean_isize = sum(filtered_list) / n_contamine
+                std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+                contamination_reads = filtered_list
+            else:
+                break
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
-    if mean_isize > param.mean_ins_size or count_contamine == 0:
+    if mean_isize >= param.mean_ins_size or std_dev_isize >= param.std_dev_ins_size or n_contamine <= 1000:
+        # either contamine mean or stddev is higher than MP lb mean which means it's spurious alignments -> no true contamine
+        # or we have less than 0.1% of contamine reads, then we skip dealing with them since they introduce more complexity
+        # when orienting scaffolds in pathfinder module
         param.contamination_ratio  = False      
         param.contamination_mean = 0
         param.contamination_stddev = 0
@@ -99,6 +105,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         param.contamination_stddev = std_dev_isize
         param.contamination_ratio = count_contamine / float(counter_total)
 
+    bam_file.reset()
     return n_contamine
 
 
@@ -112,27 +119,35 @@ def get_metrics(bam_file, param, Information):
     #cont_lengths=[int(nr) for nr in cont_lengths]  #convert long to int object
     cont_lengths_list = list(cont_lengths)
     indexes = [i for i in range(0, len(cont_lengths_list))]
-    largest_contigs_indexes = nlargest(1000, indexes, key=lambda i: cont_lengths_list[i]) #get indexes of the 1000 longest contigs
+    largest_contigs_indexes = set(nlargest(1000, indexes, key=lambda i: cont_lengths_list[i])) #get indexes of the 1000 longest contigs
 
+    try:
+        bam_file.fetch(cont_names[0])
+    except ValueError:
+        sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+        sys.exit(0)
+    #largest_contigs_indexes = nlargest(1000, indexes, key=lambda i: cont_lengths_list[i]) #get indexes of the 1000 longest contigs
+    
+    #print largest_contigs_indexes
 
     if not param.read_len: # user has not specified read len  
         #get read length
         nr_reads = 0
         tot_read_len = 0
-        for index in largest_contigs_indexes:
-            try:
-                iter_ = bam_file.fetch(cont_names[index])
-            except ValueError:
-                sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
-                sys.exit(0)
+        # for index in largest_contigs_indexes:
+        #     try:
+        #         iter_ = bam_file.fetch(cont_names[index])
+        #     except ValueError:
+        #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+        #         sys.exit(0)
 
-            for read in iter_:
-                if read.rlen != 0:
-                    tot_read_len += read.rlen
-                    nr_reads += 1
-                else:
-                    tot_read_len += read.alen
-                    nr_reads += 1
+        for read in bam_file:
+            if read.rlen != 0:
+                tot_read_len += read.rlen
+                nr_reads += 1
+            else:
+                tot_read_len += read.alen
+                nr_reads += 1
             if nr_reads >= 100:
                 param.read_len = tot_read_len / float(nr_reads)
                 break        
@@ -142,6 +157,7 @@ def get_metrics(bam_file, param, Information):
              check why almost no reads are mapping to the contigs.\nterminating..\n'.format(nr_reads))
             sys.exit(0)
 
+        bam_file.reset()
 
     if param.mean_ins_size and param.std_dev_ins_size and not param.ins_size_threshold: # user has specified mean and std dev but no thresholds
         param.ins_size_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
@@ -155,23 +171,26 @@ def get_metrics(bam_file, param, Information):
         #total_reads_iterated_through = 0
         counter = 1
         ins_size_reads = []
-        for index in largest_contigs_indexes:
-            try:
-                iter_ = bam_file.fetch(cont_names[index])
-            except ValueError:
-                sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
-                sys.exit(0)
-            for read in iter_:
-                if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read):
+        # for index in largest_contigs_indexes:
+        #     try:
+        #         iter_ = bam_file.fetch(cont_names[index])
+        #     except ValueError:
+        #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
+        #         sys.exit(0)
+        for read in bam_file:
+            if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read):
+                if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen))
                     counter += 1
-                if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read):
+            if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read):
+                if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen) + 2*param.read_len)
                     counter += 1
-                if counter > 1000000:
-                    break
             if counter > 1000000:
                 break
+        bam_file.reset()
+        # if counter > 1000000:
+        #     break
 
         #get mean and std dev here. 
         #Assure that there were enough reads  for computation of mean and variance
