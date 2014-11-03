@@ -15,7 +15,7 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering :: Bio-Informatics"
       ],
-    scripts=['runBESST', 'docs/INSTALL.txt', 'docs/MANUAL.txt', 'scripts/reads_to_ctg_map.py'],
+    scripts=['runBESST', 'scripts/reads_to_ctg_map.py'],
     description='Scaffolder for genomic assemblies.',
     author='Kristoffer Sahlin',
     author_email='kristoffer.sahlin@scilifelab.se',

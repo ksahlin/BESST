@@ -8,6 +8,7 @@ OBS:
 If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
 In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
 
+
 #### Time and memory requirements: ####
 Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
  
