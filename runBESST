@@ -289,7 +289,7 @@ parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int
                     of the other files as well as all statistics. Default: All contigs are included")
 
 
-parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
+parameters.add_argument("--iter", dest="path_threshold", type=int, default=100000,
                   help="The number of iterations performed in breadth first search for placing smaller contigs. ")
 
 parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, default=1.5,
@@ -350,7 +350,7 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
                   help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
                   not included in the main scaffolding output file with this flag specified.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.3.0')
+other.add_argument('--version', action='version', version='%(prog)s 1.3.1')
 
 
 
