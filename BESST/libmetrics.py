@@ -34,7 +34,9 @@ def remove_outliers(ins_size_reads):
         mean_isize = sum(filtered_list) / n
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n - 1)) ** 0.5
         ins_size_reads = filtered_list
-        extreme_obs_occur &= len(filtered_list) 
+        if len(filtered_list) == 0:
+            # we want to leave this loop if no good observations left
+            extreme_obs_occur = False
     n = float(len(ins_size_reads))
     mean_isize = sum(ins_size_reads) / n
     std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
