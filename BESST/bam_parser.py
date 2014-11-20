@@ -20,11 +20,11 @@ def open_bam_file(bam_file_path):
         return IOError("open_bam_file: File must be either .bam or .sam.")
 
 def is_proper_aligned_unique_innie(read):
-    return (read.is_reverse and not read.mate_is_reverse and  read.tlen < 0 and read.rname == read.mrnm) or \
+    return (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm) or \
                 (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm ) \
                 and not read.mate_is_unmapped and read.mapq > 10 and not read.is_secondary
 def is_proper_aligned_unique_outie(read):
-    return (read.is_reverse and not read.mate_is_reverse and  read.tlen > 0 and read.rname == read.mrnm) or \
+    return (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm) or \
                 (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm ) \
                 and not read.mate_is_unmapped and read.mapq > 10 and not read.is_secondary
 
