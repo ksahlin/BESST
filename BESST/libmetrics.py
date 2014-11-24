@@ -104,7 +104,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     else:
         param.contamination_mean = mean_isize
         param.contamination_stddev = std_dev_isize
-        param.contamination_ratio = count_contamine / float(counter_total)
+        param.contamination_ratio = 2*n_contamine / float(counter_total)
 
     bam_file.reset()
     return n_contamine
