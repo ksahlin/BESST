@@ -475,7 +475,6 @@ def get_total_length(Scaffolds, small_scaffolds, path):
             except KeyError:
                 print 'Contig/Scaffold {0} is not in small_scaffolds'.format(node[0])
                 return -1
-    print 'Total path length:', total_within_path_length
     return total_within_path_length
 
 
@@ -501,7 +500,6 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             high_score_path = False
             for path_info in reversed(all_paths_sorted_wrt_score):
                 path = path_info[2]
-                print path, path_info[0]
                 length_of_path = get_total_length(Scaffolds, small_scaffolds, path)
                 if 0 < length_of_path < param.ins_size_threshold:
                     high_score_path, score = path, path_info[0]
