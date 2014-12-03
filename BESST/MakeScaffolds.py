@@ -493,11 +493,12 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             c2_len = Scaffolds[end[0]].s_length
             sum_obs = G[start][end]['obs']
             data_observation = (nr_links_ * param.mean_ins_size - sum_obs) / float(nr_links_)
-            avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
+            #avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, data_observation, c1_len, c2_len)
 
             #high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
             all_paths_sorted_wrt_score = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
 
+            high_score_path = False
             for path_info in reversed(all_paths_sorted_wrt_score):
                 path = path_info[2]
                 print path, path_info[0]
