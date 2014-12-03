@@ -269,6 +269,7 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, dValuesTable, param, already_visited):
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
     new_scaffolds_ = [ G.subgraph(c) for c in nx.connected_components(G)]
+    #print 'INITIAL SCAFFOLD INDEX:',param.scaffold_indexer
     print >> Information, 'Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_))
     for new_scaffold_ in new_scaffolds_:
         param.scaffold_indexer += 1
@@ -278,6 +279,7 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
 
         ##### Here PathExtension algorithm is called if PRO is activated #####
         if param.extend_paths:
+            #print 'SCAFFOLD INDEX:',param.scaffold_indexer
             PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited)
 
         for node in new_scaffold_:
@@ -464,6 +466,22 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
             #G, contig_list, scaffold_length = UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev_node, pos, contig_list, scaffold_length, dValuesTable, param)
     return( contig_list, scaffold_length)
 
+def get_total_length(Scaffolds, small_scaffolds, path):
+    total_within_path_length = 0
+    for i,node in enumerate(path[1:-1]):
+        if i % 2 ==0:
+            try:
+                total_within_path_length += small_scaffolds[node[0]].s_length
+            except KeyError:
+                print 'Contig/Scaffold {0} is not in small_scaffolds'.format(node[0])
+                return -1
+    print 'Total path length:', total_within_path_length
+    return total_within_path_length
+
+
+
+
+
 def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, new_scaffold_, dValuesTable, already_visited):
     #loc_count = 0
     for edge in new_scaffold_.edges_iter():
@@ -480,6 +498,13 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             #high_score_path, bad_links, score, path_len = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
             all_paths_sorted_wrt_score = ELS.WithinScaffolds(G, G_prime, start, end, already_visited, param.ins_size_threshold, param)
 
+            for path_info in reversed(all_paths_sorted_wrt_score):
+                path = path_info[2]
+                print path, path_info[0]
+                length_of_path = get_total_length(Scaffolds, small_scaffolds, path)
+                if 0 < length_of_path < param.ins_size_threshold:
+                    high_score_path, score = path, path_info[0]
+                    break
             if not all_paths_sorted_wrt_score:
                 continue
 
@@ -497,11 +522,11 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
             # #     path_len = sublist[3]
             # #     print 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
-            high_score_path, score = all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][0]
+            #high_score_path, score = all_paths_sorted_wrt_score[-1][2], all_paths_sorted_wrt_score[-1][0]
             #print 'Highest scoring path:{0}'.format(high_score_path)
             #print 'Score: {0}'.format(score)
 
-            if high_score_path and score >= 0.0:
+            if high_score_path and score >= param.score_cutoff:
 
                 ##################### v1.0.4.5 
                 ## modified improved path gap estimation here!!
