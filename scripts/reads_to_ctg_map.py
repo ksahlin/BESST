@@ -36,7 +36,7 @@ def sam_to_bam(sam_path, bam_path):
 # @param genome_path Path to the reference genome.
 # @param output_path Path of the output file without extension ".bam".
 #
-def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
+def bwa_sampe(pe1_path, pe2_path, genome_path, threads, output_path):
     print 'Aligning with bwa aln/sampe'
     start = time()
     work_dir = tempfile.mkdtemp()
@@ -49,10 +49,10 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
     #null = open("/dev/null")
     subprocess.check_call([ "bwa", "index", "-p", genome_db, genome_path ], stderr=stderr_file)
     with open(pe1_output, "w") as pe1_file:
-        subprocess.check_call([ "bwa", "aln", "-t 8", genome_db, pe1_path ], stdout=pe1_file, stderr=stderr_file)
+        subprocess.check_call([ "bwa", "aln", "-t", threads, genome_db, pe1_path ], stdout=pe1_file, stderr=stderr_file)
 
     with open(pe2_output, "w") as pe2_file:
-        subprocess.check_call([ "bwa", "aln", "-t 8", genome_db, pe2_path ], stdout=pe2_file, stderr=stderr_file)
+        subprocess.check_call([ "bwa", "aln", "-t", threads, genome_db, pe2_path ], stdout=pe2_file, stderr=stderr_file)
 
     with open(bwa_output, "w") as bwa_file:
         subprocess.check_call([ "bwa", "sampe",
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
 
     if args.pe2_path and args.nomem:
-        bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, args.output_path)
+        bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, args.threads, args.output_path)
     elif args.pe2_path:
         bwa_mem(args.pe1_path, args.pe2_path, args.genome_path, args.threads, args.output_path)
     else:
