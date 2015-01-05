@@ -11,6 +11,14 @@ In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requir
 
 #### Time and memory requirements: ####
 Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
+
+#### Bam files and mapping  ####
+BESST requires sorted and indexed bamfiles as input. Any read aligner + samtools can be used to obtain such files. Read pairs needs to be aligned in paired read mode. BESST provides a script (https://github.com/ksahlin/BESST/blob/master/scripts/reads_to_ctg_map.py) for obtaining sorted and indexed bamfiles with BWA-sampe or BWA-mem in one go. An example call for mapping with this script is
+
+```sh
+python reads_to_ctg_map.py /path/to/lib1_A.fq /path/to/lib1_A.fq /path/to/contigs.fasta --threads N
+```
+where N is an integer specifying how many threads BWA-mem should use. --nomem can be specified to the above call to use BWA-sampe as the paired read alignment pipeline.
  
 INPUT:
 ------
