@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='BESST',
-    version='1.3.6',
+    version='1.3.7',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -24,6 +24,6 @@ setup(
     long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
     install_requires=['pysam>=0.7',
                       'networkx>=1.9',
-                      'mathstats>=0.1.4',
+                      'mathstats>=0.1.5',
                       'scipy>=0.9'],
 )
