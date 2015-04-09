@@ -634,6 +634,10 @@ def CalculateMeanCoverage(Contigs, Information, param):
     #Calculate mean coverage from the 1000 longest contigs
     n = float(len(cov_of_longest_contigs))
     mean_cov = sum(cov_of_longest_contigs) / n
+    # If there is only one contig above the size threshold, n can be 1
+    if n==1:
+        n+=1
+
     std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), cov_of_longest_contigs))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
     print >> Information, 'Mean coverage before filtering out extreme observations = ', mean_cov
