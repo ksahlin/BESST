@@ -724,7 +724,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
 
     # only one contig, nothing to permute
-    if len(path) <= 4 or not param.contamination_ratio:
+    if len(path) <= 4 or not param.contamination_ratio or param.NO_ILP:
         final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param,True)
         final_path = path
         #print final_path
