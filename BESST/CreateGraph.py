@@ -19,8 +19,8 @@
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
-
 import sys
+import os
 from collections import defaultdict
 from math import pi
 from time import time
@@ -60,17 +60,26 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     print >> Information, 'Nr of contigs/scaffolds included in scaffolding: ' + str(len(Scaffolds)) #,Scaffolds.keys()
     if len(Scaffolds) == 0:
+        if not os.path.isfile(param.output_directory + '/repeats.fa'):
+            repeat_file = open(param.output_directory + '/repeats.fa', 'w')
         return(G, G_prime)
 
     ### initialize graph objects two nodes per contig "left" and "right" node. ###    
     tot_start = time()
-    if param.extend_paths:
-        InitializeGraph(Scaffolds, G, Information)
 
+    if param.no_score:
+        # Only do path search
+        #small contig graph contains all scaffolds
+        InitializeGraph(small_scaffolds, G_prime, Information)
+        InitializeGraph(Scaffolds, G_prime, Information)        
+    elif param.extend_paths:
+        # do scoring and extend paths
+        InitializeGraph(Scaffolds, G, Information)
         #small contig graph contains all scaffolds
         InitializeGraph(small_scaffolds, G_prime, Information)
         InitializeGraph(Scaffolds, G_prime, Information)
     else:
+        # only do scoring
         InitializeGraph(Scaffolds, G, Information)
     print >> Information, 'Total time elapsed for initializing Graph: ', time() - tot_start
 
@@ -91,11 +100,25 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'Reading bam file and creating scaffold graph...'
     staart = time()
 
+    if param.development:
+        import guppy
+        h = guppy.hpy()
+        before_ctg_graph = h.heap()
+        print 'Just before creating contig graph:\n{0}\n'.format(before_ctg_graph)
+
     for alignedread in bam_file:
-        try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
-            contig1 = bam_file.getrname(alignedread.rname)
-            contig2 = bam_file.getrname(alignedread.mrnm)
-        except ValueError:
+        # try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
+        #     contig1 = bam_file.getrname(alignedread.rname)
+        #     contig2 = bam_file.getrname(alignedread.mrnm)
+        # except ValueError:
+        #     continue
+        
+        try:
+            contig1 = param.contig_index[alignedread.rname]
+            contig2 = param.contig_index[alignedread.mrnm]
+            #assert contig1 == contig1_old
+            #assert contig2 == contig2_old
+        except KeyError:
             continue
 
         #TODO:Repeats (and haplotypes) may have been singled out, we need this statement (or a smarter version of it)
@@ -123,7 +146,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 scaf_obj2 = Scaffolds[cont_obj2.scaffold]
 
             if scaf_obj2.name != scaf_obj1.name:
-                (side1, side2) = CheckDir(cont_obj1, cont_obj2, alignedread)
+                (side1, side2) = CheckDir(cont_obj1, cont_obj2, alignedread,param)
                 #get scaffold name for contig
                 s1 = Contigs[contig1].scaffold if contig1 in Contigs else small_contigs[contig1].scaffold
                 s2 = Contigs[contig2].scaffold if contig2 in Contigs else small_contigs[contig2].scaffold
@@ -143,11 +166,15 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 cont_obj2 = Contigs[contig2]
                 scaf_obj1 = Scaffolds[cont_obj1.scaffold]
                 scaf_obj2 = Scaffolds[cont_obj2.scaffold]
-                is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2)
-                if param.extend_paths and not is_dupl:
+                if not param.no_score:
+                    is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2)
+                else:
+                    is_dupl = CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
+
+                if param.extend_paths and not is_dupl and not param.no_score:
                     counter.prev_obs1 = -1
                     counter.prev_obs2 = -1
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
             elif param.extend_paths:
                 try:
                     cont_obj1 = small_contigs[contig1]
@@ -166,11 +193,11 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                     scaf_obj2 = Scaffolds[cont_obj2.scaffold]
                     value2 = 0
                 if value1 and value2 and scaf_obj1 != scaf_obj2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2, save_obs=False)
                 elif value1 and not value2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2,save_obs=False)
                 elif not value1 and value2:
-                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2)
+                    CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G_prime, param, alignedread, counter, contig1, contig2,save_obs=False)
 
 
             elif contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
@@ -185,6 +212,10 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if param.detect_duplicate:
         print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
 
+    if param.development:
+        h = guppy.hpy()
+        after_ctg_graph = h.heap()
+        print 'Just after creating contig graph:\n{0}\n'.format(after_ctg_graph)
 
 
 ##### Calc coverage for all contigs with current lib here #####
@@ -209,6 +240,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         sum_x_sq += cont_coverage ** 2
         n += 1
 
+    del cont_aligned_len
+
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
@@ -220,12 +253,17 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
 
+    if param.development:
+        h = guppy.hpy()
+        after_coverage = h.heap()
+        print 'Just after calc coverage:\n{0}\n'.format(after_coverage)
+
     ## Score edges in graph
     plot = 'G'
-    GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
-
-    plot = 'G_prime'
-    GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
+    if not param.no_score:
+        GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
+    #plot = 'G_prime'
+    #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
 
     #Remove all edges with link support less than 3 to be able to compute statistics: 
@@ -237,10 +275,12 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 cntr_sp += 1
     print >> Information, 'Number of fishy edges in G_prime', cntr_sp
 
-
+    if param.development:
+        h = guppy.hpy()
+        after_scoring = h.heap()
+        print 'After scoring:\n{0}\n'.format(after_scoring)
 
     return(G, G_prime)
-
 
 
 def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
@@ -294,12 +334,17 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
             try:
                 l1 = G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
+                del G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
             except KeyError:
                 l1 = G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
+                del G[edge[0]][edge[1]][small_scaffolds[edge[0][0]].name]
             try:
                 l2 = G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
+                del G[edge[0]][edge[1]][Scaffolds[edge[1][0]].name]
             except KeyError:
                 l2 = G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
+                del G[edge[0]][edge[1]][small_scaffolds[edge[1][0]].name]
+
 
             l1.sort()
             n_obs = len(l1)
@@ -327,56 +372,6 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             else:
                 span_score = 1 - KS_statistic
 
-
-#            try:
-#                span_score = 1 - sc / float(min((max_obs1 - min_obs1), (max_obs2 - min_obs2)))
-#            except ZeroDivisionError:
-#                span_score = 0
-#            if span_score < 0:
-#                span_score = 0
-#                print  'ZEEERO', max_obs1 - min_obs1, max_obs2 - min_obs2, gap, sc, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name
-
-# if len(l1) > 3:
-#     print >> Information , 'avg_diff: ', sc, 'span1: ', (max_obs1 - min_obs1), 'span2: ', (max_obs2 - min_obs2), 'Span score: ', span_score, 'pval: ', p_value, 'Est gap: ', gap, 'Nr_links: ', len(l1) #, Scaffolds[edge[0][0]].contigs[0].name, Scaffolds[edge[1][0]].contigs[0].name, len(diff)
-
-
-                #print >> Information , l1
-                #print >> Information , l2
-                #print >> Information , diff
-            #print  span_score
-
-#
-#            k = normal.MaxObsDistr(n, 0.95)
-#            if 2 * param.read_len < len1 and 2 * param.read_len < len2:
-#                #span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len1 - param.read_len + max(0, gap))
-#                #span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - 2 * param.read_len, len2 - param.read_len + max(0, gap))
-#
-#                span_max1 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len1 + max(0, gap))
-#                span_max2 = min(param.mean_ins_size + k * param.std_dev_ins_size - param.read_len, len2 + max(0, gap))
-#
-#                try:
-#                    span_obs1 = Scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else Scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - Scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-#                except KeyError:
-#                    span_obs1 = small_scaffolds[ edge[0][0] ].upper_right_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_right_nbrs_obs[edge[1]] if edge[0][1] == 'R' else small_scaffolds[ edge[0][0] ].upper_left_nbrs_obs[edge[1]] - small_scaffolds[ edge[0][0] ].lower_left_nbrs_obs[edge[1]]
-#                try:
-#                    span_obs2 = Scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else Scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - Scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-#                except KeyError:
-#                    span_obs2 = small_scaffolds[ edge[1][0] ].upper_right_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_right_nbrs_obs[edge[0]] if edge[1][1] == 'R' else small_scaffolds[ edge[1][0] ].upper_left_nbrs_obs[edge[0]] - small_scaffolds[ edge[1][0] ].lower_left_nbrs_obs[edge[0]]
-#
-#
-#                #span_score1 = min((max(0, gap) + 2 * param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + 2 * param.read_len + span_obs1)) if span_obs1 > 0 else 0
-#                #span_score2 = min((max(0, gap) + 2 * param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + 2 * param.read_len + span_obs2)) if span_obs2 > 0 else 0
-#
-#                span_score1 = min((max(0, gap) + param.read_len + span_obs1) / float(span_max1) , float(span_max1) / (max(0, gap) + param.read_len + span_obs1)) if span_obs1 > 0 else 0
-#                span_score2 = min((max(0, gap) + param.read_len + span_obs2) / float(span_max2) , float(span_max2) / (max(0, gap) + param.read_len + span_obs2)) if span_obs2 > 0 else 0
-#
-#                span_score = min(span_score1, span_score2)
-#
-#                #span_score = (max(0, gap) + param.read_len + span_obs1) / float(span_max1)
-#            else:
-#                span_score = 0
-
-
             try:
                 std_dev_score = min(std_dev / std_dev_d_eq_0, std_dev_d_eq_0 / std_dev) #+ span_score #+ min(n/E_links, E_links/float(n))
             except ZeroDivisionError:
@@ -384,6 +379,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 sys.stderr.write(str(std_dev) + ' ' + str(std_dev_d_eq_0) + ' ' + str(span_score) + '\n')
 
             G[edge[0]][edge[1]]['score'] = std_dev_score + span_score if std_dev_score > 0.5 and span_score > 0.5 else 0
+
             if param.plots:
                 span_score_obs.append(span_score)
                 std_dev_score_obs.append(std_dev_score)
@@ -413,12 +409,16 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
 
 
-def CheckDir(cont_obj1, cont_obj2, alignedread):
+def CheckDir(cont_obj1, cont_obj2, alignedread, param):
     (read_dir, mate_dir) = (not alignedread.is_reverse, not alignedread.mate_is_reverse)
     cont_dir1 = cont_obj1.direction  #if pos : L if neg: R
     #position2 cont2/scaf2                        
     cont_dir2 = cont_obj2.direction
-    (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+    if param.orientation == 'fr':
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+    else:
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorMP(cont_dir1, read_dir, 0, 0, 0, 0, cont_dir2, mate_dir, 0, 0, 0, 0, 0)
+
     return(scaf_side1, scaf_side2)
 
 def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
@@ -438,6 +438,7 @@ def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
                     G.remove_edge(edge_tuple[0], edge_tuple[1])
                     edges_removed += 1
     print >> Information, 'Number of BWA buggy edges removed: ', edges_removed
+    del fishy_edges
     return()
 
 def InitializeGraph(dict_with_scaffolds, graph, Information):
@@ -454,10 +455,10 @@ def InitializeGraph(dict_with_scaffolds, graph, Information):
         cnt += 1
     return()
 
-def constant_large():
-    return 2 ** 32
-def constant_small():
-    return -1
+# def constant_large():
+#     return 2 ** 32
+# def constant_small():
+#     return -1
 
 def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime, small_contigs, small_scaffolds, C_dict):
     singeled_out = 0
@@ -469,9 +470,9 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     #Calculate NG50 and LG 50
     param.tot_assembly_length = sum(cont_lengths)
     sorted_lengths = sorted(cont_lengths, reverse=True)
-    NG50, LG50 = CalculateStats(sorted_lengths, [], param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
+    param.current_L50 = L50
+    param.current_N50 = N50
     #extend_paths = param.extend_paths
     counter = 0
     start = time()
@@ -481,7 +482,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
             print >> Information, 'Time adding 100k keys', time() - start
             start = time()
         if cont_names[i] not in  C_dict:
-            errorhandle.unknown_contig(cont_names[i])
+            #errorhandle.unknown_contig(cont_names[i])
             continue
 
         if cont_lengths[i] >= contig_threshold:
@@ -494,7 +495,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
             C.position = 0                  #position always 0
             #C.links = {}
             Contigs[C.name] = C              # Create a dict with name as key and the object container as value
-            S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  # Create object scaffold
+            S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length)  # Create object scaffold
             Scaffolds[S.name] = S
             C.scaffold = S.name
             param.scaffold_indexer += 1
@@ -508,7 +509,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
                 C.direction = True              # always in same direction first, False=reverse
                 C.position = 0                  #position always 0
                 small_contigs[C.name] = C              # Create a dict with name as key and the object container as value
-                S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length, defaultdict(constant_large), defaultdict(constant_large), defaultdict(constant_small), defaultdict(constant_small))  # Create object scaffold
+                S = Scaffold.scaffold(param.scaffold_indexer, [C], scaf_length)  # Create object scaffold
                 small_scaffolds[S.name] = S
                 C.scaffold = S.name
                 param.scaffold_indexer += 1
@@ -525,9 +526,9 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
     sorted_lengths = sorted(scaf_lengths, reverse=True)
     scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
-    NG50, LG50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    N50, L50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
+    param.current_L50 = L50
+    param.current_N50 = N50
     for scaffold_ in Scaffolds.keys(): #iterate over keys in hash, so that we can remove keys while iterating over it
         if Scaffolds[scaffold_].s_length < param.contig_threshold:
             ###  Switch from Scaffolds to small_scaffolds (they can still be used in the path extension)
@@ -543,7 +544,7 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
     print >> Information, 'Nr of contigs/scaffolds that was singeled out due to length constraints ' + str(singeled_out)
     return()
 
-def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2):
+def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2, save_obs=True):
     if alignedread.mapq == 0:
         counter.non_unique_for_scaf += 1
     counter.count += 1
@@ -561,36 +562,34 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
     matepos = alignedread.mpos
     cont2_len = cont_obj2.length
     s2len = scaf_obj2.s_length
-    (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+    if param.orientation == 'fr':
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorPE(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+    else:
+        (obs1, obs2, scaf_side1, scaf_side2) = PosDirCalculatorMP(cont_dir1, read_dir, cont1_pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2_pos, matepos, s2len, cont2_len, param.read_len)
+
     if obs1 == counter.prev_obs1 and obs2 == counter.prev_obs2:
         counter.nr_of_duplicates += 1
         if param.detect_duplicate:
             return(1)
 
     if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:
-        if scaf_side1 == 'R':
-            scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-            scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_right_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-        if scaf_side1 == 'L':
-            scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 < scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] and scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] > 0 else scaf_obj1.lower_left_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-            scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] = obs1 if obs1 > scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)] else scaf_obj1.upper_left_nbrs_obs[(scaf_obj2.name, scaf_side2)]
-        if scaf_side2 == 'R':
-            scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 < scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] and scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] > 0 else scaf_obj2.lower_right_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-            scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 > scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)] else scaf_obj2.upper_right_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-        if scaf_side2 == 'L':
-            scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 < scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] and scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] > 0 else scaf_obj2.lower_left_nbrs_obs[(scaf_obj1.name, scaf_side1)]
-            scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] = obs2 if obs2 > scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)] else scaf_obj2.upper_left_nbrs_obs[(scaf_obj1.name, scaf_side1)]
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
-            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
-            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
-        else:
+            if save_obs:
+                G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
+                G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
+        elif save_obs:
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name].append(obs1)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name].append(obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+        else:
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+
     else:
         counter.reads_with_too_long_insert += 1
 
@@ -604,25 +603,25 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
 def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, Information):
     cur_length = 0
     nr_conts = 0
-    LG50 = 0
-    NG50 = 0
+    L50 = 0
+    N50 = 0
     for contig_length in sorted_contig_lengths:
         cur_length += contig_length
         nr_conts += 1
         if cur_length >= param.tot_assembly_length / 2.0:
-            LG50 = contig_length
-            NG50 = nr_conts
+            N50 = contig_length
+            L50 = nr_conts
             break
-    if LG50 == 0:
+    if N50 == 0:
         for contig_length in sorted_contig_lengths_small:
             cur_length += contig_length
             nr_conts += 1
             if cur_length >= param.tot_assembly_length / 2.0:
-                LG50 = contig_length
-                NG50 = nr_conts
+                N50 = contig_length
+                L50 = nr_conts
                 break
-    print >> Information, 'LG50: ', LG50, 'NG50: ', NG50, 'Initial contig assembly length: ', param.tot_assembly_length
-    return(NG50, LG50)
+    print >> Information, 'L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length
+    return(N50, L50)
 
 def CalculateMeanCoverage(Contigs, Information, param):
     # tuples like (cont lenght, contig name)
@@ -635,6 +634,10 @@ def CalculateMeanCoverage(Contigs, Information, param):
     #Calculate mean coverage from the 1000 longest contigs
     n = float(len(cov_of_longest_contigs))
     mean_cov = sum(cov_of_longest_contigs) / n
+    # If there is only one contig above the size threshold, n can be 1
+    if n==1:
+        n+=1
+
     std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), cov_of_longest_contigs))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
     print >> Information, 'Mean coverage before filtering out extreme observations = ', mean_cov
@@ -730,42 +733,55 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
 def PosDirCalculatorPE(cont_dir1, read_dir, cont1pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2pos, matepos, s2len, cont2_len, read_len):
     if cont_dir1 and read_dir:
         obs1 = s1len - cont1pos - readpos
-        read_side1 = 'R'
+        scaf_side1 = 'R'
     if cont_dir2 and mate_dir:
         obs2 = s2len - cont2pos - matepos
-        read_side2 = 'R'
+        scaf_side2 = 'R'
     if (not cont_dir1) and read_dir:
         obs1 = cont1pos + (cont1_len - readpos)
-        read_side1 = 'L'
+        scaf_side1 = 'L'
     if (not cont_dir2) and mate_dir:
         obs2 = cont2pos + (cont2_len - matepos)
-        read_side2 = 'L'
+        scaf_side2 = 'L'
     if cont_dir1 and not read_dir:
         obs1 = cont1pos + readpos + read_len
-        read_side1 = 'L'
+        scaf_side1 = 'L'
     if cont_dir2 and not mate_dir:
         obs2 = cont2pos + matepos + read_len
-        read_side2 = 'L'
+        scaf_side2 = 'L'
     if not cont_dir1 and not read_dir:
         obs1 = s1len - cont1pos - (cont1_len - readpos - read_len)
-        read_side1 = 'R'
+        scaf_side1 = 'R'
     if not cont_dir2 and not mate_dir:
         obs2 = s2len - cont2pos - (cont2_len - matepos - read_len)
-        read_side2 = 'R'
-
-    if read_side1 == 'L':
-        scaf_side1 = 'L'
-    if read_side2 == 'L':
-        scaf_side2 = 'L'
-    if read_side1 == 'R':
-        scaf_side1 = 'R'
-    if read_side2 == 'R':
         scaf_side2 = 'R'
     return(int(obs1), int(obs2), scaf_side1, scaf_side2)
 
-
-
-
-
+def PosDirCalculatorMP(cont_dir1, read_dir, cont1pos, readpos, s1len, cont1_len, cont_dir2, mate_dir, cont2pos, matepos, s2len, cont2_len, read_len):
+    if cont_dir1 and not read_dir:
+        obs1 = s1len - cont1pos - readpos
+        scaf_side1 = 'R'
+    if cont_dir2 and not mate_dir:
+        obs2 = s2len - cont2pos - matepos
+        scaf_side2 = 'R'
+    if (not cont_dir1) and not read_dir:
+        obs1 = cont1pos + (cont1_len - readpos)
+        scaf_side1 = 'L'
+    if (not cont_dir2) and not mate_dir:
+        obs2 = cont2pos + (cont2_len - matepos)
+        scaf_side2 = 'L'
+    if cont_dir1 and read_dir:
+        obs1 = cont1pos + readpos + read_len
+        scaf_side1 = 'L'
+    if cont_dir2 and mate_dir:
+        obs2 = cont2pos + matepos + read_len
+        scaf_side2 = 'L'
+    if not cont_dir1 and read_dir:
+        obs1 = s1len - cont1pos - (cont1_len - readpos - read_len)
+        scaf_side1 = 'R'
+    if not cont_dir2 and mate_dir:
+        obs2 = s2len - cont2pos - (cont2_len - matepos - read_len)
+        scaf_side2 = 'R'
+    return(int(obs1), int(obs2), scaf_side1, scaf_side2)
 
 

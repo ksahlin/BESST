@@ -18,7 +18,6 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-import subprocess
 
 
 class parameter(object):
@@ -33,23 +32,33 @@ class parameter(object):
                  parameter_edgesupport=None, parameter_contig_threshold=None,
                  parameter_scaffold_indexer=0, parameter_first_lib=None,
                  parameter_cov_cutoff=None, parameter_tot_assembly_length=None,
-                 parameter_current_NG50=None, parameter_current_LG50=None,
+                 parameter_current_N50=None, parameter_current_L50=None,
                  parameter_hapl_ratio=None, parameter_hapl_threshold=None,
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
                  parameter_fosmidpool=None, parameter_extend_paths=None,
-                 parameter_development=None, parameter_plots=None, parameter_path_threshold=None):
+                 parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
+                 path_gaps_estimated =0, parameter_gap_estimations = [],
+                 contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
+                 no_score=None, orientation = None, contig_index= None,
+                 score_cutoff = None, max_extensions = None ):
+
+
 
         # Library information
+        self.mean_ins_size = parameter_mean_ins_size
+        self.std_dev_ins_size = parameter_std_dev_ins_size
+
         # Contig information
+        self.contig_index = contig_index
         # Algorithm parameters
+        self.score_cutoff = score_cutoff
+        self.max_extensions = max_extensions
         # Assembly information
         # Algorithm information
         # Output information
         self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
-        self.mean_ins_size = parameter_mean_ins_size
-        self.std_dev_ins_size = parameter_std_dev_ins_size
         self.output_directory = parameter_output_directory
         self.bamfile = parameter_bamfile
         self.read_len = parameter_read_len
@@ -62,8 +71,8 @@ class parameter(object):
         self.first_lib = parameter_first_lib
         self.cov_cutoff = parameter_cov_cutoff
         self.tot_assembly_length = parameter_tot_assembly_length
-        self.current_NG50 = parameter_current_NG50
-        self.current_LG50 = parameter_current_LG50
+        self.current_N50 = parameter_current_N50
+        self.current_L50 = parameter_current_L50
         self.hapl_ratio = parameter_hapl_ratio
         self.hapl_threshold = parameter_hapl_threshold
         self.detect_haplotype = parameter_detect_haplotype
@@ -75,6 +84,17 @@ class parameter(object):
         self.development = parameter_development
         self.plots = parameter_plots
         self.path_threshold = parameter_path_threshold
+        self.no_score = no_score
+        self.orientation = orientation
+
+        # related to gap distances
+        self.path_gaps_estimated = path_gaps_estimated
+        self.gap_estimations = parameter_gap_estimations
+
+        # If MP library (PE contamination)
+        self.contamination_ratio = contamination_ratio
+        self.contamination_mean = contamination_mean
+        self.contamination_stddev = contamination_stddev
 
 
 class counters(object):

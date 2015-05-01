@@ -22,12 +22,12 @@ import sys
 import os
 import errno
 from time import time
-from optparse import OptionParser
-import optparse
 import argparse
+import shutil
+from itertools import izip
 
 from BESST import errorhandle
-
+from BESST import decide_approach
 
 def mkdir_p(path):
     try:
@@ -37,7 +37,7 @@ def mkdir_p(path):
             pass
         else: raise
 
-def ReadInContigseqs(contigfile):
+def ReadInContigseqs(contigfile,contig_filter_length, Information):
     cont_dict = {}
     k = 0
     temp = ''
@@ -54,6 +54,16 @@ def ReadInContigseqs(contigfile):
         else:
             temp += line.strip()
     cont_dict[accession] = temp
+
+    # for contig in cont_dict.keys():
+    #     print 'Initial length:', len(cont_dict[contig])
+    if contig_filter_length:
+        singled_out = 0
+        for contig in cont_dict.keys():
+            if len(cont_dict[contig]) < contig_filter_length:
+                del cont_dict[contig]
+                singled_out += 1
+        print >> Information, 'Number of contigs discarded from further analysis (with -filter_contigs set to {0}): {1}'.format(contig_filter_length,singled_out)
     return(cont_dict)
 
 def main(options):
@@ -64,6 +74,7 @@ def main(options):
     from BESST import MakeScaffolds as MS
     from BESST import GenerateOutput as GO
     from BESST import libmetrics
+    #from BESST import bam_parser
     from BESST.diploid import get_haplotype_regions
 
     tot_start = time()
@@ -76,6 +87,16 @@ def main(options):
     param.scaffold_indexer = 1 # global indicator for scaffolds, used to index scaffolds when they are created
     param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
+    param.no_score = options.no_score
+    param.score_cutoff = options.score_cutoff
+    param.max_extensions = options.max_extensions
+
+    if args.devel:
+        h = guppy.hpy()
+        initial = h.heap()
+        print 'Initial:\n{0}'.format(initial)
+
+
     param.development = options.devel
     options.output = options.output + '/BESST_output'
 
@@ -88,8 +109,17 @@ def main(options):
     Information = param.information_file
     open(options.output + '/haplotypes.fa', 'w')
     #Read in the sequences of the contigs in memory
-    C_dict = ReadInContigseqs(open(options.contigfile, 'r'))
+    start = time()
+    C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
+    elapsed = time() - start
+    print >> Information, 'Time elapsed for reading in contig sequences:' + str(elapsed) + '\n'
+
     print 'Number of initial contigs:', len(C_dict)
+    if options.devel:
+        h = guppy.hpy()
+        after_ctgs = h.heap()
+        print 'After ctg seqs:\n{0}'.format(after_ctgs)
+
     if options.haplotype:
         get_haplotype_regions.main(options.output, C_dict, options.kmer, options.mmer, 0.8)
         sys.exit()
@@ -97,8 +127,8 @@ def main(options):
     param.first_lib = True
     param.path_threshold = options.path_threshold
     for i in xrange(len(options.bamfiles)):
-        start = time()
         param.bamfile = options.bamfiles[i]
+        param.orientation = options.orientation[i] if options.orientation != None else 'fr'
         param.mean_ins_size = options.mean[i] if options.mean != None else None
         param.ins_size_threshold = options.threshold[i] if options.threshold != None else None
         param.edgesupport = options.edgesupport[i] if options.edgesupport != None else 5
@@ -114,29 +144,49 @@ def main(options):
         param.fosmidpool = options.fosmidpool
         param.extend_paths = options.extendpaths
         print >> Information, '\nPASS ' + str(i + 1) + '\n\n'
-        print 'Creating contig graph with library: ', param.bamfile
 
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
+            #if param.first_lib:
+            #print bam_file.references
+            #print map(bam_file.gettid, bam_file.references)
+            start = time()
+            param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
             libmetrics.get_metrics(bam_file, param, Information)
+            
+            elapsed = time() - start
+            print >> Information, 'Time elapsed for getting libmetrics, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+
+
+            if args.devel:
+                h = guppy.hpy()
+                after_libmetrics = h.heap()
+                print 'After libmetrics\n{0}\n'.format(after_libmetrics)
 
             #create graph
+            print 'Creating contig graph with library: ', param.bamfile
+            start = time()
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
+            elapsed = time() - start
+            print >> Information, 'Total time for CreateGraph-module, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+            decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
-        param.first_lib = False   #not the first lib any more
-        if G == None:
+            if args.devel:
+                h = guppy.hpy()
+                after_ctg_graph = h.heap()
+                print 'After contig graph\n{0}\n'.format(after_ctg_graph)
+
+        #print G, not G == None, not None, None == False
+        if not G and not param.no_score:
             print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
-            break
-        elapsed = time() - start
-        print >> Information, 'Time elapsed for creating graph, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
-        start = time()
+            
 
         print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
+        start = time()
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
-
-
         print >> Information, 'Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+
         print 'Writing out scaffolding results for step', i + 1, ' ...'
 
         F = [] #list of (ordered) lists of tuples containing (contig_name, direction, position, length, sequence). The tuple is a contig within a scaffold and the list of tuples is the scaffold.
@@ -154,17 +204,31 @@ def main(options):
 
         GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
 
+        if not options.separate_repeats:
+            destination = open("{0}/pass{1}/Scaffolds_pass{1}.fa".format(param.output_directory, str(i+1) ), 'wb')
+            #destination = open(outfile,'wb')
+            shutil.copyfileobj(open("{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
+            shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
+            destination.close()
+            os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
+        
+        param.first_lib = False   #not the first lib any more    
+
+    if not options.separate_repeats:
+        os.remove( "{0}/repeats.fa".format(param.output_directory ) )
+
     ### Calculate stats for last scaffolding step    
     scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]
     sorted_lengths = sorted(scaf_lengths, reverse=True)
     scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
-    NG50, LG50 = CG.CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
-    param.current_LG50 = LG50
-    param.current_NG50 = NG50
+    N50, L50 = CG.CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
+    param.current_L50 = L50
+    param.current_N50 = N50
 
     elapsed = time() - tot_start
     print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'
+
     print 'Finished\n\n '
 
     return()
@@ -178,6 +242,7 @@ libstats = parser.add_argument_group('read_library', 'Library parameters that ca
 haplotypes = parser.add_argument_group('diploid', 'Options involving detection of split allele contigs in diploid assemblies.')
 parameters = parser.add_argument_group('parameters', 'Parameters/variables/threshold involved in BESST.')
 other = parser.add_argument_group('other', 'Various other parameters')
+group = parser.add_mutually_exclusive_group(required=False)
 
 ## required
 required.add_argument("-c", dest="contigfile", type=str, required=True,
@@ -192,10 +257,10 @@ required.add_argument("-f", dest="bamfiles", type=str, nargs='+', required=True,
 libstats.add_argument("-r", dest="readlen", type=int, nargs='+',
                   help="Mean read length of libraries. ")
 
-libstats.add_argument("-m", dest="mean", type=int, nargs='+',
+libstats.add_argument("-m", dest="mean", type=float, nargs='+',
                   help="Mean insert size of libraries.")
 
-libstats.add_argument("-s", dest="stddev", type=int, nargs='+',
+libstats.add_argument("-s", dest="stddev", type=float, nargs='+',
                   help="Estimated standard deviation of libraries.")
 
 libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',
@@ -218,8 +283,20 @@ parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
-parameters.add_argument("--iter", dest="path_threshold", type=int, default=1000,
+parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int, default=None,
+                    help="Contigs under this size is discarded from all scaffolding (including pathfinding).\
+                    they are also not included in the resulting scaffold output fasta file and any\
+                    of the other files as well as all statistics. Default: All contigs are included")
+
+
+parameters.add_argument("--iter", dest="path_threshold", type=int, default=100000,
                   help="The number of iterations performed in breadth first search for placing smaller contigs. ")
+
+parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, default=1.5,
+                  help="Only store paths with score larger than score_cutoff. ")
+
+parameters.add_argument("--max_extensions", dest="max_extensions", type=int,
+                  help="Maximum number of (large) scaffolds to search for paths extensions with. ")
 
 
 ## haplotypes
@@ -232,10 +309,13 @@ haplotypes.add_argument("-b", dest="haplthreshold", type=int, default=3,
                    Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
                    if -b 3")
 
-haplotypes.add_argument("-g", dest="haplotype", type=int , default=0,
+haplotypes.add_argument("-g", dest="haplotype", action="store_true",
                   help="Haplotype detection function, default = off")
 
 ## other 
+
+required.add_argument("--orientation", dest="orientation", type=str, nargs='+',
+                      help="Mapped orientation for each library given with -f option. Valid input is either fr (forward reverse orientation) or rf (reverse forward orientation).")
 
 other.add_argument("-o", dest="output", type=str, default='.',
                   help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")
@@ -249,11 +329,15 @@ other.add_argument("-K", dest="kmer", type=int, default=50,
 other.add_argument("-M", dest="mmer", type=int, default=40,
                   help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
 
-other.add_argument("-y", dest='extendpaths', action="store_false",
+group.add_argument("-y", dest='extendpaths', action="store_false",
                   help="Deactivate pathfinder module for including smaller contigs.")
 
 other.add_argument("-q", dest="multiprocess", action="store_true",
                 help="Parallellize work load of path finder module in case of multiple processors available.\
+                  ",)
+
+group.add_argument("--no_score", dest="no_score", action="store_true",
+                help="Statistical scoring is not performed. BESST instead searches for paths between contigs.\
                   ",)
 
 other.add_argument("-devel", action="store_true",
@@ -262,7 +346,11 @@ other.add_argument("-devel", action="store_true",
 other.add_argument("-plots", action="store_true",
                   help="Plot coverage, histograms of scores e.t.c.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.0.4.2')
+other.add_argument("--separate_repeats", dest="separate_repeats", action="store_true",
+                  help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
+                  not included in the main scaffolding output file with this flag specified.")
+
+other.add_argument('--version', action='version', version='%(prog)s 1.3.7')
 
 
 
@@ -288,7 +376,6 @@ errorhandle.parse_check(args, parser)
 if args.devel:
     import guppy
 
-
 if args.plots:
     try:
         import matplotlib
@@ -305,5 +392,9 @@ main(args)
 
 if args.devel:
     h = guppy.hpy()
-    print h.heap()
+    at_end= h.heap()
+
+    print 'At end:\n{0}\n'.format(at_end)
+
+
 

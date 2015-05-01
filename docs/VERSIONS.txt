@@ -90,3 +90,40 @@ V1.0.4.1
 V1.0.4.2
 * Fixed bug in removing 0 score edges i G_prime. Now all edges in G are also removed in G_prime when searching for paths. This is an important fix.
 
+V1.1
+* Added LP solution to fix errors in orderings of small contigs when PE contamination in MP libraries are present. This is a big weakness in earlier versions (for fragmented assemblies scaffolded with MP libraries with considerable amount of PE contamination). 
+
+* Gap size estimations in non linear scaffold regions are now estimated with a LP module toghether with GapEst. Since the theory of gapest (analytic derivation, hence the speed) only works for one gap between two scaffolds, all gaps were previously estimated one by one with GapEst. Now, in nonlinear regions, gaps between all pairs of scaffolds are estimated. These estimations are then given as input in the objective function for an linear programming instance. The onbejtive is to minimize the total distance of a current solution to the LP, given GapEst estimated ones. This will give more robust esitmations in case where short contigs and few links by making use of more information simultaneosly.
+
+* Added a histogram of estimated gap distribution in cas -plots are specified.
+
+* If a gap estiamtion is less than or equal to 0, a single lower case 'n' is output between contigs (changed from a single 'N'). This is changed to try to standardize the output of scaffolders (SSPACE output 'n'). Also after discussion with QUAST (assembly evaluating software) author Alexey to be able to parse scaffold output consistently.
+
+* pulp (Linear programming module for python) is added as required packages
+
+* added parameter --separate_repeats to separate potential repeats (inferred by BESST) into a file "repeats.fa". This was default output for BESST in earlier versions. Now, default output is a single file in each scaffolding step Scaffolds_passX.fa.
+
+* added parameter -filter_contigs <int> . This parameter with remove att contigs smaller than <int> from all scaffolding (and scaffold output). 
+
+* added parameter --no_score. If specified, statistical scoring is not used to scaffold. BESST instead relies soley on the new LP module to search for paths between contigs. The effect of this is not thouroughly tested so far but preliminary results hint that it is slower but gives slightly better results.
+
+V1.2
+* BESST can now parse alignments of both forward reverse and reverse forward orientation. To specify the orientation of the alignments, a parameter --orientation is added. --orientation takes a string 'rf' or 'fr' for each library that is povided with the -f option to BESST. If --orientation is not specified, BESST throws a warning that orientations are not specified and proceeds by assuming that the alignemts are done with fr orientation irregardless of library (as is done in previous versions). This is done not to break old pipelines.
+
+* Added automatic check for which scaffolding approach that are the most sound/beneficial given the library and the fragmentation level of the assembly (statistical scoring or pathsearching immediately).
+
+* relaxed dependency criterion on pysam. Now, all versions >=0.7 works (bug when installing with pysam v0.7 reported by Shaun Jackman).
+
+* Some minor bugs and fixes implemented by Rayan Chikhi, Jan van Haarst and Mattias Frånberg.
+
+V1.3
+
+* MAJOR IMPROVEMENTS IN RUNTIME AND MEMORY CONSUMPTION. It is strongly encouraged to update to this version (or later) for bigger assemblies.
+
+* Removed dependency on PuLP. LP is now solved with module from https://github.com/pv/scipy-work/blob/11c7f50e8b90edb1e74e5f0c6710717b2af6aed6/scipy/optimize/_lp.py  
+
+* Added paramenters --max_extensions, --score_cutoff. Good to set if millons of contigs in assembly (see docs/manual.md). 
+
+* Added merging of overlapping k-mers in contigs for final output
+
+

@@ -25,20 +25,14 @@ class scaffold(object):
     classdocs
     '''
 
-    __slots__ = ('name', 'contigs', 's_length', 'lower_left_nbrs_obs',
-                 'lower_right_nbrs_obs', 'upper_left_nbrs_obs', 'upper_right_nbrs_obs')
-    def __init__(self, scaffold_name, scaffold_contigs, scaffold_length,
-                 scaffold_lower_left_nbrs, scaffold_lower_right_nbrs,
-                 scaffold_upper_left_nbrs, scaffold_upper_right_nbrs):
+    __slots__ = ('name', 'contigs', 's_length')
+    def __init__(self, scaffold_name, scaffold_contigs, scaffold_length):
         '''
         Constructor
         '''
         self.name = scaffold_name           # String name
-        self.contigs = scaffold_contigs     # list of contig objects that are ordered ass they should be placed in the scaffold
+        self.contigs = scaffold_contigs     # list of contig objects that are ordered as they should be placed in the scaffold
         self.s_length = scaffold_length     # integer of total length of the scaffold   
-        self.lower_left_nbrs_obs = scaffold_lower_left_nbrs
-        self.lower_right_nbrs_obs = scaffold_lower_right_nbrs
-        self.upper_left_nbrs_obs = scaffold_upper_left_nbrs
-        self.upper_right_nbrs_obs = scaffold_upper_right_nbrs
+
 
 
