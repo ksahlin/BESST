@@ -274,13 +274,13 @@ parameters.add_argument("-w", dest="relweight", type=int, default=3,
                   help="Threshold value for the relative weight of an edge (deprecated)")
 
 parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
-                  help="Threshold value filter out reads that are mapped too far apart given insert size. ")
+                  help="Threshold value to filter out reads that are mapped too far apart given insert size. ")
 
 parameters.add_argument("-e", dest="edgesupport", type=int, nargs='+',
                   help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
 
 parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
-                    help="Contig size threshold for the library (all contigs below this size is discarded from the \
+                    help="Contig size threshold for the library (all contigs below this size are discarded from the \
                     'large contigs' scaffolding, but included in pathfinding). Default: Set to same as -T parameter")
 
 parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int, default=None,
@@ -321,10 +321,10 @@ other.add_argument("-o", dest="output", type=str, default='.',
                   help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")
 
 other.add_argument("-d", dest='duplicate' , action="store_false",
-                  help="Deactivate sequencing duplicates detection")
+                  help="Deactivate detection of sequencing duplicates")
 
 other.add_argument("-K", dest="kmer", type=int, default=50,
-                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50")
+                  help="k-mer size used in a de Brujin graph for obtaining contigs in assembly, default 50")
 
 other.add_argument("-M", dest="mmer", type=int, default=40,
                   help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
@@ -333,7 +333,7 @@ group.add_argument("-y", dest='extendpaths', action="store_false",
                   help="Deactivate pathfinder module for including smaller contigs.")
 
 other.add_argument("-q", dest="multiprocess", action="store_true",
-                help="Parallellize work load of path finder module in case of multiple processors available.\
+                help="Parallelize work load of path finder module in case of multiple processors available.\
                   ",)
 
 group.add_argument("--no_score", dest="no_score", action="store_true",
@@ -344,7 +344,7 @@ other.add_argument("-devel", action="store_true",
                   help="Run in development mode (bug checking and memory usage etc.)")
 
 other.add_argument("-plots", action="store_true",
-                  help="Plot coverage, histograms of scores e.t.c.")
+                  help="Plot coverage, histograms of scores et.c.")
 
 other.add_argument("--separate_repeats", dest="separate_repeats", action="store_true",
                   help="Separates contigs classified as repeats by BESST into a file 'repeats.fa'. They are \
