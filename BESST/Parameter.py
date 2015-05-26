@@ -41,7 +41,7 @@ class parameter(object):
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
                  no_score=None, orientation = None, contig_index= None,
-                 score_cutoff = None, max_extensions = None ):
+                 score_cutoff = None, max_extensions = None, NO_ILP = None ):
 
 
 
@@ -95,6 +95,7 @@ class parameter(object):
         self.contamination_ratio = contamination_ratio
         self.contamination_mean = contamination_mean
         self.contamination_stddev = contamination_stddev
+        self.NO_ILP = NO_ILP
 
 
 class counters(object):
