@@ -6,6 +6,7 @@ Created on Jul 25, 2013
 '''
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -66,6 +67,8 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path):
     pysam.sort(bwa_output + ".bam", output_path)
     pysam.index(output_path + '.bam')
 
+    shutil.rmtree(work_dir)
+
 def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path):
     print 'Aligning with bwa mem'
     start = time()
@@ -89,8 +92,8 @@ def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path):
     sam_to_bam(bwa_output, bwa_output + ".bam")
     pysam.sort(bwa_output + ".bam", output_path)
     pysam.index(output_path + '.bam')
-
-
+   
+    shutil.rmtree(work_dir)
 
 def map_single_reads(pe_path, genome_path, output_path):
     work_dir = tempfile.mkdtemp()
@@ -110,11 +113,8 @@ def map_single_reads(pe_path, genome_path, output_path):
                                 pe_output,
                                 pe_path ], stdout=bwa_file, stderr=null)
 
-    os.popen('mv ' + bwa_output + ' ' + output_path)
-
-    #sam_to_bam( bwa_output, bwa_output + ".bam" )
-    #pysam.sort( bwa_output + ".bam", output_path )
-    #pysam.index(output_path+'.bam')
+    shutil.move(bwa_output, output_path)
+    shutil.rmtree(work_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Maps the given reads with bwa.")
