@@ -1,19 +1,92 @@
-BESST v1.3
+BESST
 ======
+
+INSTALLATION
+----------------
+See docs/INSTALL.md.
+
+TROUBLESHOOTING Q&A
+------------------
+
+######  What aligner should I use?
+BESST requires only a sorted and indexed bamfile -- your favourite aligner can be used. However, we have had the best experience with BWA-mem using default parameters on most data used in our evaluations.
+
+######  What aligner options are good/bad?
+BESST only work with uniquely aligned reads for now (under development to consider probability distribution over read placements). The uniqueness is detected in the sorted BAM file by looking at the flag. Therefore, it is NOT suitable for BESST to specify any parameter that makes the aligner output several (suboptimal) alignments of a read, and reporting the read as mapped to multiple locations. Bowtie's "-k <int>" is an example of such a parameter that is not good. 
+
+######  My mate pair libraries contains paired-end contamination
+Good! BESST can handle paired-end contamination and results can even be improved when not filrering out these reads before alignments. Removal of adapter sequence and trimming of reads (e.g. chimeric reads due to adapter in the middle of one read in the read pair are still good to do using you favourite tool. So, BESST will have besst performance when scaffolding with all reads classified as mate-pairs, paired-ends and "unknown" ( definition from the trimmer [NxTrim](https://github.com/sequencing/NxTrim) ) they should be left untouched in the read files so that BESST can infer the original orientation and comtamine rate from the alignments.
+
+
+######  BESST does not scaffold anything, what is going on?
+
+A lot of debugging can be done immediately in "< outputfolder >/BESST_output/Statistics.txt" file where outputfolder is specified with -o when running BESST. BESST outputs statistics of insert size distribution(s) (mate-pair and PE-contamination) as well as coverage statistics and how many read pair are used for scaffolding --- for each library used for scaffolding. Below is an example of the beginning of a file. Make sure library distribution, contamine distribution and rate looks ok, as well as coverage statistics. If this does not resolve issues or you are unsure about how to proceed, pleas mail **ksahlin@kth.se**.
+
+```sh
+PASS 1
+
+
+Mean before filtering : 2471.05005763
+Std_est  before filtering:  1621.22128565
+Mean converged: 2454.01278202
+Std_est converged:  1438.84572664
+Contamine mean before filtering : 383.841809945
+Contamine stddev before filtering:  541.063248334
+Contamine mean converged: 371.132937665
+Contamine std_est converged:  105.713828422
+
+LIBRARY STATISTICS
+Mean of library set to: 2454.01278202
+Standard deviation of library set to:  1438.84572664
+MP library PE contamination:
+Contamine rate (rev comp oriented) estimated to:  0.228445050646
+lib contamine mean (avg fragmentation size):  371.132937665
+lib contamine stddev:  105.713828422
+Number of contamined reads used for this calculation:  106857.0
+-T (library insert size threshold) set to:  8209.39568857
+-k set to (Scaffolding with contigs larger than):  8209.39568857
+Number of links required to create an edge:  5
+Read length set to:  100.38
+Relative weight of dominating link set to (default=3):  3
+
+Time elapsed for getting libmetrics, iteration 0: 41.3993628025
+
+Parsing BAM file...
+L50:  37 N50:  42455 Initial contig assembly length:  4588376
+Nr of contigs that was singeled out due to length constraints 78
+Time initializing BESST objects:  0.00225305557251
+Nr of contigs/scaffolds included in scaffolding: 130
+Total time elapsed for initializing Graph:  0.00791215896606
+Reading bam file and creating scaffold graph...
+ELAPSED reading file: 30.2451779842
+NR OF FISHY READ LINKS:  0
+Number of USEFUL READS (reads mapping to different contigs uniquly):  434284
+Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding):  29267
+Reads with too large insert size from "USEFUL READS" (filtered out):  325897
+Number of duplicated reads indicated and removed:  4890
+Mean coverage before filtering out extreme observations =  69.01403104
+Std dev of coverage before filtering out extreme observations=  61.5185426061
+Mean coverage after filtering =  51.1057077906
+Std coverage after filtering =  17.4310506587
+Length of longest contig in calc of coverage:  106467
+Length of shortest contig in calc of coverage:  8270
+```
+
+
 
 OBS:
 ----
 #### Common pitfall: ####
 
 If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
-In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.
+(In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.)
 
 
 #### Time and memory requirements: ####
 Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
 
 #### Bam files and mapping  ####
-BESST requires sorted and indexed bamfiles as input. Any read aligner + samtools can be used to obtain such files. Read pairs needs to be aligned in paired read mode. BESST provides a script (https://github.com/ksahlin/BESST/blob/master/scripts/reads_to_ctg_map.py) for obtaining sorted and indexed bamfiles with BWA-sampe or BWA-mem in one go. An example call for mapping with this script is
+BESST requires sorted and indexed bamfiles as input. Any read aligner + samtools can be used to obtain such files. Read pairs needs to be aligned in paired read mode. BESST provides a script (https://github.com/ksahlin/BESST/blob/master/scripts/reads_to_ctg_map.py) for obtaining sorted and indexed bamfiles with BWA-mem or BWA-sampe in one go. An example call for mapping with this script is
 
 ```sh
 python reads_to_ctg_map.py /path/to/lib1_A.fq /path/to/lib1_A.fq /path/to/contigs.fasta --threads N
@@ -24,7 +97,7 @@ INPUT:
 ------
 Required arguments:
 
-* -c < path to a contig file >  
+* -c < path to a contig file >
 
 * -f < path to bamfiles >  (increasing order of insert size)
 

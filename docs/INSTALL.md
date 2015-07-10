@@ -1,7 +1,20 @@
 INSTALLATION:
 --------------
 
-Using pip or easy_install (strongly recommended)
+Below gives three options to install BESST.
+
+Source from GitHub
+-----------------
+This assumes that you have the python modules pysam, networkx, numpy and scipy installed.
+
+```sh
+git clone https://github.com/ksahlin/BESST.git
+cd BESST
+./runBESST
+```
+
+
+Using pip or easy_install (recommended)
 ---------------------------------------------------
 Python has two package installers, *pip* and *easy_install*, which makes it very easy to install **BESST**. If you have any of this installed,
 
