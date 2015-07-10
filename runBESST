@@ -354,7 +354,7 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
 parameters.add_argument("--NO_ILP", dest="NO_ILP", action="store_true",
                   help="Threshold value for the relative weight of an edge (deprecated)")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.3.8')
+other.add_argument('--version', action='version', version='%(prog)s 1.3.9')
 
 
 
