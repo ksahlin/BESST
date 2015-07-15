@@ -131,7 +131,7 @@ def main(options):
         param.orientation = options.orientation[i] if options.orientation != None else 'fr'
         param.mean_ins_size = options.mean[i] if options.mean != None else None
         param.ins_size_threshold = options.threshold[i] if options.threshold != None else None
-        param.edgesupport = options.edgesupport[i] if options.edgesupport != None else 5
+        param.edgesupport = options.edgesupport[i] if options.edgesupport != None else 3
         param.read_len = options.readlen[i] if options.readlen != None else None
         param.output_directory = options.output
         param.std_dev_ins_size = options.stddev[i] if options.stddev != None else None
