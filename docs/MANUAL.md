@@ -74,7 +74,7 @@ Length of shortest contig in calc of coverage:  8270
 
 
 
-OBS:
+NOTE:
 ----
 #### Common pitfall: ####
 
@@ -168,7 +168,7 @@ The following arguments are computed internally / set by BESST. It is however go
 * -q < optinal flag > Parallellize work load of path finder module in case of multiple processors available using multiprocessing library for pyhton.
 
 
-NOTE:
+NOTE2:
 -------
 
 1. Definition of insert size: BESST assumes the following definitions: 
