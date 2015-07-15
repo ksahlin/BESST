@@ -27,7 +27,7 @@ class parameter(object):
     def __init__(self, parameter_mean_coverage=None, parameter_std_dev_coverage=None,
                  parameter_mean_ins_size=None , parameter_std_dev_ins_size=None,
                  parameter_output_directory=None, parameter_bamfile=None,
-                 parameter_read_len=None, parameter_rel_weight=None,
+                 parameter_read_len=None,
                  parameter_ins_size_threshold=None, parameter_contigfile=None,
                  parameter_edgesupport=None, parameter_contig_threshold=None,
                  parameter_scaffold_indexer=0, parameter_first_lib=None,
@@ -62,7 +62,6 @@ class parameter(object):
         self.output_directory = parameter_output_directory
         self.bamfile = parameter_bamfile
         self.read_len = parameter_read_len
-        self.rel_weight = parameter_rel_weight
         self.ins_size_threshold = parameter_ins_size_threshold
         self.contigfile = parameter_contigfile
         self.edgesupport = parameter_edgesupport

@@ -252,7 +252,6 @@ def get_metrics(bam_file, param, Information):
     print >> Information, '-k set to (Scaffolding with contigs larger than): ', param.contig_threshold
     print >> Information, 'Number of links required to create an edge: ', param.edgesupport
     print >> Information, 'Read length set to: ', param.read_len
-    print >> Information, 'Relative weight of dominating link set to (default=3): ', param.rel_weight
     print >> Information, ''
     return()
 

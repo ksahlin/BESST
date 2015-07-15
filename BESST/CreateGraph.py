@@ -270,7 +270,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     cntr_sp = 0
     for edge in G_prime.edges():
         if G_prime[edge[0]][edge[1]]['nr_links'] != None:
-            if G_prime[edge[0]][edge[1]]['nr_links'] < 3:
+            if G_prime[edge[0]][edge[1]]['nr_links'] < param.edgesupport:
                 G_prime.remove_edge(edge[0], edge[1])
                 cntr_sp += 1
     print >> Information, 'Number of fishy edges in G_prime', cntr_sp

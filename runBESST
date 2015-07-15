@@ -85,7 +85,6 @@ def main(options):
 
     param = Parameter.parameter() # object containing all parameters (user specified, defaulted and comuted along the way.)
     param.scaffold_indexer = 1 # global indicator for scaffolds, used to index scaffolds when they are created
-    param.rel_weight = options.relweight
     param.multiprocess = options.multiprocess
     param.no_score = options.no_score
     param.score_cutoff = options.score_cutoff
@@ -270,9 +269,6 @@ libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',
 
 
 ## parameters
-
-parameters.add_argument("-w", dest="relweight", type=int, default=3,
-                  help="Threshold value for the relative weight of an edge (deprecated)")
 
 parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
                   help="Threshold value filter out reads that are mapped too far apart given insert size. ")
