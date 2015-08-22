@@ -622,7 +622,7 @@ def permute_path(path, ctg_to_move, contig_after):
     return path
 
 
-def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, param, initial_path):
+def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,initial_path):
     contigs_to_indexes = {}
     indexes_to_contigs = {}
     index = 0
@@ -632,7 +632,7 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
             continue
         else:
             contigs_to_indexes[ctg[0]] = index
-            indexes_to_contigs[index] = ctg[0]
+            indexes_to_contigs[index] =  ctg[0]
 
             index += 1
 
@@ -652,17 +652,12 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
     mp_links = 0
     index_observations = {}     
     for c1,c2 in observations:  
-        tot_links += observations[(c1,c2)][1] 
-        std_dev_obs = observations[(c1,c2)][2]  
+        tot_links += observations[(c1,c2)][1]  
         if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0 and param.contamination_ratio:
             PE = 1
-            if std_dev_obs > 2*param.contamination_stddev:
-                return None,None,None,None
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1 and param.contamination_ratio:
             PE = 1
-            if std_dev_obs > 2*param.contamination_stddev:
-                return None,None,None,None
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 0
@@ -712,13 +707,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
     observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
     sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
     for c1,c2 in sub_graph_small_to_large_ctgs:
-        n = sub_graph[c1][c2]['nr_links']
-        mean_obs = sub_graph[c1][c2]['obs'] / n
-        if n > 1:
-            std_dev_obs =  ((sub_graph[c1][c2]['obs_sq'] - n * mean_obs ** 2) / (n - 1)) ** 0.5
-        else:
-            std_dev_obs = 0
-        observations[(c1,c2)] = (mean_obs, n, std_dev_obs) 
+        observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
     
 
     # for c1,c2 in observations:

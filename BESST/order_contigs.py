@@ -127,7 +127,7 @@ class Path(object):
         obs_dict = {}
         for c1,c2,is_PE_link in observations:
             #nr_obs = len(observations[(c1,c2,is_PE_link)])
-            mean_obs, nr_obs, std_dev_obs = observations[(c1,c2,is_PE_link)]
+            mean_obs, nr_obs = observations[(c1,c2,is_PE_link)]
             if is_PE_link:
                 mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len 
                 #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])

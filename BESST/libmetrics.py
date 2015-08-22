@@ -45,7 +45,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     count_contamine = 0
 
     contamination_reads = []
-    sample_counter = 0
+    counter = 0
 
     # for index in largest_contigs_indexes:
     #     try:
@@ -56,7 +56,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     for read in bam_file:
         # all reads mapping
         if read.rname in largest_contigs_indexes:
-            sample_counter += 1
+            counter += 1
             if not read.is_unmapped: ##read.tid == read.rnext and not read.mate_is_unmapped and not read.is_unmapped: #
                 counter_total += 1
 
@@ -69,7 +69,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
                 if read.rname in largest_contigs_indexes:
                     contamination_reads.append(abs(read.tlen))
                     count_contamine += 2 
-            if sample_counter >= iter_threshold:
+            if counter >= iter_threshold:
                     break
 
     ## SMOOTH OUT contamine distribution here by removing extreme observations## 
@@ -94,20 +94,17 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
-    contamination_ratio = 2*n_contamine / float(counter_total)
-
-    if mean_isize >= param.mean_ins_size or std_dev_isize >= param.std_dev_ins_size or contamination_ratio <= 0.05:
-        # either contamine mean or stddev is higher than MP lb mean which means it's spurious alignments or
-        # other wierd thing -> no true PE-contamine as artifact discribed in the illumina MP construction protocol.
-        # or we have less than 5% of contamine reads. Then we skip dealing with them since they constitute such a small
-        # fraction of the total reads and introduce more complexity when orienting scaffolds in pathfinder module
-        param.contamination_ratio = False
+    if mean_isize >= param.mean_ins_size or std_dev_isize >= param.std_dev_ins_size or n_contamine <= 1000:
+        # either contamine mean or stddev is higher than MP lb mean which means it's spurious alignments -> no true contamine
+        # or we have less than 0.1% of contamine reads, then we skip dealing with them since they introduce more complexity
+        # when orienting scaffolds in pathfinder module
+        param.contamination_ratio  = False      
         param.contamination_mean = 0
         param.contamination_stddev = 0
     else:
         param.contamination_mean = mean_isize
         param.contamination_stddev = std_dev_isize
-        param.contamination_ratio = contamination_ratio
+        param.contamination_ratio = 2*n_contamine / float(counter_total)
 
     bam_file.reset()
     return n_contamine
