@@ -318,15 +318,13 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
                     nr_links_ = G_prime[start][nbr]['nr_links']
                     if nr_links_:
                         obs_ = G_prime[start][nbr]['obs']
-                        obs_sq_ = G_prime[start][nbr]['obs_sq']
-                        G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_ )
+                        G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
 
                 for nbr in G_prime.neighbors(end):
                     nr_links_ = G_prime[end][nbr]['nr_links']
                     if nr_links_:
                         obs_ = G_prime[end][nbr]['obs']
-                        obs_sq_ = G_prime[end][nbr]['obs_sq']
-                        G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
+                        G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
 
                 #remove the old scaffold objects from G_prime
                 G_prime.remove_nodes_from(new_scaffold_)
