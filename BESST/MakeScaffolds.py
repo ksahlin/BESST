@@ -751,11 +751,8 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             current_path = copy.deepcopy(final_path)
             ctg_to_move = original_path[i][0]
             contig_after = original_path[i-2][0]
-            if (contig_after, ctg_to_move) in observations:
-                std_dev_obs = observations[(contig_after, ctg_to_move)][2]
-            else:
-                std_dev_obs = observations[(ctg_to_move, contig_after)][2]
-
+            
+            std_dev_obs = observations[(contig_after, ctg_to_move)][2]
             if std_dev_obs > 2 * param.contamination_stddev:
                 continue
 
