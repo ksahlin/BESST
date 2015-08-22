@@ -655,11 +655,16 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
     index_observations = {}     
     for c1,c2 in observations:  
         tot_links += observations[(c1,c2)][1] 
+        std_dev_obs = observations[(c1,c2)][2]  
         if current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 1 and current_path.index(c2) % 2 == 0 and param.contamination_ratio:
             PE = 1
+            if std_dev_obs > 2*param.contamination_stddev:
+                return None,None,None,None
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) > current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1 and param.contamination_ratio:
             PE = 1
+            if std_dev_obs > 2*param.contamination_stddev:
+                return None,None,None,None
             #print 'PE link!!',c1,c2
         elif current_path.index(c1) < current_path.index(c2) and current_path.index(c1) % 2 == 0 and current_path.index(c2) % 2 == 1:
             PE = 0
@@ -751,12 +756,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
             current_path = copy.deepcopy(final_path)
             ctg_to_move = original_path[i][0]
             contig_after = original_path[i-2][0]
-            
-            std_dev_obs = observations[(contig_after, ctg_to_move)][2]
-            if std_dev_obs > 2 * param.contamination_stddev:
-                continue
-
-            current_path = permute_path(current_path, ctg_to_move, contig_after)
+            current_path  = permute_path(current_path, ctg_to_move, contig_after)
 
             #print 'Current path:',current_path
         ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
