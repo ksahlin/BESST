@@ -715,7 +715,7 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
         n = sub_graph[c1][c2]['nr_links']
         mean_obs = sub_graph[c1][c2]['obs'] / n
         if n > 1:
-            std_dev_obs = ((sub_graph[c1][c2]['obs_sq'] - n * mean_obs ** 2) / (n - 1)) ** 0.5
+            std_dev_obs =  ((sub_graph[c1][c2]['obs_sq'] - n * mean_obs ** 2) / (n - 1)) ** 0.5
         else:
             std_dev_obs = 0
         observations[(c1,c2)] = (mean_obs, n, std_dev_obs) 
@@ -1085,15 +1085,13 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             nr_links_ = G_prime[start][nbr]['nr_links']
             if nr_links_:
                 obs_ = G_prime[start][nbr]['obs']
-                obs_sq_ = G_prime[start][nbr]['obs_sq']
-                G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
+                G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
 
         for nbr in G_prime.neighbors(end):
             nr_links_ = G_prime[end][nbr]['nr_links']
             if nr_links_:
                 obs_ = G_prime[end][nbr]['obs']
-                obs_sq_ = G_prime[start][nbr]['obs_sq']
-                G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
+                G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
 
         #remove the old scaffold objects from G_prime
         G_prime.remove_nodes_from(path)

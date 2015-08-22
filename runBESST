@@ -274,7 +274,7 @@ parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
                   help="Threshold value filter out reads that are mapped too far apart given insert size. ")
 
 parameters.add_argument("-e", dest="edgesupport", type=int, nargs='+',
-                  help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 3 ")
+                  help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
 
 parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
