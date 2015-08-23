@@ -150,7 +150,10 @@ def split_distribution(all_isizes):
     # base case varaince to variances when splitting the distribution.
 
     observations = [item for sublist in joined_bins for item in sublist]
-    base_mu, base_var = params(observations)
+    filter_observations = filter(lambda x: x>100, observations)
+    if len(filter_observations) < 2:
+        return [],[],0,0,0,0
+    base_mu, base_var = params(filter_observations)
     base_stddev = math.sqrt(base_var)
     mean = base_mu
     # print "base", base_mu, base_stddev, base_var

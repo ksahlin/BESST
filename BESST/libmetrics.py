@@ -10,6 +10,7 @@ from heapq import nlargest
 
 from mathstats.normaldist.normal import MaxObsDistr
 from BESST import bam_parser
+from BESST import find_bimodality
 
 
 def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
@@ -72,7 +73,8 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
             if sample_counter >= iter_threshold:
                     break
 
-    ## SMOOTH OUT contamine distribution here by removing extreme observations## 
+    ## SMOOTH OUT contamine distribution here by removing extreme observations##
+
     n_contamine = float(len(contamination_reads))
     mean_isize = 0
     std_dev_isize = 0
@@ -81,16 +83,19 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
         print >> Information, 'Contamine mean before filtering :', mean_isize
         print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
-        extreme_obs_occur = True
-        while extreme_obs_occur:
-            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
-            n_contamine = float(len(filtered_list))
-            if n_contamine > 2:
-                mean_isize = sum(filtered_list) / n_contamine
-                std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
-                contamination_reads = filtered_list
-            else:
-                break
+        #new method to find distribution
+        dist1, dist2, mean_isize, std_dev_isize, outliers_mean, outliers_stddev = find_bimodality.split_distribution(contamination_reads)
+        n_contamine = len(dist1)
+        # extreme_obs_occur = True
+        # while extreme_obs_occur:
+        #     extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
+        #     n_contamine = float(len(filtered_list))
+        #     if n_contamine > 2:
+        #         mean_isize = sum(filtered_list) / n_contamine
+        #         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n_contamine - 1)) ** 0.5
+        #         contamination_reads = filtered_list
+        #     else:
+        #         break
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
