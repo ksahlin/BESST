@@ -63,17 +63,13 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
 
             # contamination reads (mapped in reverse complemented orientation)
             if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
-                frag_size = abs(read.tlen)+2*param.read_len
-                if param.read_len < frag_size:
-                    contamination_reads.append(frag_size)
+                if read.rname in largest_contigs_indexes:
+                    contamination_reads.append(abs(read.tlen)+2*param.read_len)
                     count_contamine += 2
-
             if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
-                frag_size = abs(read.tlen)
-                if param.read_len < frag_size:
-                    contamination_reads.append(frag_size)
-                    count_contamine += 2
-
+                if read.rname in largest_contigs_indexes:
+                    contamination_reads.append(abs(read.tlen))
+                    count_contamine += 2 
             if sample_counter >= iter_threshold:
                     break
 
