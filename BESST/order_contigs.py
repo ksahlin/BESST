@@ -110,6 +110,7 @@ class Path(object):
         self.stddev = param.std_dev_ins_size
         self.read_len = param.read_len
         self.contamination_ratio = param.contamination_ratio
+        self.contamination_weight = param.contamination_weight
         self.contamination_mean = param.contamination_mean
         self.contamination_stddev = param.contamination_stddev
         self.ctgs = []
@@ -342,7 +343,7 @@ class Path(object):
         if self.contamination_ratio:
             obj_row = [0]*n
             for h_index,(i,j,is_PE_link) in enumerate(self.observations):
-                obj_row[ 2*g + h_index] = is_PE_link * self.stddev * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * (self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
+                obj_row[ 2*g + h_index] = is_PE_link * self.stddev * (1 - self.contamination_weight) * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * (self.contamination_weight)*self.observations[(i,j,is_PE_link)][1]
                 t.add_objective(obj_row)
             #problem += lpSum( [ is_PE_link * (1 - self.contamination_ratio) * help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] + (1-is_PE_link)*(self.contamination_ratio)* help_variables[(i,j,is_PE_link)]*self.observations[(i,j,is_PE_link)][1] for (i,j,is_PE_link) in self.observations] ) , "objective"
         else:

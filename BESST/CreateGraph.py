@@ -156,7 +156,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
         ## add to coverage computation if contig is still in the list of considered contigs
         #print contig1, contig2, alignedread.is_read2
-        cont_aligned_len[contig1][0] += alignedread.rlen
+        cont_aligned_len[contig1][0] += alignedread.qlen
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
 
