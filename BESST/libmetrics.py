@@ -113,7 +113,6 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         param.contamination_mean = mean_isize
         param.contamination_stddev = std_dev_isize
         param.contamination_ratio = contamination_ratio
-        param.contamination_weight = contamination_ratio * param.contamination_mean/param.mean_ins_size
 
     bam_file.reset()
     return n_contamine
@@ -255,7 +254,7 @@ def get_metrics(bam_file, param, Information):
     print >> Information, 'lib contamine mean (avg fragmentation size): ', param.contamination_mean
     print >> Information, 'lib contamine stddev: ', param.contamination_stddev 
     print >> Information, 'Number of contamined reads used for this calculation: ', n_contamine
-    print >> Information, 'Contamination weight (c_ratio * mu_pe/mu_mp): ', param.contamination_weight
+
 
     print >> Information, '-T (library insert size threshold) set to: ', param.ins_size_threshold
     print >> Information, '-k set to (Scaffolding with contigs larger than): ', param.contig_threshold
