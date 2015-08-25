@@ -128,6 +128,7 @@ def find_all_paths_for_start_node(graph, start, end, already_visited, is_withing
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
         if counter > param.path_threshold or len(path) > 100:
+            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'
             break
             
         start, path, path_len = queue.pop() #start, end, path, sum_path = queue.pop()  

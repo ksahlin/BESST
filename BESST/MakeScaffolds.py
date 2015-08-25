@@ -606,6 +606,8 @@ def other_end(node):
         print 'Node is not properly declared (has not right or left end)'
         sys.exit()
 
+
+
 def permute_path(path, ctg_to_move, contig_after):
     pos_ctg_to_move_left = path.index((ctg_to_move,'L'))
     pos_ctg_to_move_right = path.index((ctg_to_move,'R'))
@@ -691,6 +693,72 @@ def calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,
         return None,None,None,None
 
     return result_path, contigs_to_indexes, indexes_to_contigs, index_observations
+
+
+def path_permutations_iterator(path, i, original_path):
+    """
+        Iterator function to return all "valid" permutations of contigs given our
+        assumptions of links. This is a very limited set of permutations compared to the m!
+        if m contigs
+        blowup of a general permutation set. For small instances (m < 5), this will return 2^m
+        permutations. If m is larger, we return 2^5 + 2^5 + ... +2^(rest < 5) permutations where the sum
+        contians m/5 +1 terms. This is a huristic but well motivated by the fact that far away contigs in initial 
+        solution is unlikely to be permuted so that they switch order with each other. (This depends on the isize of course)
+
+        Another heuristic could be to instead of chosing 5, we scale down 2^m for large m by
+        giving back all permutations of sets of contigs that have sum of lenghts larger than, say, mu+3sigma. This
+        is another way of separating and scaling down the solution space by using the fact that far away contigs 
+        in initial solution is unlikely to be permuted so that they switch order with each other. 
+
+        In original_path : switch is always performed on contig i with contig i-1. Since each
+        contig except start and en here has 2 nodes in the path object, we will always permute
+        items [i,i+1] with items [i-2,i-1] in original path, where i =3, 5, 7,..., len(path) - 3.
+        Object on index len(path)-1 in the list (last object) is the right border contig.  
+    """
+        #Path needs to be a deepcopy of original_path !!!!
+    if 3<= i <= len(original_path)-3:
+        # no permutation
+        #yield path
+        #print '1lol',i,path
+        for p in path_permutations_iterator(copy.deepcopy(path), i+2, original_path):
+            yield p #path_permutations_iterator(path, i+2, original_path)
+
+        ### permuting ###
+        #contigs to permute
+        c1_x, c1_y, c2_x, c2_y = original_path[i-2],original_path[i-1],original_path[i],original_path[i+1]
+        # current indexes of them in path
+        i_c1_x, i_c1_y, i_c2_x, i_c2_y = path.index(c1_x), path.index(c1_y), path.index(c2_x), path.index(c2_y)
+
+        # permutation is that i_c2_x --> i_c1_x , i_c2_y --> i_c1_y and all contigs after that
+        # is shited 2 indicies up  
+        path.insert(i_c1_x, path.pop(i_c2_x))
+        path.insert(i_c1_x+1, path.pop(i_c2_y))
+
+        # path.insert(pos_of_ctg_after, (ctg_to_move,'L') )
+        # path.insert(pos_of_ctg_after, (ctg_to_move,'R') )
+        # path.insert(pos_of_ctg_after, (ctg_to_move,'R') )
+        # path.insert(pos_of_ctg_after, (ctg_to_move,'L') )
+
+
+        # path[i_c1_x],path[i_c1_y],path[i_c2_x],path[i_c2_y] = path[i_c2_x],path[i_c2_y],path[i_c1_x],path[i_c1_y]
+        #yield path
+        #print '2lol',i,path
+        for p in path_permutations_iterator(copy.deepcopy(path), i+2, original_path):
+            yield p #path_permutations_iterator(path, i+2, original_path)
+    else:
+        yield path
+
+    # # switch positions of two contigs
+    # path_copy = copy.deepcopy(path)
+
+    # for i in range(3, len(path) - 1, 2):
+    #     yield
+
+
+    # ctg_to_move = original_path[i][0]
+    # contig_after = original_path[i-2][0]
+    # path_copy  = permute_path(path_copy, ctg_to_move, contig_after)
+    # yield
 
 
 def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
