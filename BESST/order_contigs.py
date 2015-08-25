@@ -133,7 +133,7 @@ class Path(object):
                 #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 #mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1,c2,is_PE_link)] = (mean_PE_obs , nr_obs)
-                if mean_PE_obs > max(self.contamination_mean + 3.5 * self.contamination_stddev, 1.5*self.contamination_mean) and not initial_path:
+                if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
                     self.observations = None
                     return None
             else:
