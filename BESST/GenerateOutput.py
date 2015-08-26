@@ -113,7 +113,7 @@ class Scaffold(object):
                 overlap = self.check_kmer_overlap( self.get_sequence(self.seqs[i], self.directions[i])[-k_mer_overlap:], self.get_sequence(self.seqs[i+1], self.directions[i+1])[:k_mer_overlap])
                 if overlap > 20:
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1])[overlap:])
-                    #print 'merging {0} bp here'.format(overlap)
+                    print 'merging {0} bp here'.format(overlap)
                 else:
                     #print gap
                     if gap <= 1:

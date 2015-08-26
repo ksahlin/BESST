@@ -531,7 +531,7 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
                 ## modified improved path gap estimation here!!
 
                 high_score_path_copy = copy.deepcopy(high_score_path)
-                G_, path = estimate_path_gaps(high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
+                G_, path = estimate_path_gaps(Contigs, small_contigs, high_score_path_copy,Scaffolds,small_scaffolds, G_prime,param)
                 del path[0]
                 del path[-1]
                 G.remove_edge(start, end)
@@ -748,20 +748,241 @@ def path_permutations_iterator(path, i, original_path):
     else:
         yield path
 
-    # # switch positions of two contigs
-    # path_copy = copy.deepcopy(path)
 
+
+def path_permutations_with_overlap_constraints(original_path, constraint_dict):
+    """
+        Iterator function to return all "valid" permutations of contigs given overlap constraints.
+        This is a very limited set of permutations compared to the m!
+        if m contigs.
+    """
+    # # Adjacancies of valid permutations according to our model
+    # path = copy.deepcopy(original_path)
+    # valid_permutations = set()
     # for i in range(3, len(path) - 1, 2):
-    #     yield
+    #     # switch positions of two contigs
+    #     ctg_end = original_path[i]
+    #     contig_end = original_path[i-2]    
+    # # 
+
+    # order original path with the constraint pairs
+    path = copy.deepcopy(original_path)
+    #print "before constraints", path
+
+    long_end = path[0]
+    long_beginning = path[-1]
+
+    for beginning in constraint_dict:
+        c2_x = beginning
+        c1_y = constraint_dict[beginning][0]
+
+        if c2_x == long_beginning and c1_y == long_end:
+            continue
+
+        #print c1_y,c2_x 
+        i_c2_x = path.index(c2_x)
+
+        i_c1_y =  path.index(c1_y)
+
+        #print 'HHEHER', i_c1_y, i_c2_x
 
 
-    # ctg_to_move = original_path[i][0]
-    # contig_after = original_path[i-2][0]
-    # path_copy  = permute_path(path_copy, ctg_to_move, contig_after)
-    # yield
+        if c2_x == long_beginning:
+            # print '1', path
+            i_c1_x = i_c1_y - 1
+            c1_x = path[i_c1_x]
+            path.insert(-1, c1_x)
+            path.insert(-1, c1_y)
+            path.pop(i_c1_y)
+            path.pop(i_c1_x)
+            # print '5', path
+            continue
 
 
-def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
+
+        if c1_y == long_end:
+            # print '1', path
+            i_c2_y = i_c2_x+1
+            c2_y = path[i_c2_y]
+            path.insert(1, c2_y)
+            path.insert(1, c2_x)
+            path.pop(i_c2_y+2)
+            path.pop(i_c2_x+2)
+            # print '5', path
+            continue
+
+        i_c1_x = i_c1_y - 1
+        c1_x = path[i_c1_x]
+        i_c2_y = i_c2_x+1
+        c2_y = path[i_c2_y]
+
+        if i_c1_y < i_c2_x:
+            # print '1', path
+            path.insert(i_c2_x, c1_y)
+            # print '2', path
+            path.pop(i_c1_y)
+            # print '3', path
+            path.insert(i_c2_x-1, c1_x)
+            # print '4', path
+            path.pop(i_c1_x)
+            # print '5', path
+
+        elif i_c2_x < i_c1_y:
+            # print '1lolz', path
+            path.insert(i_c1_y, path.pop(i_c2_x))
+            path.insert(i_c1_y, path.pop(i_c2_x))
+            # print '5', path
+
+    # print "after constraints", path
+
+    return path
+
+
+
+
+rev_nuc = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'a':'t', 'c':'g', 'g':'c', 't':'a', 'N':'N', 'X':'X', 'n':'n', 'Y':'R', 'R':'Y', 'K':'M', 'M':'K', 'S':'S', 'W':'W', 'B':'V', 'V':'B', 'H':'D', 'D':'H', 'y':'r', 'r':'y', 'k':'m', 'm':'k', 's':'s', 'w':'w', 'b':'v', 'v':'b', 'h':'d', 'd':'h'}
+
+def rev_comp(string, rev_nuc):
+    #rev_nuc={'A':'T','C':'G','G':'C','T':'A','N':'N','X':'X'}
+    rev_comp = ''.join([rev_nuc[nucl] for nucl in reversed(string)])
+    return(rev_comp)
+
+def check_kmer_overlap(end1,end2):
+    i = len(end1)
+    while i > 0:
+        if end1[-i:] == end2[:i]:
+            return i
+        i -= 1
+    return i
+
+def kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs):
+
+    # get sequences of contigs
+    seq_dict = {} # "ctg_sequence" : "scaf_index"
+    label_dict_beginnings = {}
+    label_dict_ends = {}
+    # print path
+    for label in path:
+        # get each end of 200bp
+
+        # scaffold is forward oriented and beginning
+        if (label[1] == 'L' and path.index(label) % 2 == 1):
+            #print Scaffolds[label[0]].contigs, Scaffolds[label[0]].contigs[0].direction
+            ctg = Scaffolds[label[0]].contigs[0]
+            #print ctg.sequence
+            if ctg.direction:
+                ctg_seq = ctg.sequence[:200]
+            else:
+                ctg_seq = rev_comp(ctg.sequence[-200:], rev_nuc)
+            label_dict_beginnings[label] = ctg_seq
+
+        # scaffold is forward oriented and end
+        elif (label[1] == 'R' and path.index(label) % 2 == 0):
+            ctg = Scaffolds[label[0]].contigs[-1]
+            #print ctg.sequence
+            if ctg.direction:
+                ctg_seq = ctg.sequence[-200:]
+            else:
+                ctg_seq = rev_comp(ctg.sequence[:200], rev_nuc)
+            label_dict_ends[label] = ctg_seq
+
+        # scaffold is reverse oriented and beginning
+        elif (label[1] == 'R' and path.index(label) % 2 == 1):
+            ctg = Scaffolds[label[0]].contigs[-1]
+            if ctg.direction:
+                ctg_seq = rev_comp(ctg.sequence[-200:], rev_nuc)
+            else:
+                ctg_seq = ctg.sequence[:200]
+            label_dict_beginnings[label] = ctg_seq
+
+        # scaffold is reverse oriented and end
+        elif (label[1] == 'L' and path.index(label) % 2 == 0):
+            ctg = Scaffolds[label[0]].contigs[0]
+            if ctg.direction:
+                # print "LLLOOOOL"
+                ctg_seq = rev_comp(ctg.sequence[-200:], rev_nuc) #[::-1]
+            else:
+                ctg_seq = ctg.sequence[-200:]
+            label_dict_ends[label] = ctg_seq
+
+        else:
+            print 'BUG!'
+
+        #label_dict[label] = ctg_seq
+
+    already_added = set()
+    constraint_pairs = {}
+    constraint_dict = {}
+
+    for label1 in label_dict_ends:
+        for label2 in label_dict_beginnings:
+            if label1[0] != label2[0]:
+                overlap = check_kmer_overlap(label_dict_ends[label1], label_dict_beginnings[label2])
+                if overlap > 15:
+                    print overlap
+                    # print overlap, label1, label2
+                    # print label_dict[label1], label_dict[label2]
+                    # print
+                    if label1 not in already_added and label2 not in already_added:
+                        #print 'YEAH', already_added
+                        constraint_pairs[label1] = (label2, overlap)
+                        constraint_dict[label2] = (label1, overlap)
+                        already_added.add(label1)
+                        already_added.add(label2)
+
+                    elif label1 in already_added and label2 not in already_added:
+                        old_label2 = constraint_pairs[label1][0]
+                        if overlap > constraint_pairs[label1][1]:
+                            del constraint_pairs[label1]
+                            del constraint_dict[old_label2]
+                            constraint_pairs[label1] = (label2, overlap)
+                            constraint_dict[label2] = (label1, overlap)
+                            already_added.add(label1)
+                            already_added.add(label2)
+                            already_added.remove(old_label2)
+
+                    elif label1 not in already_added and label2 in already_added:
+                        old_label1 = constraint_dict[label2][0]
+                        if overlap > constraint_dict[label2][1]:
+                            del constraint_dict[label2]
+                            del constraint_pairs[old_label1]
+                            constraint_dict[label2] = (label1, overlap)
+                            constraint_pairs[label1] = (label2, overlap)
+                            already_added.add(label1)
+                            already_added.add(label2)
+                            already_added.remove(old_label1)
+
+                    elif label1 in already_added and label2 in already_added:
+                        old_label1 = constraint_dict[label2][0]
+                        old_label2 = constraint_pairs[label1][0]
+                        if overlap > constraint_dict[label2][1] and overlap > constraint_pairs[label1][1]:
+                            del constraint_dict[label2]
+                            del constraint_pairs[old_label1]
+                            del constraint_pairs[label1]
+                            del constraint_dict[old_label2]
+                            constraint_dict[label2] = (label1, overlap)
+                            constraint_pairs[label1] = (label2, overlap)
+                            already_added.add(label1)
+                            already_added.add(label2)
+                            already_added.remove(old_label1)
+                            already_added.remove(old_label2)
+
+                    # else:
+                    #     constraint_pairs[label1] = (label2, overlap)
+
+
+    #print already_added
+
+            #''.join(map(lambda ctg: ctg.sequence, Scaffolds[label[0]].contigs[0]))
+
+    # find longest overlaps
+
+    # generate and return constraints on permutations
+
+    return constraint_dict
+
+
+def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G_prime, param):
     #print "New path!"
     ## ACCURATE GAP EST HERE
 
@@ -793,12 +1014,17 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
 
     # only one contig, nothing to permute
     if len(path) <= 4 or not param.contamination_ratio or param.NO_ILP:
+
+        constraint_pairs = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
+        # print 'small', constraint_pairs
+
         final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param,True)
         final_path = path
         #print final_path
-        
+
     ## algm here
     else:
+
 
         # new algorithm
         # final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
@@ -820,32 +1046,83 @@ def estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime, param):
         #         final_index_observations = current_index_observations
         ############################
 
-        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
-        final_path = copy.deepcopy(path)
-        original_path = copy.deepcopy(path)
-        #print 'WORK IS DONE'
 
+
+        ## overlap idea ##
+
+        original_path = copy.deepcopy(path)
+        constraint_dict = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
+        # print 'big', constraint_dict
+        original_path_with_constraints = path_permutations_with_overlap_constraints(original_path, constraint_dict)
+
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(original_path_with_constraints, Scaffolds, small_scaffolds, observations,param, True)
+        final_path = copy.deepcopy(original_path_with_constraints)
+
+        end_constraints = map(lambda x: x[0], constraint_dict.values())
+        # inital valid permutations
         for i in range(3, len(path) - 1, 2):
             # switch positions of two contigs
-            current_path = copy.deepcopy(final_path)
-            ctg_to_move = original_path[i][0]
-            contig_after = original_path[i-2][0]
-            current_path  = permute_path(current_path, ctg_to_move, contig_after)
-
-            #print 'Current path:',current_path
-        ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
-            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
-            if not current_path_instance:
+            contig_beginning = original_path[i]
+            contig_end = original_path[i-2]
+            if contig_beginning in constraint_dict or contig_end in end_constraints:
                 continue
-        ## 3 Check of current path is better than previous
-            #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+            else:
+                # switch positions of two contigs
+                current_path = copy.deepcopy(final_path)
+                ctg_to_move = original_path[i][0]
+                contig_after = original_path[i-2][0]
+                current_path  = permute_path(current_path, ctg_to_move, contig_after)
+
+                #print 'Current path:',current_path
+            ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+                current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
+                if not current_path_instance:
+                    continue
+            ## 3 Check of current path is better than previous
+                #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+                
+                if current_path_instance.objective < final_path_instance.objective:
+                    final_path = copy.deepcopy(current_path)
+                    final_path_instance = copy.deepcopy(current_path_instance)
+                    final_contigs_to_indexes = current_contigs_to_indexes 
+                    final_indexes_to_contigs = current_indexes_to_contigs
+                    final_index_observations = current_index_observations
+
+
+
+        #########################
+
+
+    #     #### ORIGINAL ILP ##############
+
+    #     final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
+    #     final_path = copy.deepcopy(path)
+    #     original_path = copy.deepcopy(path)
+    #     #print 'WORK IS DONE'
+
+    #     for i in range(3, len(path) - 1, 2):
+    #         # switch positions of two contigs
+    #         current_path = copy.deepcopy(final_path)
+    #         ctg_to_move = original_path[i][0]
+    #         contig_after = original_path[i-2][0]
+    #         current_path  = permute_path(current_path, ctg_to_move, contig_after)
+
+    #         #print 'Current path:',current_path
+    #     ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+    #         current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
+    #         if not current_path_instance:
+    #             continue
+    #     ## 3 Check of current path is better than previous
+    #         #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
             
-            if current_path_instance.objective < final_path_instance.objective:
-                final_path = copy.deepcopy(current_path)
-                final_path_instance = copy.deepcopy(current_path_instance)
-                final_contigs_to_indexes = current_contigs_to_indexes 
-                final_indexes_to_contigs = current_indexes_to_contigs
-                final_index_observations = current_index_observations
+    #         if current_path_instance.objective < final_path_instance.objective:
+    #             final_path = copy.deepcopy(current_path)
+    #             final_path_instance = copy.deepcopy(current_path_instance)
+    #             final_contigs_to_indexes = current_contigs_to_indexes 
+    #             final_indexes_to_contigs = current_indexes_to_contigs
+    #             final_index_observations = current_index_observations
+
+    # #########################################################################
 
 
     ## 5 Calculate some stats on the path that we have chosen
@@ -1095,7 +1372,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         ## the above dublette checking function to work
 
 
-        G_, path = estimate_path_gaps(path,Scaffolds,small_scaffolds, G_prime,param)
+        G_, path = estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G_prime,param)
 
 
         # #make the path a small linear graph
