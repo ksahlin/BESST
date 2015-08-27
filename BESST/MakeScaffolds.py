@@ -1050,43 +1050,43 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
         ## overlap idea ##
 
-        original_path = copy.deepcopy(path)
-        constraint_dict = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
-        # print 'big', constraint_dict
-        original_path_with_constraints = path_permutations_with_overlap_constraints(original_path, constraint_dict)
+        # original_path = copy.deepcopy(path)
+        # constraint_dict = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
+        # # print 'big', constraint_dict
+        # original_path_with_constraints = path_permutations_with_overlap_constraints(original_path, constraint_dict)
 
-        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(original_path_with_constraints, Scaffolds, small_scaffolds, observations,param, True)
-        final_path = copy.deepcopy(original_path_with_constraints)
+        # final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(original_path_with_constraints, Scaffolds, small_scaffolds, observations,param, True)
+        # final_path = copy.deepcopy(original_path_with_constraints)
 
-        end_constraints = map(lambda x: x[0], constraint_dict.values())
-        # inital valid permutations
-        for i in range(3, len(path) - 1, 2):
-            # switch positions of two contigs
-            contig_beginning = original_path[i]
-            contig_end = original_path[i-2]
-            if contig_beginning in constraint_dict or contig_end in end_constraints:
-                continue
-            else:
-                # switch positions of two contigs
-                current_path = copy.deepcopy(final_path)
-                ctg_to_move = original_path[i][0]
-                contig_after = original_path[i-2][0]
-                current_path  = permute_path(current_path, ctg_to_move, contig_after)
+        # end_constraints = map(lambda x: x[0], constraint_dict.values())
+        # # inital valid permutations
+        # for i in range(3, len(path) - 1, 2):
+        #     # switch positions of two contigs
+        #     contig_beginning = original_path[i]
+        #     contig_end = original_path[i-2]
+        #     if contig_beginning in constraint_dict or contig_end in end_constraints:
+        #         continue
+        #     else:
+        #         # switch positions of two contigs
+        #         current_path = copy.deepcopy(final_path)
+        #         ctg_to_move = original_path[i][0]
+        #         contig_after = original_path[i-2][0]
+        #         current_path  = permute_path(current_path, ctg_to_move, contig_after)
 
-                #print 'Current path:',current_path
-            ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
-                current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
-                if not current_path_instance:
-                    continue
-            ## 3 Check of current path is better than previous
-                #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
-                
-                if current_path_instance.objective < final_path_instance.objective:
-                    final_path = copy.deepcopy(current_path)
-                    final_path_instance = copy.deepcopy(current_path_instance)
-                    final_contigs_to_indexes = current_contigs_to_indexes 
-                    final_indexes_to_contigs = current_indexes_to_contigs
-                    final_index_observations = current_index_observations
+        #         #print 'Current path:',current_path
+        #     ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+        #         current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
+        #         if not current_path_instance:
+        #             continue
+        #     ## 3 Check of current path is better than previous
+        #         #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+
+        #         if current_path_instance.objective < final_path_instance.objective:
+        #             final_path = copy.deepcopy(current_path)
+        #             final_path_instance = copy.deepcopy(current_path_instance)
+        #             final_contigs_to_indexes = current_contigs_to_indexes
+        #             final_indexes_to_contigs = current_indexes_to_contigs
+        #             final_index_observations = current_index_observations
 
 
 
@@ -1095,32 +1095,32 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
     #     #### ORIGINAL ILP ##############
 
-    #     final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
-    #     final_path = copy.deepcopy(path)
-    #     original_path = copy.deepcopy(path)
-    #     #print 'WORK IS DONE'
+        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param, True)
+        final_path = copy.deepcopy(path)
+        original_path = copy.deepcopy(path)
+        #print 'WORK IS DONE'
 
-    #     for i in range(3, len(path) - 1, 2):
-    #         # switch positions of two contigs
-    #         current_path = copy.deepcopy(final_path)
-    #         ctg_to_move = original_path[i][0]
-    #         contig_after = original_path[i-2][0]
-    #         current_path  = permute_path(current_path, ctg_to_move, contig_after)
+        for i in range(3, len(path) - 1, 2):
+            # switch positions of two contigs
+            current_path = copy.deepcopy(final_path)
+            ctg_to_move = original_path[i][0]
+            contig_after = original_path[i-2][0]
+            current_path  = permute_path(current_path, ctg_to_move, contig_after)
 
-    #         #print 'Current path:',current_path
-    #     ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
-    #         current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
-    #         if not current_path_instance:
-    #             continue
-    #     ## 3 Check of current path is better than previous
-    #         #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+            #print 'Current path:',current_path
+        ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path,Scaffolds,small_scaffolds,observations,param,False)
+            if not current_path_instance:
+                continue
+        ## 3 Check of current path is better than previous
+            #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
             
-    #         if current_path_instance.objective < final_path_instance.objective:
-    #             final_path = copy.deepcopy(current_path)
-    #             final_path_instance = copy.deepcopy(current_path_instance)
-    #             final_contigs_to_indexes = current_contigs_to_indexes 
-    #             final_indexes_to_contigs = current_indexes_to_contigs
-    #             final_index_observations = current_index_observations
+            if current_path_instance.objective < final_path_instance.objective:
+                final_path = copy.deepcopy(current_path)
+                final_path_instance = copy.deepcopy(current_path_instance)
+                final_contigs_to_indexes = current_contigs_to_indexes 
+                final_indexes_to_contigs = current_indexes_to_contigs
+                final_index_observations = current_index_observations
 
     # #########################################################################
 
