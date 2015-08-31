@@ -632,7 +632,7 @@ def CalculateMeanCoverage(Contigs, Information, param):
     longest_contigs = list_of_cont_tuples[:1000]
     cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs]
     #Calculate mean coverage from the 1000 longest contigs
-    n = float(len(cov_of_longest_contigs))
+    n = max(float(len(cov_of_longest_contigs)),1)
     mean_cov = sum(cov_of_longest_contigs) / n
     # If there is only one contig above the size threshold, n can be 1
     if n==1:
