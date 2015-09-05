@@ -1025,7 +1025,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
     # only one contig, nothing to permute
     if len(path) <= 4 or not param.contamination_ratio or param.NO_ILP:
 
-        constraint_pairs = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
+        # constraint_pairs = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
         # print 'small', constraint_pairs
 
         final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param,True)
