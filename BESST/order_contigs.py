@@ -124,21 +124,51 @@ class Path(object):
         # let us cheat here! Instead of calculating likeliooods of thousands of
         # onservations we calculate the ikelihood for them average (mean) of the
         # observations and weight it with the number of observations
+        self.mp_links = 0.0
+        self.pe_links = 0.0
         obs_dict = {}
+
+
+        if 1359 in ctg_lengths and 673 in ctg_lengths:
+            print ''
+            print '' 
+            print 'Setting up path', ctg_lengths
+            for c1,c2,is_PE_link in observations:
+                mean_obs, nr_obs, stddev_obs = observations[(c1,c2,is_PE_link)]
+                if is_PE_link:
+                    mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len
+                    print 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+                    obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
+                    self.pe_links += nr_obs
+                    if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                        self.observations = None
+                        return None
+                else:
+                    #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
+                    print 'MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+
+                    obs_dict[(c1, c2, is_PE_link)] = (mean_obs, nr_obs, stddev_obs)
+                    self.mp_links += nr_obs
+            print ''
+            print ''
+            
+
         for c1,c2,is_PE_link in observations:
             #nr_obs = len(observations[(c1,c2,is_PE_link)])
-            mean_obs, nr_obs = observations[(c1,c2,is_PE_link)]
+            mean_obs, nr_obs, stddev_obs = observations[(c1,c2,is_PE_link)]
             if is_PE_link:
                 mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len 
                 #PE_obs = map(lambda x: self.ctgs[c1].length + self.ctgs[c2].length - x + 2*param.read_len ,observations[(c1,c2,is_PE_link)])
                 #mean_obs = sum( PE_obs)/nr_obs
-                obs_dict[(c1,c2,is_PE_link)] = (mean_PE_obs , nr_obs)
+                obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
+                self.pe_links += nr_obs
                 if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
                     self.observations = None
                     return None
             else:
                 #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
-                obs_dict[(c1,c2,is_PE_link)] = (mean_obs,nr_obs)
+                obs_dict[(c1, c2, is_PE_link)] = (mean_obs, nr_obs, stddev_obs)
+                self.mp_links += nr_obs
             
 
         self.observations = obs_dict
@@ -332,18 +362,27 @@ class Path(object):
             row[ 2*g + h_index] = -1
 
             # sum of "inbetween" contig lengths + observation
-            constant =   sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
+            constant = sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
             predicted_distance = exp_means_gapest[(i,j,is_PE_link)]
 
             t.add_constraint(row, predicted_distance - constant )
 
         # add objective row
 
-
+        # calculate the total penalties of discrepancies of stddevs given assigned orientations
+        # of all edges
+        obj_delta_stddev = 0
         if self.contamination_ratio:
             obj_row = [0]*n
             for h_index,(i,j,is_PE_link) in enumerate(self.observations):
-                obj_row[ 2*g + h_index] = is_PE_link * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) *  self.observations[(i,j,is_PE_link)][1]
+                n = self.observations[(i,j,is_PE_link)][1]
+                obs_stddev = self.observations[(i,j,is_PE_link)][2]
+                if is_PE_link:
+                    obj_delta_stddev += abs(self.contamination_stddev - obs_stddev) * n
+                else:
+                    obj_delta_stddev += abs(self.stddev - obs_stddev) * n
+
+                obj_row[ 2*g + h_index] = is_PE_link * n + (1-is_PE_link) * n
                 #obj_row[ 2*g + h_index] = is_PE_link * self.stddev  * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * self.observations[(i,j,is_PE_link)][1]
                 # obj_row[ 2*g + h_index] = is_PE_link * self.stddev * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * (self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
                 t.add_objective(obj_row)
@@ -380,7 +419,15 @@ class Path(object):
             gap_solution.append( round (optx[2*i] -optx[2*i +1],0) )           
 
         self.objective = lpsol.fun
-        #print self.objective
+
+        # also add the penalties from the observed standard deviations
+        self.objective += obj_delta_stddev
+        
+        ctg_lengths = map(lambda x: x.length, self.ctgs)
+        if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
+            print 'Obj:',self.objective
+            print "of which stddev contributing:", obj_delta_stddev
+        #print "objective:",self.objective
         
         return gap_solution
 
@@ -438,6 +485,15 @@ def main(contig_lenghts, observations, param, initial_path):
 
     optimal_LP_gaps = path.LP_solve_gaps(param)
     path.gaps = optimal_LP_gaps
+    ctg_lengths = map(lambda x: x.length, path.ctgs)
+    if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
+        print 'Solution:', path.gaps
+        print "objective:",path.objective
+        print 'ctg lengths:', map(lambda x: x.length, path.ctgs)
+        print 'mp links:', path.mp_links
+        print 'pe links:', path.pe_links
+        print 'PE relative freq', path.pe_links / (path.pe_links + path.mp_links)
+
     path.update_positions()
 
     # print 'MCMC path:'

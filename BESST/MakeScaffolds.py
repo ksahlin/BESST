@@ -318,13 +318,17 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
                     nr_links_ = G_prime[start][nbr]['nr_links']
                     if nr_links_:
                         obs_ = G_prime[start][nbr]['obs']
-                        G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
+                        # G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
+                        obs_sq_ = G_prime[start][nbr]['obs_sq']
+                        G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
 
                 for nbr in G_prime.neighbors(end):
                     nr_links_ = G_prime[end][nbr]['nr_links']
                     if nr_links_:
                         obs_ = G_prime[end][nbr]['obs']
-                        G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
+                        # G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
+                        obs_sq_ = G_prime[end][nbr]['obs_sq']
+                        G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
 
                 #remove the old scaffold objects from G_prime
                 G_prime.remove_nodes_from(new_scaffold_)
@@ -767,7 +771,7 @@ def path_permutations_with_overlap_constraints(original_path, constraint_dict):
 
     # order original path with the constraint pairs
     path = copy.deepcopy(original_path)
-    #print "before constraints", path
+    print "before constraints", path
 
     long_end = path[0]
     long_beginning = path[-1]
@@ -833,7 +837,7 @@ def path_permutations_with_overlap_constraints(original_path, constraint_dict):
             path.insert(i_c1_y, path.pop(i_c2_x))
             # print '5', path
 
-    # print "after constraints", path
+    print "after constraints", path
 
     return path
 
@@ -918,7 +922,7 @@ def kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs):
         for label2 in label_dict_beginnings:
             if label1[0] != label2[0]:
                 overlap = check_kmer_overlap(label_dict_ends[label1], label_dict_beginnings[label2])
-                if overlap > 15:
+                if overlap > 20:
                     print overlap
                     # print overlap, label1, label2
                     # print label_dict[label1], label_dict[label2]
@@ -996,8 +1000,14 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
     observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
     sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
     for c1,c2 in sub_graph_small_to_large_ctgs:
-        observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
-    
+        #observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
+        n = sub_graph[c1][c2]['nr_links']
+        mean_obs = sub_graph[c1][c2]['obs'] / n
+        if n > 1:
+            std_dev_obs = ((sub_graph[c1][c2]['obs_sq'] - n * mean_obs ** 2) / (n - 1)) ** 0.5
+        else:
+            std_dev_obs = 0
+        observations[(c1, c2)] = (mean_obs, n, std_dev_obs)
 
     # for c1,c2 in observations:
     #     if (other_end(c2),other_end(c1)) in observations:
@@ -1052,7 +1062,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
         # original_path = copy.deepcopy(path)
         # constraint_dict = kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs)
-        # # print 'big', constraint_dict
+        # print 'big', constraint_dict
         # original_path_with_constraints = path_permutations_with_overlap_constraints(original_path, constraint_dict)
 
         # final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(original_path_with_constraints, Scaffolds, small_scaffolds, observations,param, True)
@@ -1069,6 +1079,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
         #     else:
         #         # switch positions of two contigs
         #         current_path = copy.deepcopy(final_path)
+        #         print current_path
         #         ctg_to_move = original_path[i][0]
         #         contig_after = original_path[i-2][0]
         #         current_path  = permute_path(current_path, ctg_to_move, contig_after)
@@ -1414,13 +1425,17 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             nr_links_ = G_prime[start][nbr]['nr_links']
             if nr_links_:
                 obs_ = G_prime[start][nbr]['obs']
-                G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
+                #G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_)
+                obs_sq_ = G_prime[start][nbr]['obs_sq']
+                G_prime.add_edge((S.name, 'L'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
 
         for nbr in G_prime.neighbors(end):
             nr_links_ = G_prime[end][nbr]['nr_links']
             if nr_links_:
                 obs_ = G_prime[end][nbr]['obs']
-                G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
+                # G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_)
+                obs_sq_ = G_prime[end][nbr]['obs_sq']
+                G_prime.add_edge((S.name, 'R'), nbr, nr_links=nr_links_, obs=obs_, obs_sq=obs_sq_)
 
         #remove the old scaffold objects from G_prime
         G_prime.remove_nodes_from(path)
