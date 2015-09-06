@@ -104,7 +104,7 @@ class Path(object):
     of links. Instead, we take the average link obervation between all contigs. This will not give true ML 
     estimates but speeds up calculation with thousands of x order. In practice, using average link obervation 
     For ML estimation will give a fairly good prediction. For this cheat, see comment approx 15 lines below.  """
-    def __init__(self, ctg_lengths, observations, param, initial_path=False):
+    def __init__(self, ctg_lengths, observations, param):
         super(Path, self).__init__()
         self.mean = param.mean_ins_size
         self.stddev = param.std_dev_ins_size
@@ -140,7 +140,7 @@ class Path(object):
                     print 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
                     obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
                     self.pe_links += nr_obs
-                    if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                    if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev:
                         self.observations = None
                         return None
                 else:
@@ -151,7 +151,7 @@ class Path(object):
                     self.mp_links += nr_obs
             print ''
             print ''
-            
+
 
         for c1,c2,is_PE_link in observations:
             #nr_obs = len(observations[(c1,c2,is_PE_link)])
@@ -162,9 +162,9 @@ class Path(object):
                 #mean_obs = sum( PE_obs)/nr_obs
                 obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
                 self.pe_links += nr_obs
-                if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
-                    self.observations = None
-                    return None
+                # if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev and not initial_path:
+                #     self.observations = None
+                #     return None
             else:
                 #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                 obs_dict[(c1, c2, is_PE_link)] = (mean_obs, nr_obs, stddev_obs)
@@ -468,14 +468,14 @@ def ordered_search(path):
 
 
 
-def main(contig_lenghts, observations, param, initial_path):
+def main(contig_lenghts, observations, param):
     """
     contig_lenghts: Ordered list of integers which is contig lengths (ordered as contigs comes in the path)
     observations:  dictionary oflist of observations, eg for contigs c1,c2,c3
                     we can have [(c1,c2):[23, 33, 21],(c1,c3):[12,14,11],(c2,c3):[11,34,32]]
     """
 
-    path = Path(contig_lenghts,observations, param, initial_path=initial_path)
+    path = Path(contig_lenghts,observations, param)
     
     if path.observations == None:
         return None
