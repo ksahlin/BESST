@@ -109,9 +109,9 @@ class Scaffold(object):
 
         for i in range(len(self.seqs)-1):
             gap = self.gaps[i]
-            if gap < self.param.std_dev_ins_size:
+            if gap <= 2*self.param.std_dev_ins_size:
                 overlap = self.check_kmer_overlap( self.get_sequence(self.seqs[i], self.directions[i])[-k_mer_overlap:], self.get_sequence(self.seqs[i+1], self.directions[i+1])[:k_mer_overlap])
-                if overlap > 20:
+                if overlap >= 20:
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1])[overlap:])
                     print 'merging {0} bp here'.format(overlap)
                 else:
