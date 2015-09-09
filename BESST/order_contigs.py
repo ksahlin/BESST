@@ -140,9 +140,9 @@ class Path(object):
                     print 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
                     obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
                     self.pe_links += nr_obs
-                    if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev:
-                        self.observations = None
-                        return None
+                    # if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev:
+                    #     self.observations = None
+                    #     return None
                 else:
                     #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
                     print 'MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
@@ -421,7 +421,7 @@ class Path(object):
         self.objective = lpsol.fun
 
         # also add the penalties from the observed standard deviations
-        self.objective += obj_delta_stddev
+        #self.objective += obj_delta_stddev
         
         ctg_lengths = map(lambda x: x.length, self.ctgs)
         if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
