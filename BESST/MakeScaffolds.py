@@ -738,7 +738,9 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
         mean_obs, nr_obs, stddev_obs = index_observations[(index_moved_forward, index_shifted, is_PE_link)]
         mean_PE_obs = ctg_lengths_index_ordered[index_moved_forward] + ctg_lengths_index_ordered[index_shifted] - mean_obs + 2*param.read_len
         if mean_PE_obs > param.contamination_mean + 6 * param.contamination_stddev:
-            print 'permuted link invalid. Continuing..'
+            #print 'permuted link invalid. Continuing..'
+            if all(length in ctg_lengths_index_ordered for length in [670, 2093]) or all(length in ctg_lengths_index_ordered for length in [900, 3810]) or all(length in ctg_lengths_index_ordered for length in [2528, 591]) or all(length in ctg_lengths_index_ordered for length in [734, 257, 1548]):
+                print >> param.information_file, 'permuted link invalid. Continuing..', 'moved forward:', index_moved_forward, 'shifted:', index_shifted
             return None, None, None, None
 
 
@@ -1046,6 +1048,62 @@ def kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs):
     return constraint_dict
 
 
+def permute_path_segment(path, ctg_to_move, ctg_after, valid_connections):
+    #print 'path before permute', path
+    segment_upper_index = max(path.index((ctg_to_move, 'L')), path.index((ctg_to_move, 'R')))
+    segment_min_index = max(path.index((ctg_after, 'L')), path.index((ctg_after, 'R'))) + 1
+    segment_lower_index = segment_min_index
+    for index in range(segment_upper_index, segment_min_index, -1):
+        if path[index][0] == path[index-1][0] or (path[index][0], path[index-1][0]) in valid_connections or (path[index-1][0], path[index][0]) in valid_connections:
+            continue
+        else:
+            segment_lower_index = index
+
+    segment_to_move = path[segment_lower_index: segment_upper_index + 1]
+    #print "segment to move", segment_to_move
+    path[segment_lower_index: segment_upper_index + 1] = []
+    permuted_path = path[0:segment_min_index-2] + segment_to_move + path[segment_min_index-2:]
+    #print "path after permute", permuted_path
+    return permuted_path
+
+
+def calculate_min_objective(path, Scaffolds, small_scaffolds, observations, param, valid_permutations, valid_connections):
+    current_min_path = copy.deepcopy(path)
+    current_min_path_instance, current_min_contigs_to_indexes, current_min_indexes_to_contigs, current_min_index_observations = calculate_path_LP(current_min_path, Scaffolds, small_scaffolds, observations, param)
+    ctgs_perm_chosen = None
+    #print 'WORK IS DONE'
+
+    for edge_end1, edge_end2 in valid_permutations:
+        # switch positions of two contigs
+        #print "To permute:", edge_end1, edge_end2
+        current_path = copy.deepcopy(path)
+        ctg_to_move = edge_end1[0]
+        ctg_after = edge_end2[0]
+        current_path = permute_path_segment(current_path, ctg_to_move, ctg_after, valid_connections)
+
+        #print 'Current current_path:',current_path
+    ## 1 Get a mapping from contigs to indexes (index for contig order in the current current_min_path)
+        current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, param, moved_forward=ctg_to_move, shifted=ctg_after)
+        if not current_path_instance:
+            continue
+    ## 3 Check of current current_min_path is better than previous
+        #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, current_min_path_instance.objective)
+        # if  -1 < current_path_instance.objective - current_min_path_instance.objective < 1:
+        #     print 'Very close:', current_path_instance.objective, current_min_path_instance.objective
+        #     print current_path_instance.objective < current_min_path_instance.objective
+        #print 'obj:', current_path_instance.objective,current_min_path_instance.objective
+        if current_path_instance.objective < current_min_path_instance.objective - 1:
+            current_min_path = copy.deepcopy(current_path)
+            current_min_path_instance = copy.deepcopy(current_path_instance)
+            current_min_contigs_to_indexes = current_contigs_to_indexes
+            current_min_indexes_to_contigs = current_indexes_to_contigs
+            current_min_index_observations = current_index_observations
+            ctgs_perm_chosen = (edge_end1, edge_end2)
+    #print "IN FCN:", ctgs_perm_chosen, current_min_path_instance.objective
+    return current_min_path, current_min_path_instance, current_min_contigs_to_indexes, current_min_indexes_to_contigs, current_min_index_observations, ctgs_perm_chosen
+
+
+
 def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G_prime, param):
     #print "New path!"
     ## ACCURATE GAP EST HERE
@@ -1164,34 +1222,81 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
         #########################
 
 
+        ### O(n*(n-1)/2) solution idea ######
+
+        max_nr_rounds = len(range(3, len(path) - 1, 2))
+        current_min_path = copy.deepcopy(path)
+
+        # calculate initial round with all edges
+        valid_permutations = set([(current_min_path[i], current_min_path[i-2]) for i in range(3, len(path) - 1, 2)])
+        #print "PERM set:", valid_permutations
+
+        # store what are valid adjacent contigs, we need it as info when we permute contigs in a path
+        valid_connections = set([(current_min_path[i][0], current_min_path[i-2][0]) for i in range(3, len(path) - 1, 2)])
+
+        final_path, final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations, ctgs_perm_chosen = calculate_min_objective(current_min_path, Scaffolds, small_scaffolds, observations, param, valid_permutations, valid_connections)
+
+        # In initial step, at least one solution was better than original path
+        if ctgs_perm_chosen:
+            valid_permutations.remove(ctgs_perm_chosen)
+            #print "PERM set:", valid_permutations
+            i = 1
+            while i < max_nr_rounds:
+                #print 'WE are here!!!!! round:', i, max_nr_rounds
+                min_path, min_solution_path_instance, min_solution_contigs_to_indexes, min_solution_indexes_to_contigs, min_solution_index_observations, ctgs_perm_chosen = calculate_min_objective(final_path,Scaffolds,small_scaffolds,observations,param, valid_permutations, valid_connections)
+                #print "IN WHILE:", ctgs_perm_chosen
+                if ctgs_perm_chosen:
+                    valid_permutations.remove(ctgs_perm_chosen)
+                else:
+                    break
+                #print "PERM set LOLLL:", valid_permutations
+                # allow smal approximation error of LP solver, hence at least -1 lower obj of new instance is accepted
+                if min_solution_path_instance.objective < final_path_instance.objective - 1:
+                    final_path = copy.deepcopy(min_path)
+                    final_path_instance = copy.deepcopy(min_solution_path_instance)
+                    final_contigs_to_indexes = min_solution_contigs_to_indexes
+                    final_indexes_to_contigs = min_solution_indexes_to_contigs
+                    final_index_observations = min_solution_index_observations
+                else:
+                    break
+                i += 1
+
+
+        ######################################
+
+
+
     #     #### ORIGINAL ILP ##############
 
-        final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
-        final_path = copy.deepcopy(path)
-        original_path = copy.deepcopy(path)
-        #print 'WORK IS DONE'
+        # final_path_instance, final_contigs_to_indexes, final_indexes_to_contigs, final_index_observations = calculate_path_LP(path,Scaffolds,small_scaffolds,observations,param)
+        # final_path = copy.deepcopy(path)
+        # original_path = copy.deepcopy(path)
+        # #print 'WORK IS DONE'
 
-        for i in range(3, len(path) - 1, 2):
-            # switch positions of two contigs
-            current_path = copy.deepcopy(final_path)
-            ctg_to_move = original_path[i][0]
-            contig_after = original_path[i-2][0]
-            current_path  = permute_path(current_path, ctg_to_move, contig_after)
+        # for i in range(3, len(path) - 1, 2):
+        #     # switch positions of two contigs
+        #     current_path = copy.deepcopy(final_path)
+        #     ctg_to_move = original_path[i][0]
+        #     contig_after = original_path[i-2][0]
+        #     current_path  = permute_path(current_path, ctg_to_move, contig_after)
 
-            #print 'Current path:',current_path
-        ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
-            current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, param, moved_forward=ctg_to_move, shifted=contig_after)
-            if not current_path_instance:
-                continue
-        ## 3 Check of current path is better than previous
-            #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
-            
-            if current_path_instance.objective < final_path_instance.objective:
-                final_path = copy.deepcopy(current_path)
-                final_path_instance = copy.deepcopy(current_path_instance)
-                final_contigs_to_indexes = current_contigs_to_indexes 
-                final_indexes_to_contigs = current_indexes_to_contigs
-                final_index_observations = current_index_observations
+        #     #print 'Current path:',current_path
+        # ## 1 Get a mapping from contigs to indexes (index for contig order in the current path)
+        #     current_path_instance, current_contigs_to_indexes, current_indexes_to_contigs, current_index_observations = calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, param, moved_forward=ctg_to_move, shifted=contig_after)
+        #     if not current_path_instance:
+        #         continue
+        # ## 3 Check of current path is better than previous
+        #     #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
+        #     if  -1 < current_path_instance.objective - final_path_instance.objective < 1:
+        #         print 'Very close:', current_path_instance.objective, final_path_instance.objective
+        #         print current_path_instance.objective < final_path_instance.objective
+
+        #     if current_path_instance.objective < final_path_instance.objective - 1:
+        #         final_path = copy.deepcopy(current_path)
+        #         final_path_instance = copy.deepcopy(current_path_instance)
+        #         final_contigs_to_indexes = current_contigs_to_indexes 
+        #         final_indexes_to_contigs = current_indexes_to_contigs
+        #         final_index_observations = current_index_observations
 
     # #########################################################################
 
@@ -1200,8 +1305,8 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
     param.path_gaps_estimated += len(final_path_instance.gaps)
     path_dict_index = final_path_instance.make_path_dict_for_besst()
-    #print 'FINAL:', final_path
-    #print 'OBJECTIVE: {0}'.format(final_path_instance.objective)
+    print 'FINAL:', final_path
+    print 'OBJECTIVE: {0}'.format(final_path_instance.objective)
 
     # for ctg in final_path:
     #     if ctg[0] in Scaffolds:

@@ -27,6 +27,9 @@ import cPickle
 import os
 import subprocess
 
+#import numpy as np
+
+
 from mathstats.normaldist.normal import normpdf
 from mathstats.normaldist.truncatedskewed import param_est as GC
 
@@ -113,6 +116,7 @@ class Path(object):
         self.contamination_mean = param.contamination_mean
         self.contamination_stddev = param.contamination_stddev
         self.ctgs = []
+        self.ctg_lengths = ctg_lengths
         for i,length in enumerate(ctg_lengths):
             self.ctgs.append(Contig(i, length))
         self.ctgs = tuple(self.ctgs)
@@ -129,15 +133,15 @@ class Path(object):
         obs_dict = {}
 
 
-        if 1359 in ctg_lengths and 673 in ctg_lengths:
-            print ''
-            print '' 
-            print 'Setting up path', ctg_lengths
+        if all(length in self.ctg_lengths for length in [670, 2093]) or all(length in self.ctg_lengths for length in [900, 3810]) or all(length in self.ctg_lengths for length in [2528, 591]) or all(length in self.ctg_lengths for length in [734, 257, 1548]):
+            print >> param.information_file, ''
+            print >> param.information_file, '' 
+            print >> param.information_file, 'Setting up path', ctg_lengths
             for c1,c2,is_PE_link in observations:
                 mean_obs, nr_obs, stddev_obs = observations[(c1,c2,is_PE_link)]
                 if is_PE_link:
                     mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len
-                    print 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+                    print >> param.information_file, 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
                     obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs)
                     self.pe_links += nr_obs
                     # if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev:
@@ -145,12 +149,12 @@ class Path(object):
                     #     return None
                 else:
                     #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
-                    print 'MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+                    print >> param.information_file, 'MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
 
                     obs_dict[(c1, c2, is_PE_link)] = (mean_obs, nr_obs, stddev_obs)
                     self.mp_links += nr_obs
-            print ''
-            print ''
+            print >> param.information_file, ''
+            print >> param.information_file, ''
 
 
         for c1,c2,is_PE_link in observations:
@@ -296,6 +300,20 @@ class Path(object):
                 exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
                 #print 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
         
+
+        if all(length in self.ctg_lengths for length in [670, 2093]) or all(length in self.ctg_lengths for length in [900, 3810]) or all(length in self.ctg_lengths for length in [2528, 591]) or all(length in self.ctg_lengths for length in [734, 257, 1548]):
+
+            for (i,j,is_PE_link) in self.observations:
+                mean_obs = self.observations[(i,j,is_PE_link)][0]
+                if is_PE_link:
+                    #exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                    print >> param.information_file, 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+
+                else:
+                    #exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                    print >> param.information_file, 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+
+
         ####################
         ####### NEW ########
         ####################
@@ -393,6 +411,11 @@ class Path(object):
                 t.add_objective(obj_row)
 
         A, b, c = t.standard_form()
+
+        # sol_lsq =np.linalg.lstsq(A,b)
+        # print "LEAST SQUARES SOLUTION:"
+        # print sol_lsq[0]
+
         #t.display()
 
         # print 'Objective:', c 
@@ -412,6 +435,9 @@ class Path(object):
         # print "solvable:",solvable
         # print "basis:",basis
         # print "-------------------------------------------"
+
+        # print "LP SOLUTION:"
+        # print optx
 
         # transform solutions to gaps back
         gap_solution = []
@@ -486,13 +512,13 @@ def main(contig_lenghts, observations, param):
     optimal_LP_gaps = path.LP_solve_gaps(param)
     path.gaps = optimal_LP_gaps
     ctg_lengths = map(lambda x: x.length, path.ctgs)
-    if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
-        print 'Solution:', path.gaps
-        print "objective:",path.objective
-        print 'ctg lengths:', map(lambda x: x.length, path.ctgs)
-        print 'mp links:', path.mp_links
-        print 'pe links:', path.pe_links
-        print 'PE relative freq', path.pe_links / (path.pe_links + path.mp_links)
+    if all(length in ctg_lengths for length in [670, 2093]) or all(length in ctg_lengths for length in [900, 3810]) or all(length in ctg_lengths for length in [2528, 591]) or all(length in ctg_lengths for length in [734, 257, 1548]):  #len(path.gaps) >= 4:
+        print >> param.information_file, 'Solution:', path.gaps
+        print >> param.information_file, "objective:",path.objective
+        print >> param.information_file, 'ctg lengths:', map(lambda x: x.length, path.ctgs)
+        print >> param.information_file, 'mp links:', path.mp_links
+        print >> param.information_file, 'pe links:', path.pe_links
+        print >> param.information_file, 'PE relative freq', path.pe_links / (path.pe_links + path.mp_links)
 
     path.update_positions()
 
