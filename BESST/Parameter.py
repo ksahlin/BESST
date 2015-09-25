@@ -36,12 +36,12 @@ class parameter(object):
                  parameter_hapl_ratio=None, parameter_hapl_threshold=None,
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
-                 parameter_extend_paths=None,
+                 parameter_extend_paths=None, FASTER_ILP=None,
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
                  no_score=None, orientation = None, contig_index= None,
-                 score_cutoff = None, max_extensions = None, NO_ILP = None ):
+                 score_cutoff = None, max_extensions = None, NO_ILP=None, print_scores=None,pass_number=None):
 
 
 
@@ -84,6 +84,10 @@ class parameter(object):
         self.path_threshold = parameter_path_threshold
         self.no_score = no_score
         self.orientation = orientation
+        self.pass_number = pass_number
+        # debugging and logging
+        self.print_scores = print_scores
+
 
         # related to gap distances
         self.path_gaps_estimated = path_gaps_estimated
@@ -94,7 +98,7 @@ class parameter(object):
         self.contamination_mean = contamination_mean
         self.contamination_stddev = contamination_stddev
         self.NO_ILP = NO_ILP
-
+        self.FASTER_ILP = FASTER_ILP
 
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,

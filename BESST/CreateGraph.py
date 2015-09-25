@@ -291,6 +291,10 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
     nr_link_obs = []
     cnt_sign = 0
 
+    if param.print_scores:
+        score_file = open(os.path.join(param.output_directory,"score_file_pass_{0}.tsv".format(param.pass_number)), "w")
+        print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format("scf1/ctg1","scf2/ctg2" ,"gap", "link_variation_score", "link_dispersity_score", "number_of_links")
+
     for edge in G.edges():
         mean_ = 0
         std_dev = 0
@@ -386,6 +390,28 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 gap_obs.append(gap)
                 nr_link_obs.append(n_obs)
 
+            if param.print_scores:
+                if edge[0][1] == 'R':
+                    contig_objects = Scaffolds[edge[0][0]].contigs
+                    contig_names = map(lambda x: x.name, contig_objects)
+                    scf1 =";".join(contig_names)
+                else:
+                    contig_objects = Scaffolds[edge[0][0]].contigs[::-1]
+                    contig_names = map(lambda x: x.name, contig_objects)
+                    scf1 =";".join(contig_names)
+                if edge[1][1] == 'L':
+                    contig_objects = Scaffolds[edge[1][0]].contigs
+                    contig_names = map(lambda x: x.name, contig_objects)
+                    scf2 =";".join(contig_names)
+                else:
+                    contig_objects = Scaffolds[edge[1][0]].contigs[::-1]
+                    contig_names = map(lambda x: x.name, contig_objects)
+                    scf2 =";".join(contig_names)
+
+                print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(scf1, scf2, gap, std_dev_score, span_score, n_obs)
+
+    if param.print_scores:
+        score_file.close()
 
     if param.plots:
         plots.histogram(span_score_obs, param, bins=20, x_label='score', y_label='frequency', title='Dispersity_score_distribuion' + plot + '.' + param.bamfile.split('/')[-1])

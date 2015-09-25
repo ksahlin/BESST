@@ -90,6 +90,8 @@ def main(options):
     param.score_cutoff = options.score_cutoff
     param.max_extensions = options.max_extensions
     param.NO_ILP = options.NO_ILP
+    param.FASTER_ILP = options.FASTER_ILP
+    param.print_scores = options.print_scores
 
     if args.devel:
         h = guppy.hpy()
@@ -111,6 +113,7 @@ def main(options):
     #Read in the sequences of the contigs in memory
     start = time()
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
+
     elapsed = time() - start
     print >> Information, 'Time elapsed for reading in contig sequences:' + str(elapsed) + '\n'
 
@@ -127,6 +130,7 @@ def main(options):
     param.first_lib = True
     param.path_threshold = options.path_threshold
     for i in xrange(len(options.bamfiles)):
+        param.pass_number = i+1
         param.bamfile = options.bamfiles[i]
         param.orientation = options.orientation[i] if options.orientation != None else 'fr'
         param.mean_ins_size = options.mean[i] if options.mean != None else None
@@ -349,6 +353,13 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
 
 parameters.add_argument("--NO_ILP", dest="NO_ILP", action="store_true",
                   help="Warning: Do not use this option! This option is included only for benchmarking purposes of old BESST algorithm. This option will give poor results as it mimics earlier versions of BESST.")
+
+parameters.add_argument("--FASTER_ILP", dest="FASTER_ILP", action="store_true",
+                  help="Faster but worse performing heuristic solution to solving ILPs. May be used if BESST is too slow. However, lowering --iter is usually more effective to reduce scaffolding time.")
+
+parameters.add_argument("--print_scores", dest="print_scores", action="store_true",
+                  help="Print BESST scores on edges in the Scaffolding graph.")
+
 
 other.add_argument('--version', action='version', version='%(prog)s 2.0.0')
 
