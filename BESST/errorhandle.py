@@ -80,6 +80,16 @@ def parse_check(arg, parser):
     if not arg.bamfiles:
         parser.error("parameter -f (BAM files) is required")
 
+    if  arg.multiprocess:
+        sys.stdout.write('Warning: -q specified but will not be activated. The multiprocess option was found to contain a bug\
+         and will therefore not be activated.\n')
+        arg.multiprocess = False
+
+    if  arg.haplotype:
+        sys.stdout.write('Warning: -g (haplotype aware scaffolding) specified but this option is under construction and not stable. \
+         This option will therefore be inactivated. \n')
+        arg.haplotype = False
+
     return()
 
 ##

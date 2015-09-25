@@ -36,7 +36,7 @@ class parameter(object):
                  parameter_hapl_ratio=None, parameter_hapl_threshold=None,
                  parameter_detect_haplotype=None, parameter_detect_duplicate=None,
                  parameter_gff_file=None, parameter_information_file=None,
-                 parameter_fosmidpool=None, parameter_extend_paths=None,
+                 parameter_extend_paths=None,
                  parameter_development=None, parameter_plots=None, parameter_path_threshold=None,
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
@@ -78,7 +78,6 @@ class parameter(object):
         self.detect_duplicate = parameter_detect_duplicate
         self.gff_file = parameter_gff_file
         self.information_file = parameter_information_file
-        self.fosmidpool = parameter_fosmidpool
         self.extend_paths = parameter_extend_paths
         self.development = parameter_development
         self.plots = parameter_plots

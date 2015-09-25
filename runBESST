@@ -141,7 +141,6 @@ def main(options):
         param.hapl_threshold = options.haplthreshold
         param.detect_haplotype = options.haplotype
         param.detect_duplicate = options.duplicate
-        param.fosmidpool = options.fosmidpool
         param.extend_paths = options.extendpaths
         print >> Information, '\nPASS ' + str(i + 1) + '\n\n'
 
@@ -296,7 +295,7 @@ parameters.add_argument("--max_extensions", dest="max_extensions", type=int,
                   help="Maximum number of (large) scaffolds to search for paths extensions with. ")
 
 
-## haplotypes
+## related to scaffolding high heterozygozity assemblies with lots of split haplotype contigs
 
 haplotypes.add_argument("-a", dest="haplratio", type=float, default=1.3,
                   help="Maximum length ratio for merging of haplotypic regions.")
@@ -306,10 +305,17 @@ haplotypes.add_argument("-b", dest="haplthreshold", type=int, default=3,
                    Example: contigs with under mean/2 + 3sigma are indicated as potential haplotypes (tested later) \
                    if -b 3")
 
+other.add_argument("-K", dest="kmer", type=int, default=50,
+                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50")
+
+other.add_argument("-M", dest="mmer", type=int, default=40,
+                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
+
 haplotypes.add_argument("-g", dest="haplotype", action="store_true",
                   help="Haplotype detection function, default = off")
 
-## other 
+
+## other
 
 required.add_argument("--orientation", dest="orientation", type=str, nargs='+',
                       help="Mapped orientation for each library given with -f option. Valid input is either fr (forward reverse orientation) or rf (reverse forward orientation).")
@@ -319,12 +325,6 @@ other.add_argument("-o", dest="output", type=str, default='.',
 
 other.add_argument("-d", dest='duplicate' , action="store_false",
                   help="Deactivate sequencing duplicates detection")
-
-other.add_argument("-K", dest="kmer", type=int, default=50,
-                  help="k-mer size used in de brujin graph for obtaining contigs in assembly, default 50")
-
-other.add_argument("-M", dest="mmer", type=int, default=40,
-                  help="m-mer usted for creating connection graph. Should be set lower than k-mer size ")
 
 group.add_argument("-y", dest='extendpaths', action="store_false",
                   help="Deactivate pathfinder module for including smaller contigs.")
@@ -348,21 +348,11 @@ other.add_argument("--separate_repeats", dest="separate_repeats", action="store_
                   not included in the main scaffolding output file with this flag specified.")
 
 parameters.add_argument("--NO_ILP", dest="NO_ILP", action="store_true",
-                  help="Threshold value for the relative weight of an edge (deprecated)")
+                  help="Warning: Do not use this option! This option is included only for benchmarking purposes of old BESST algorithm. This option will give poor results as it mimics earlier versions of BESST.")
 
-other.add_argument('--version', action='version', version='%(prog)s 1.3.9')
-
-
+other.add_argument('--version', action='version', version='%(prog)s 2.0.0')
 
 
-#TEMPORARY parameters here, remove after spruce assembly
-other.add_argument("-t", dest="transcriptalignfile",
-                  help="file of contigs", type=str)
-
-other.add_argument("-p", dest="fosmidpool", default=None,
-                  help="""Specify that data comes from a fosmid pool. This parameter sets the number of
-                  links that the second strongest link must have in order to not do any scaffolding
-                  with the region.""", type=int)
 
 
 if len(sys.argv) == 1:
