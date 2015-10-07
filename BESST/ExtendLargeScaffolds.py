@@ -30,46 +30,75 @@ def ScorePaths(G, paths, all_paths, param):
     if len(paths) == 0:
         return ()
 
-    def CalculateConnectivity(path, G):
-        good_edges = set(map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path)))))
-        #print good_edges, 'path len:',len(path)- 2, 'nr of good edges: ', len(good_edges)*(len(good_edges)+1)/2.0
-        good_edges_count = 0
-        bad_edges_count = 0
-        prev_node = path[0]
-        good_edges_already_considered = set()
-        bad_edges_already_considered = set()
+    def calculate_connectivity(path, G):
+        """
+            Contig ends has even or odd numbered placements (index) in the path list. In case
+            of contamination, good links are between an even to an odd indexed contig-end, or vice versa.
+
+        """
         bad_link_weight = 0
         good_link_weight = 0
-        link_weights = defaultdict(lambda : defaultdict(float))
+        links_not_in_path = 0
+        links_wrong_orientation_in_path = 0
+        even, odd = path[::2], path[1::2]
+        nodes_even = set(even)
+        nodes_odd = set(odd)
+        visited = set()
+        for i, node in enumerate(path):
+            for nbr in G.neighbors(node):
+                if i % 2 == 0 and node[0] != nbr[0]:
+                    if nbr in nodes_odd:
+                        if nbr not in visited:
+                            good_link_weight += G[node][nbr]['nr_links']
+                        else:
+                            pass
+                    else:
+                        bad_link_weight += G[node][nbr]['nr_links']
+                elif i % 2 == 1 and node[0] != nbr[0]:
+                    if nbr not in nodes_even:
+                        bad_link_weight += G[node][nbr]['nr_links']
+                    elif nbr not in visited:
+                        bad_link_weight += G[node][nbr]['nr_links']
+            visited.add(node)
+        good_link_weight = good_link_weight
+        bad_link_weight = bad_link_weight
+        try:
+            score = good_link_weight / float(bad_link_weight)
+        except ZeroDivisionError:
+            score = good_link_weight
 
-        for node in path:
-            if node[0] == prev_node[0]:
-                #TODO: eventually calculate if global optima here. We then need a hash table good_e ={node:[tot_edge = set(nbr1,nbr2..), bad_edge = set(nbr3,..)]}
-                for nbr in G.neighbors(node):
-                    if nbr in good_edges and not nbr[0] == node[0]:
-                        good_edges_count += 1
+        return score, bad_link_weight
+
+
+    def calculate_connectivity_contamination(path, G):
+        """
+            Contig ends has even or odd numbered placements (index) in the path list. In case
+            of contamination, good links are between an even to an odd indexed contig-end, or vice versa.
+
+        """
+        bad_link_weight = 0
+        good_link_weight = 0
+        links_not_in_path = 0
+        links_wrong_orientation_in_path = 0
+        even, odd = path[::2], path[1::2]
+        nodes_even = set(even)
+        nodes_odd = set(odd)
+        for i, node in enumerate(path):
+            for nbr in G.neighbors(node):
+                if i % 2 == 0 and node[0] != nbr[0]:
+                    if nbr in nodes_odd:
                         good_link_weight += G[node][nbr]['nr_links']
-                        link_weights[node[0]]['good'] += G[node][nbr]['nr_links']
-                        good_edges_already_considered.add((nbr, node))
-                        good_edges_already_considered.add((node, nbr))
-                    elif not nbr[0] == node[0] and (nbr, node) not in bad_edges_already_considered:
-                        bad_edges_count += 1
+                    else:
                         bad_link_weight += G[node][nbr]['nr_links']
-                        link_weights[node[0]]['bad'] += G[node][nbr]['nr_links']
-                        bad_edges_already_considered.add((nbr, node))
-                        bad_edges_already_considered.add((node, nbr))
-            else:
-                good_edges.remove(node)
-                for nbr in G.neighbors(node):
-                    if (nbr, node) not in good_edges_already_considered and not nbr[0] == node[0] and (nbr, node) not in bad_edges_already_considered:
-                        bad_edges_count += 1
+                elif i % 2 == 1 and node[0] != nbr[0]:
+                    if nbr in nodes_even:
+                        good_link_weight += G[node][nbr]['nr_links']
+                    else:
                         bad_link_weight += G[node][nbr]['nr_links']
-                        link_weights[node[0]]['bad'] += G[node][nbr]['nr_links']
-                        bad_edges_already_considered.add((nbr, node))
-                        bad_edges_already_considered.add((node, nbr))
-                    elif (nbr, node) in good_edges_already_considered:
-                        link_weights[node[0]]['good'] += G[node][nbr]['nr_links']
-            prev_node = node
+        good_link_weight = good_link_weight/2
+        bad_link_weight = bad_link_weight
+
+        # ###############
 
 
         try:
@@ -80,13 +109,17 @@ def ScorePaths(G, paths, all_paths, param):
         return score, bad_link_weight
 
 
-
     #print '\nSTARTING scoring paths:'
     for path_ in paths:
         path = path_[0]
         path_len = path_[1]
         #calculate spanning score s_ci
-        score, bad_link_weight = CalculateConnectivity(path, G)
+        if param.contamination_ratio:
+            score, bad_link_weight = calculate_connectivity_contamination(path, G)
+        else:
+            score, bad_link_weight = calculate_connectivity(path, G)
+
+
         if param.no_score and score >= param.score_cutoff:
             all_paths.append([score, bad_link_weight, path, path_len])
             #Insert_path(all_paths, score, path , bad_link_weight, path_len)

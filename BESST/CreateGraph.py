@@ -655,7 +655,7 @@ def CalculateMeanCoverage(Contigs, Information, param):
     #sorted as longest first
     list_of_cont_tuples = sorted(list_of_cont_tuples, key=lambda tuple: tuple[0], reverse=True)
     #coverages of longest contigs
-    longest_contigs = list_of_cont_tuples[:1000]
+    longest_contigs = list_of_cont_tuples[:50000]
     cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs]
     #Calculate mean coverage from the 1000 longest contigs
     n = float(len(cov_of_longest_contigs))
@@ -709,11 +709,13 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
     count_hapl = 0
     nr_of_contigs = len(Contigs)
     k = normal.MaxObsDistr(nr_of_contigs, 0.95)
-    repeat_thresh = max(mean_cov + k * std_dev, 2 * mean_cov - std_dev)
+    repeat_thresh = max(mean_cov + k * std_dev, 2 * mean_cov - 3*std_dev)
     if cov_cutoff:
         repeat_thresh = cov_cutoff
     print >> Information, 'Detecting repeats..'
+    plot_cov_list = []
     for contig in Contigs:
+        plot_cov_list.append(Contigs[contig].coverage)
         if Contigs[contig].coverage > repeat_thresh:
             count_repeats += 1
             cont_obj_ref = Contigs[contig]
@@ -732,6 +734,7 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
 
 #    if param.extend_paths:
     for contig in small_contigs:
+        plot_cov_list.append(small_contigs[contig].coverage)
         if small_contigs[contig].coverage > repeat_thresh:
             count_repeats += 1
             cont_obj_ref = small_contigs[contig]
@@ -746,8 +749,13 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
             small_contigs[contig].is_haplotype = True
 
 
+    if param.plots:
+        plotting_ = filter(lambda x: x < 55 , plot_cov_list)
+        plots.histogram(plotting_, param, bins=100, x_label='coverage' , y_label='frequency' , title='contigs_coverage' + param.bamfile.split('/')[-1])
+
     GO.PrintOutRepeats(Repeats, Contigs, param.output_directory, small_contigs)
-    print >> Information, 'Removed a total of: ', count_repeats, ' repeats.'
+    print >> Information, 'Removed a total of: ', count_repeats, ' repeats. With coverage larger than ', repeat_thresh
+    #sys.exit()
     if param.detect_haplotype:
         print >> Information, 'Marked a total of: ', count_hapl, ' potential haplotypes.'
     return(Contigs, Scaffolds, G)

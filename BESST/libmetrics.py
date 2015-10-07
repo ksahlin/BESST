@@ -5,6 +5,7 @@ Created on Mar 7, 2013
 '''
 
 import sys
+import math
 
 from heapq import nlargest
 
@@ -121,8 +122,31 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     bam_file.reset()
     return n_contamine
 
+def getdistr(ins_size_reads, cont_lengths_list):
+    largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
+    print largest_contigs
+    #sorted_lengths = sorted(cont_lengths_list)
+    min_ctg_length = min(largest_contigs)
+    max_isize = max(ins_size_reads)
+    adjusted_distribution = [0]*int(max_isize+1)
+    sum_ctgs = sum(largest_contigs)
+    nr_ctgs = len(largest_contigs)
+    print min_ctg_length, max_isize
+    if min_ctg_length >= max_isize:
+        for o in ins_size_reads:
+            obs = int(o)
+            w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
+            adjusted_distribution[obs] += 1/w
+    tot_density = float(sum(adjusted_distribution))
+    mu_adj = sum(map(lambda (i, f_x): i*f_x, enumerate(adjusted_distribution)))/tot_density
+    sigma_adj = math.sqrt(sum(map(lambda (i, f_x): (i-mu_adj)**2 * f_x, enumerate(adjusted_distribution))) / tot_density)
+    m_3 = sum(map(lambda (i, f_x): (i-mu_adj)**3 * f_x, enumerate(adjusted_distribution))) / tot_density
 
+    # m_3 = sum(map(lambda x: (x - mean_isize) ** 3, ins_size_reads))/n
+    skew_adj = m_3 / sigma_adj**3
 
+    print mu_adj, sigma_adj, skew_adj
+    return adjusted_distribution, mu_adj, sigma_adj, skew_adj
 #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
 
 def get_metrics(bam_file, param, Information):
@@ -235,6 +259,40 @@ def get_metrics(bam_file, param, Information):
 
         param.mean_ins_size = mean_isize
         param.std_dev_ins_size = std_dev_isize
+
+        m_3 = sum(map(lambda x: (x - mean_isize) ** 3, ins_size_reads))/n
+        skewness = m_3 / std_dev_isize**3
+        param.skewness = skewness
+        print >> Information, 'Skewness of distribution: ', param.skewness
+
+        # weight each observation with how likely it is to see it
+        adj_distr, mu_adj, sigma_adj, skew_adj = getdistr(ins_size_reads, cont_lengths_list)
+        param.skew_adj = skew_adj
+        print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
+        print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
+        print >> Information, 'Skewness of getdistr adjusted distribution: ', skew_adj
+
+        #### NOTE: Fitting lognormal of original sample, not getdistr adjusted
+        #### because I don't know how yet. If the two distributions are not too unsimilar
+        #### it should be a good approximation in practice
+        median = sorted(ins_size_reads)[len(ins_size_reads)/2]
+        mode = mean_isize - 3*(mean_isize - median)
+        print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode
+        print >> Information, "Median on initial sample (not getdistr adjusted)", median
+        print "mode:", mode
+        print "median", median
+        param.lognormal_mean = math.log(median)
+        param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode))
+        print >> Information, 'Lognormal mean (not getdistr adjusted): ', param.lognormal_mean
+        print >> Information, "Lognormal stddev (not getdistr adjusted)", param.lognormal_sigma
+
+        # stddev_fit = (sum(map(lambda x: (x - mode)**2 , ins_size_reads))/n)**0.5
+        # print stddev_fit
+        
+        # import matplotlib.pyplot as plt
+        # plt.hist(ins_size_reads,100)
+        # plt.savefig("/Users/ksahlin/_tmp/BESST_ILP/ARABI_27_statistical_score_no_paths/isize_plot")
+        #sys.exit()
     else:
         total_reads_iterated_through = None
 
