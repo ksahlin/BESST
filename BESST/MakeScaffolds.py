@@ -31,6 +31,7 @@ import multiprocessing
 import Contig, Scaffold, Parameter
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est as GC
+import mathstats.log_normal_param_est as lnpe
 from mathstats.normaldist import normal
 import ExtendLargeScaffolds as ELS
 import haplotypes as HR
@@ -90,7 +91,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
         print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
         PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
         print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
-        print >> Information, 'Number of gaps estimated by GapEst-LP module pathgaps in this step is: {0}'.format(param.path_gaps_estimated)
+        print >> Information, 'Number of gaps estimated by GapEst-LP module order_contigs in this step is: {0}'.format(param.path_gaps_estimated)
 
     if param.plots:
         if len(param.gap_estimations) > 0:
@@ -414,48 +415,53 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
         else:
             if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
                 #calculate gap to next scaffold
-                sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
-                nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
-                data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
-                mean_obs = sum_obs / float(nr_links)
-                #try:
-                c1_len = Scaffolds[scaf].s_length
-                #except KeyError:
-                #    c1_len=small_scaffolds[scaf].s_length
-                #try:
-                c2_len = Scaffolds[nbr_scaf].s_length
-                #except KeyError:
-                #   c2_len=small_scaffolds[nbr_scaf].s_length
-                #do fancy gap estimation by the bias estimator formula
-                if param.std_dev_ins_size and nr_links >= 5:
-                    #pre calculated value in lookup table 
-                    if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
-                        #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
-                        try:
-                            avg_gap = dValuesTable[int(round(data_observation, 0))]
-                        except KeyError:
+
+                if param.lognormal:
+                    samples = G[(scaf, side)][(nbr_scaf, nbr_side)]['observations']
+                    avg_gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, c1_len1, c2_len=c2_len)
+                else:
+
+                    sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
+                    nr_links = G[(scaf, side)][(nbr_scaf, nbr_side)]['nr_links']
+                    data_observation = (nr_links * param.mean_ins_size - sum_obs) / float(nr_links)
+                    mean_obs = sum_obs / float(nr_links)
+                    #try:
+                    c1_len = Scaffolds[scaf].s_length
+                    #except KeyError:
+                    #    c1_len=small_scaffolds[scaf].s_length
+                    #try:
+                    c2_len = Scaffolds[nbr_scaf].s_length
+                    #except KeyError:
+                    #   c2_len=small_scaffolds[nbr_scaf].s_length
+                    #do fancy gap estimation by the bias estimator formula
+                    if param.std_dev_ins_size and nr_links >= 5:
+                        #pre calculated value in lookup table 
+                        if c1_len > param.mean_ins_size + 4 * param.std_dev_ins_size and c2_len > param.mean_ins_size + 4 * param.std_dev_ins_size:
+                            #(heuristic scale down of table to gaps of at most 2 stddevs away from mean)
+                            try:
+                                avg_gap = dValuesTable[int(round(data_observation, 0))]
+                            except KeyError:
+                                avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                                #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
+                        #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
+                        elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
                             avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
-                            #print 'Gap estimate was outside the boundary of the precalculated table, obs were: ', data_observation, 'binary search gave: ', avg_gap
-                    #Do binary search for ML estimate of gap if contigs is larger than 3 times the std_dev
-                    elif c1_len > param.std_dev_ins_size + param.read_len and c2_len > param.std_dev_ins_size + param.read_len:
-                        avg_gap = GC.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_obs, c1_len, c2_len)
+                        else:
+                            #print 'now', 2 * param.std_dev_ins_size + param.read_len
+                            avg_gap = int(data_observation)
+                            param.gap_estimations.append( avg_gap )
+                        #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
+                        #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
+                        #contigs contained in other contigs
+                    #do naive gap estimation
                     else:
-                        #print 'now', 2 * param.std_dev_ins_size + param.read_len
                         avg_gap = int(data_observation)
                         param.gap_estimations.append( avg_gap )
-                    #print 'Gapest if used:' + str(int(avg_gap)), 'Naive: ' + str(int(data_observation)), c1_len, c2_len, Scaffolds[scaf].contigs[0].name, Scaffolds[nbr_scaf].contigs[0].name
-                    #See if the two contigs are in fact negatively overlapped in the delta file, , then abyss produses
-                    #contigs contained in other contigs
-                #do naive gap estimation
-                else:
-                    avg_gap = int(data_observation)
-                    param.gap_estimations.append( avg_gap )
             else:
                 avg_gap = G[(scaf, side)][(nbr_scaf, nbr_side)]['avg_gap']
                 param.gap_estimations.append( avg_gap )
 
             if avg_gap <= 1:
-                #TODO: Eventually implement SW algm to find ML overlap
                 avg_gap = 1
 
             pos += int(avg_gap)
@@ -735,7 +741,7 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
 
     if moved_forward and shifted:
         is_PE_link = 1
-        mean_obs, nr_obs, stddev_obs = index_observations[(index_moved_forward, index_shifted, is_PE_link)]
+        mean_obs, nr_obs, stddev_obs, list_of_obs = index_observations[(index_moved_forward, index_shifted, is_PE_link)]
         mean_PE_obs = ctg_lengths_index_ordered[index_moved_forward] + ctg_lengths_index_ordered[index_shifted] - mean_obs + 2*param.read_len
         if mean_PE_obs > param.contamination_mean + 6 * param.contamination_stddev:
             #print 'permuted link invalid. Continuing..'
@@ -1125,7 +1131,8 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
             std_dev_obs = ((sub_graph[c1][c2]['obs_sq'] - n * mean_obs ** 2) / (n - 1)) ** 0.5
         else:
             std_dev_obs = 0
-        observations[(c1, c2)] = (mean_obs, n, std_dev_obs)
+        obs_list = sub_graph[c1][c2]['observations']
+        observations[(c1, c2)] = (mean_obs, n, std_dev_obs, obs_list)
 
     # for c1,c2 in observations:
     #     if (other_end(c2),other_end(c1)) in observations:
@@ -1337,7 +1344,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
     for c1,c2,gap in path_dict:
         if (c2,'L') in G_[(c1,'L')]:
-            G_[(c1,'L')][(c2,'L')]['avg_gap'] = gap 
+            G_[(c1,'L')][(c2,'L')]['avg_gap'] = gap
         elif (c2,'R') in G_[(c1,'L')]:
             G_[(c1,'L')][(c2,'R')]['avg_gap'] = gap
         elif (c2,'L') in G_[(c1,'R')]:

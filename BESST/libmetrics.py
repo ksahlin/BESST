@@ -124,19 +124,49 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
 
 def getdistr(ins_size_reads, cont_lengths_list):
     largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
-    print largest_contigs
+    #print largest_contigs
     #sorted_lengths = sorted(cont_lengths_list)
     min_ctg_length = min(largest_contigs)
     max_isize = max(ins_size_reads)
     adjusted_distribution = [0]*int(max_isize+1)
-    sum_ctgs = sum(largest_contigs)
-    nr_ctgs = len(largest_contigs)
-    print min_ctg_length, max_isize
-    if min_ctg_length >= max_isize:
-        for o in ins_size_reads:
-            obs = int(o)
-            w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
-            adjusted_distribution[obs] += 1/w
+    ## Make hasmap of the number of contigs and their sum 
+    ## that is larger than a given isize
+    current_sum_ctgs = sum(largest_contigs)
+    current_nr_ctgs = len(largest_contigs)
+    ctgs_larger_than = [] # array indexed by isize, item is tuple is a tuple (n_ctgs, their nucleotide sum)
+
+    ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
+    current_smallest_contig = largest_contigs[0]
+    current_smallest_contig_index = 0
+
+    for isize in xrange(max_isize+1):
+        if isize <= current_smallest_contig:
+            ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
+        else:
+            current_smallest_contig_index += 1
+            while isize > largest_contigs[current_smallest_contig_index]:
+                current_smallest_contig_index += 1
+                current_nr_ctgs -= 1
+                current_sum_ctgs -= current_smallest_contig
+
+            current_smallest_contig = largest_contigs[current_smallest_contig_index]
+
+    # print min_ctg_length, max_isize
+    # print ctgs_larger_than
+
+    for o in ins_size_reads:
+        obs = int(o)
+        nr_ctgs = ctgs_larger_than[obs][0]
+        sum_ctgs = ctgs_larger_than[obs][1]
+        w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
+        adjusted_distribution[obs] += 1/w
+
+    # if min_ctg_length >= max_isize:
+    #     for o in ins_size_reads:
+    #         obs = int(o)
+    #         w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
+    #         adjusted_distribution[obs] += 1/w
+
     tot_density = float(sum(adjusted_distribution))
     mu_adj = sum(map(lambda (i, f_x): i*f_x, enumerate(adjusted_distribution)))/tot_density
     sigma_adj = math.sqrt(sum(map(lambda (i, f_x): (i-mu_adj)**2 * f_x, enumerate(adjusted_distribution))) / tot_density)
@@ -271,20 +301,30 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
         print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
         print >> Information, 'Skewness of getdistr adjusted distribution: ', skew_adj
+        print >> Information, 'Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj
+        param.mean_ins_size = mu_adj
+        param.std_dev_ins_size = sigma_adj
 
-        #### NOTE: Fitting lognormal of original sample, not getdistr adjusted
+        #### If skewness (of original - not the getdistr)is positive and larger than 0.2 
+        #### (big enough skew to have impact), we fit to the lognormal distribution 
+        #### NOTE: Fitting lognormal of original sample, not getdistr adjusted for 
+        #### smaller isizes observation bias
         #### because I don't know how yet. If the two distributions are not too unsimilar
         #### it should be a good approximation in practice
-        median = sorted(ins_size_reads)[len(ins_size_reads)/2]
-        mode = mean_isize - 3*(mean_isize - median)
-        print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode
-        print >> Information, "Median on initial sample (not getdistr adjusted)", median
-        print "mode:", mode
-        print "median", median
-        param.lognormal_mean = math.log(median)
-        param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode))
-        print >> Information, 'Lognormal mean (not getdistr adjusted): ', param.lognormal_mean
-        print >> Information, "Lognormal stddev (not getdistr adjusted)", param.lognormal_sigma
+        if param.skew_adj > 0.2:
+            median = sorted(ins_size_reads)[len(ins_size_reads)/2]
+            mode = mean_isize - 3*(mean_isize - median)
+            print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode
+            print >> Information, "Median on initial sample (not getdistr adjusted)", median
+            print "mode:", mode
+            print "median", median
+            param.lognormal_mean = math.log(median)
+            param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode))
+            print >> Information, 'Lognormal mean (not getdistr adjusted): ', param.lognormal_mean
+            print >> Information, "Lognormal stddev (not getdistr adjusted)", param.lognormal_sigma
+            param.lognormal = True
+
+        # TODO: calculate skew of contamination distribution
 
         # stddev_fit = (sum(map(lambda x: (x - mode)**2 , ins_size_reads))/n)**0.5
         # print stddev_fit
@@ -292,7 +332,6 @@ def get_metrics(bam_file, param, Information):
         # import matplotlib.pyplot as plt
         # plt.hist(ins_size_reads,100)
         # plt.savefig("/Users/ksahlin/_tmp/BESST_ILP/ARABI_27_statistical_score_no_paths/isize_plot")
-        #sys.exit()
     else:
         total_reads_iterated_through = None
 

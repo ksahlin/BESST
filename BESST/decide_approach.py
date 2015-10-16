@@ -14,10 +14,10 @@ def decide_scaffolding_procedure(Scaffolds,small_scaffolds, param):
 	lengths_long = map(lambda x: Scaffolds[x].s_length, Scaffolds)
 	lengths_short = map(lambda x: small_scaffolds[x].s_length, small_scaffolds)
 	lengths = lengths_long + lengths_short
-	N60 = NX(60,lengths)
-	if N60 < param.ins_size_threshold and param.extend_paths:
+	N50 = NX(50,lengths)
+	if N50 < param.ins_size_threshold and param.extend_paths:
 		param.no_score = True
-		param.contig_threshold = N60 - 1
+		param.contig_threshold = N50 - 1
 		sys.stdout.write('Too fragmented assembly (given the insert size of the library)\
 			for statistical scoring. Proceding with path finding.')
 	else:
