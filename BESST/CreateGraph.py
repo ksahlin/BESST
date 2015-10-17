@@ -602,6 +602,8 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'] = [obs1+obs2]
+
             if save_obs:
                 G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name] = [obs1]
                 G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name] = [obs2]
@@ -611,10 +613,14 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj1.name].append(obs1)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)][scaf_obj2.name].append(obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'].append(obs1+obs2)
+
         else:
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['nr_links'] += 1
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
+            G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'].append(obs1+obs2)
+
 
     else:
         counter.reads_with_too_long_insert += 1

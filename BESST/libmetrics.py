@@ -127,7 +127,7 @@ def getdistr(ins_size_reads, cont_lengths_list):
     #print largest_contigs
     #sorted_lengths = sorted(cont_lengths_list)
     min_ctg_length = min(largest_contigs)
-    max_isize = max(ins_size_reads)
+    max_isize = int(max(ins_size_reads))
     adjusted_distribution = [0]*int(max_isize+1)
     ## Make hasmap of the number of contigs and their sum 
     ## that is larger than a given isize
@@ -311,7 +311,7 @@ def get_metrics(bam_file, param, Information):
         #### smaller isizes observation bias
         #### because I don't know how yet. If the two distributions are not too unsimilar
         #### it should be a good approximation in practice
-        if param.skew_adj > 0.2:
+        if param.skew_adj > 0.5:
             median = sorted(ins_size_reads)[len(ins_size_reads)/2]
             mode = mean_isize - 3*(mean_isize - median)
             print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode

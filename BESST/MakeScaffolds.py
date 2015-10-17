@@ -415,10 +415,13 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
         else:
             if  'avg_gap' not in  G[(scaf, side)][(nbr_scaf, nbr_side)]:
                 #calculate gap to next scaffold
-
+                c1_len = Scaffolds[scaf].s_length
+                c2_len = Scaffolds[nbr_scaf].s_length
                 if param.lognormal:
+                    print G[(scaf, side)][(nbr_scaf, nbr_side)]
+                    print G[(scaf, side)]
                     samples = G[(scaf, side)][(nbr_scaf, nbr_side)]['observations']
-                    avg_gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, c1_len1, c2_len=c2_len)
+                    avg_gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, c1_len, c2_len=c2_len)
                 else:
 
                     sum_obs = G[(scaf, side)][(nbr_scaf, nbr_side)]['obs']
