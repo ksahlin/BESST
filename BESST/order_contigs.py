@@ -162,7 +162,7 @@ class Path(object):
 
         for c1,c2,is_PE_link in observations:
             #nr_obs = len(observations[(c1,c2,is_PE_link)])
-            mean_obs, nr_obs, stddev_obs = observations[(c1,c2,is_PE_link)]
+            mean_obs, nr_obs, stddev_obs, list_of_obs = observations[(c1,c2,is_PE_link)]
             if is_PE_link:
                 mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len 
                 list_of_obs = [ self.ctgs[c1].length + self.ctgs[c2].length - obs + 2*param.read_len for obs in list_of_obs]
@@ -409,6 +409,8 @@ class Path(object):
                     obj_delta_stddev += abs(self.stddev - obs_stddev) * n
 
                 obj_row[ 2*g + h_index] = is_PE_link * n + (1-is_PE_link) * n
+                #obj_row[ 2*g + h_index] = is_PE_link*self.stddev*n + (1-is_PE_link)*self.contamination_stddev * n
+
                 #obj_row[ 2*g + h_index] = is_PE_link * self.stddev  * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * self.observations[(i,j,is_PE_link)][1]
                 # obj_row[ 2*g + h_index] = is_PE_link * self.stddev * (1 - self.contamination_ratio) * self.observations[(i,j,is_PE_link)][1] +  (1-is_PE_link) * self.contamination_stddev * (self.contamination_ratio)*self.observations[(i,j,is_PE_link)][1]
                 t.add_objective(obj_row)

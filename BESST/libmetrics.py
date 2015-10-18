@@ -122,6 +122,9 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     bam_file.reset()
     return n_contamine
 
+def argmax(iterable):
+    return max(enumerate(iterable), key=lambda x: x[1])[0]
+
 def getdistr(ins_size_reads, cont_lengths_list):
     largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
     #print largest_contigs
@@ -168,6 +171,15 @@ def getdistr(ins_size_reads, cont_lengths_list):
     #         adjusted_distribution[obs] += 1/w
 
     tot_density = float(sum(adjusted_distribution))
+    cum_sum = 0
+    curr_isize = 0
+    median_density = tot_density/2.0
+    while cum_sum <= median_density:
+         cum_sum += adjusted_distribution[curr_isize]
+         curr_isize +=1
+
+    median_adj = curr_isize
+    mode_adj = argmax(adjusted_distribution)
     mu_adj = sum(map(lambda (i, f_x): i*f_x, enumerate(adjusted_distribution)))/tot_density
     sigma_adj = math.sqrt(sum(map(lambda (i, f_x): (i-mu_adj)**2 * f_x, enumerate(adjusted_distribution))) / tot_density)
     m_3 = sum(map(lambda (i, f_x): (i-mu_adj)**3 * f_x, enumerate(adjusted_distribution))) / tot_density
@@ -176,7 +188,7 @@ def getdistr(ins_size_reads, cont_lengths_list):
     skew_adj = m_3 / sigma_adj**3
 
     print mu_adj, sigma_adj, skew_adj
-    return adjusted_distribution, mu_adj, sigma_adj, skew_adj
+    return adjusted_distribution, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj
 #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
 
 def get_metrics(bam_file, param, Information):
@@ -296,33 +308,51 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Skewness of distribution: ', param.skewness
 
         # weight each observation with how likely it is to see it
-        adj_distr, mu_adj, sigma_adj, skew_adj = getdistr(ins_size_reads, cont_lengths_list)
+        adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list)
         param.skew_adj = skew_adj
         print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
         print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
         print >> Information, 'Skewness of getdistr adjusted distribution: ', skew_adj
+        print >> Information, 'Median of getdistr adjusted distribution: ', median_adj
+        print >> Information, 'Mode of getdistr adjusted distribution: ', mode_adj
         print >> Information, 'Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj
         param.mean_ins_size = mu_adj
         param.std_dev_ins_size = sigma_adj
 
-        #### If skewness (of original - not the getdistr)is positive and larger than 0.2 
+        #### If skewness (of original - not the getdistr)is positive and larger than 0.5 
         #### (big enough skew to have impact), we fit to the lognormal distribution 
-        #### NOTE: Fitting lognormal of original sample, not getdistr adjusted for 
-        #### smaller isizes observation bias
-        #### because I don't know how yet. If the two distributions are not too unsimilar
-        #### it should be a good approximation in practice
         if param.skew_adj > 0.5:
-            median = sorted(ins_size_reads)[len(ins_size_reads)/2]
-            mode = mean_isize - 3*(mean_isize - median)
-            print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode
-            print >> Information, "Median on initial sample (not getdistr adjusted)", median
-            print "mode:", mode
-            print "median", median
-            param.lognormal_mean = math.log(median)
-            param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode))
-            print >> Information, 'Lognormal mean (not getdistr adjusted): ', param.lognormal_mean
-            print >> Information, "Lognormal stddev (not getdistr adjusted)", param.lognormal_sigma
+
+            ###################################################
+            #### NOTE: Fitting lognormal of original sample, not getdistr adjusted for 
+            #### smaller isizes observation bias
+            #### because I don't know how yet. If the two distributions are not too unsimilar
+            #### it should be a good approximation in practice
+            # median = sorted(ins_size_reads)[len(ins_size_reads)/2]
+            # mode = mean_isize - 3*(mean_isize - median)
+            # print >> Information, 'Mode on initial sample (not getdistr adjusted): ', mode
+            # print >> Information, "Median on initial sample (not getdistr adjusted)", median
+            # print "mode:", mode
+            # print "median", median
+            # param.lognormal_mean = math.log(median)
+            # param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode))
+            # print >> Information, 'Lognormal mean (not getdistr adjusted): ', param.lognormal_mean
+            # print >> Information, "Lognormal stddev (not getdistr adjusted)", param.lognormal_sigma
+            #################################################
+
+            ## the statistics for the getdistr adjusted distribution
+            #mode_adj = mu_adj - 3*(mu_adj - median_adj)
+            print >> Information, 'Mode on getdistr adjusted: ', mode_adj
+            print >> Information, "Median on getdistr adjusted:", median_adj
+            print "mode adj:", mode_adj
+            print "median adj", median_adj
+            param.lognormal_mean = math.log(median_adj)
+            param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode_adj))
+            print >> Information, 'Lognormal mean getdistr adjusted: ', param.lognormal_mean
+            print >> Information, "Lognormal stddev getdistr adjusted", param.lognormal_sigma
+
             param.lognormal = True
+            #sys.exit()
 
         # TODO: calculate skew of contamination distribution
 
