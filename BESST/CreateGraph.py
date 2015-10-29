@@ -284,7 +284,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     print >> Information, 'Number of edges in G_prime  (after removing edges under -e threshold (if not specified, default is -e 3): ', len(G_prime.edges())
 
-
     if param.development:
         h = guppy.hpy()
         after_scoring = h.heap()

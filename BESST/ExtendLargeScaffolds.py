@@ -24,7 +24,7 @@ import time
 import networkx as nx
 from collections import defaultdict
 import multiprocessing as mp
-
+import heapq
 
 def ScorePaths(G, paths, all_paths, param):
     if len(paths) == 0:
@@ -129,7 +129,7 @@ def ScorePaths(G, paths, all_paths, param):
 
     return ()
 
-def find_all_paths_for_start_node(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
+def find_all_paths_for_start_node_BFS(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
     path = []
     paths = []
     if start[1] == 'L':
@@ -204,6 +204,82 @@ def find_all_paths_for_start_node(graph, start, end, already_visited, is_withing
     return paths
 
 
+def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
+    path = []
+    paths = []
+    if start[1] == 'L':
+        forbidden = set()
+        forbidden.add((start[0], 'R'))
+    else:
+        forbidden = set()
+        forbidden.add((start[0], 'L'))
+
+    #Joining within scaffolds
+    if is_withing_scaf:
+        element = end.pop()
+        end.add(element)
+        if element[1] == 'L':
+            forbidden.add((element[0], 'R'))
+        else:
+            forbidden.add((element[0], 'L'))
+
+
+    #TODO: Have length criteria that limits the path lenght due to complecity reasons. Can also identify strange
+    #links by looking how many neighbors a contig has and how mych the library actually can span
+    path_len = 0
+    heap = [(0,(start, path, path_len))]#, sum_path)]
+    #prev_node = start
+    counter = 0
+    while heap:
+        #prev_node = start
+        counter += 1
+        #if counter % 100 == 0:
+        #    print 'Potential paths:', counter, 'paths found: ', len(paths)
+        if counter > param.path_threshold or len(path) > 100:
+            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            break
+            
+        nr_links, (start, path, path_len) = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
+        try:
+            prev_node = path[-1]
+        except IndexError:
+            prev_node = start
+        path = path + [start]
+        path_len = len(path)
+        #print 'PATH', path ,'end', end 
+        if path_len > max_path_length_allowed: #All possible paths can be exponential!! need something to stop algorithm in time
+            continue
+        #if score < score_best_path: # need something to stop a bad path
+        #    continue
+        if start in already_visited or start in forbidden:
+            continue
+
+        if start in end:
+            # if (start_node, start) in nodes_present_in_path:
+            #     nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
+            # else:
+            #     nodes_present_in_path[(start_node, start)] = set(path)
+            paths.append((path, path_len))
+            continue
+
+
+        if  prev_node[0] != start[0]:
+            nr_links = 2**16 # large number to give high priority to this intra-contig edge in this two node representation
+            if start[1] == 'L' and (start[0], 'R') not in forbidden:
+                heapq.heappush(heap, (nr_links, ((start[0], 'R'), path, path_len))) #, sum_path + graph[start][(start[0], 'R')]['nr_links']))
+            elif start[1] == 'R' and (start[0], 'L') not in forbidden:
+                heapq.heappush(heap, (nr_links, ((start[0], 'L'), path, path_len)))#, sum_path + graph[start][(start[0], 'L')]['nr_links']))                
+        else:
+            for node in set(graph[start]).difference(path):
+                if node not in forbidden: # and node not in already_visited: 
+                    # try: # if last node (i.e. "end") it is not present in small_scaffolds and it should not be included in the length
+                    #     heapq.heappush(heap, (nr_links, node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
+                    # except KeyError:
+                    nr_links = graph[start][node]['nr_links']
+                    heapq.heappush(heap, (nr_links, (node, path, path_len)))
+
+    return paths
+
 
 def BetweenScaffolds(G_prime, end, iter_nodes, param):
     # here we should have a for loop looping over all start nodes. Start nodes already examined should be removed in a nice way to skip over counting
@@ -225,7 +301,11 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         if cnter % 100 == 0:
             print 'enter Betwween scaf node: ', cnter
         end.difference_update(set([start_node]))
-        paths = find_all_paths_for_start_node(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+        if param.bfs_traversal:
+            paths = find_all_paths_for_start_node_BFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+        else:
+            paths = find_all_paths_for_start_node_DFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+
         already_visited.add(start_node)
         ScorePaths(G_prime, paths, all_paths, param)
         cnter += 1
@@ -241,7 +321,11 @@ def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_lengt
     end.add(end_node)
     all_paths = []
     already_visited.difference_update(set([start, end_node]))
-    paths = find_all_paths_for_start_node(G_prime, start, end, already_visited, 1, max_path_length, param)
+    if param.bfs_traversal:
+        paths = find_all_paths_for_start_node_BFS(G_prime, start, end, already_visited, 1, max_path_length, param)
+    else:
+        paths = find_all_paths_for_start_node_DFS(G_prime, start, end, already_visited, 1, max_path_length, param)
+
     already_visited.add(start)
     already_visited.add(end_node)
     #print paths

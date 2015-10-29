@@ -91,6 +91,7 @@ def main(options):
     param.max_extensions = options.max_extensions
     param.NO_ILP = options.NO_ILP
     param.FASTER_ILP = options.FASTER_ILP
+    param.bfs_traversal = options.bfs_traversal
     param.print_scores = options.print_scores
     param.min_mapq = options.min_mapq
 
@@ -301,6 +302,10 @@ parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, defau
 
 parameters.add_argument("--max_extensions", dest="max_extensions", type=int,
                   help="Maximum number of (large) scaffolds to search for paths extensions with. ")
+
+other.add_argument("--bfs_traversal", dest="bfs_traversal", action="store_true",
+                help="Choose a breadth first search in the contig graph. Default is using the extenstion with the most \
+                links to investigate first (Sort of depth first-ish)",)
 
 
 ## related to scaffolding high heterozygozity assemblies with lots of split haplotype contigs

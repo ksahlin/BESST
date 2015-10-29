@@ -270,7 +270,7 @@ class Path(object):
     def make_path_dict_for_besst(self):
         path_dict = {}
         for ctg1,ctg2 in zip(self.ctgs[:-1],self.ctgs[1:]):
-            path_dict[(ctg1,ctg2)] = ctg2.position - (ctg1.position + ctg1.length) - 1 
+            path_dict[(ctg1,ctg2)] = ctg2.position - (ctg1.position + ctg1.length) - 1
         #print path_dict
         return path_dict
 
@@ -459,12 +459,24 @@ class Path(object):
         # also add the penalties from the observed standard deviations
         #self.objective += obj_delta_stddev
         
-        ctg_lengths = map(lambda x: x.length, self.ctgs)
-        if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
-            print 'Obj:',self.objective
-            print "of which stddev contributing:", obj_delta_stddev
+        # ctg_lengths = map(lambda x: x.length, self.ctgs)
+        # if 1359 in ctg_lengths and 673 in ctg_lengths: #len(path.gaps) >= 4:
+        #     print 'Obj:',self.objective
+        #     print "of which stddev contributing:", obj_delta_stddev
         #print "objective:",self.objective
         
+        #### Use the added accurace from the narrow contamine distribution here
+        #### to further precisely adjust the gaps in the LP solution if there is 
+        #### any pe links
+        if self.contamination_ratio:
+            for g_i in xrange(g):
+                if (g_i, g_i +1, True) in self.observations: # if it is a PE-link
+                    mean_obs = self.observations[(g_i, g_i+1, True)][0]
+                    gap_contamination = exp_means_gapest[(g_i, g_i+1, True)] - mean_obs
+                    old_gap = gap_solution[g_i]
+                    gap_solution[g_i] = gap_contamination
+                    #print " changing contamination gap from: {0} to {1}".format(old_gap, gap_contamination)
+
         return gap_solution
 
     def __str__(self):
