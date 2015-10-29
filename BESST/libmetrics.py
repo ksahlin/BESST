@@ -141,24 +141,26 @@ def getdistr(ins_size_reads, cont_lengths_list):
     ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
     current_smallest_contig = largest_contigs[0]
     current_smallest_contig_index = 0
-
-    for isize in xrange(max_isize+1):
+    upper_isize = min(max_isize+1, largest_contigs[-1])
+    for isize in xrange(upper_isize):
         if isize <= current_smallest_contig:
             ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
         else:
-            current_smallest_contig_index += 1
+            #current_smallest_contig_index += 1
             while isize > largest_contigs[current_smallest_contig_index]:
                 current_smallest_contig_index += 1
                 current_nr_ctgs -= 1
                 current_sum_ctgs -= current_smallest_contig
 
+            ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
             current_smallest_contig = largest_contigs[current_smallest_contig_index]
 
     # print min_ctg_length, max_isize
     # print ctgs_larger_than
-
     for o in ins_size_reads:
         obs = int(o)
+        if obs > upper_isize:
+            continue
         nr_ctgs = ctgs_larger_than[obs][0]
         sum_ctgs = ctgs_larger_than[obs][1]
         w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
@@ -318,6 +320,7 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj
         param.mean_ins_size = mu_adj
         param.std_dev_ins_size = sigma_adj
+        param.lognormal = False #default as False, but cna change below dependant on skew
 
         #### If skewness (of original - not the getdistr)is positive and larger than 0.5 
         #### (big enough skew to have impact), we fit to the lognormal distribution 

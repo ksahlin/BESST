@@ -92,6 +92,7 @@ def main(options):
     param.NO_ILP = options.NO_ILP
     param.FASTER_ILP = options.FASTER_ILP
     param.print_scores = options.print_scores
+    param.min_mapq = options.min_mapq
 
     if args.devel:
         h = guppy.hpy()
@@ -287,6 +288,9 @@ parameters.add_argument("-filter_contigs", dest="contig_filter_length", type=int
                     help="Contigs under this size is discarded from all scaffolding (including pathfinding).\
                     they are also not included in the resulting scaffold output fasta file and any\
                     of the other files as well as all statistics. Default: All contigs are included")
+
+parameters.add_argument("--min_mapq", dest="min_mapq", type=int, default=11,
+                      help="Lowest mapping quality allowed in order to use the read pair (both reads needs to have equal or bigger mapq than this value). This value is compared to the mapping quality column in the BAM file. ")
 
 
 parameters.add_argument("--iter", dest="path_threshold", type=int, default=100000,

@@ -160,7 +160,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
 
-        if contig1 != contig2 and alignedread.is_read2 and not alignedread.is_unmapped and alignedread.mapq > 10:
+        if contig1 != contig2 and alignedread.is_read2 and not alignedread.is_unmapped and alignedread.mapq >= param.min_mapq:
             if contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
                 cont_obj1 = Contigs[contig1]
                 cont_obj2 = Contigs[contig2]
@@ -209,6 +209,9 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count
     print >> Information, 'Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique
     print >> Information, 'Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert
+    print >> Information, 'Initial number of edges in G (the graph with large contigs): ', len(G.edges())
+    print >> Information, 'Initial number of edges in G_prime (the full graph of all contigs before removal of repats): ', len(G_prime.edges())
+    
     if param.detect_duplicate:
         print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
 
@@ -248,10 +251,14 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if param.first_lib:
         Contigs, Scaffolds, G = RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
+    print >> Information, 'Number of edges in G (after repeat removel): ', len(G.edges())
+    print >> Information, 'Number of edges in G_prime (after repeat removel): ', len(G_prime.edges())
 
     ### Remove edges created by false reporting of BWA ###
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
+    print >> Information, 'Number of edges in G (after filtering for buggy flag stats reporting): ', len(G.edges())
+    print >> Information, 'Number of edges in G_prime  (after filtering for buggy flag stats reporting): ', len(G_prime.edges())
 
     if param.development:
         h = guppy.hpy()
@@ -275,6 +282,9 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 cntr_sp += 1
     print >> Information, 'Number of fishy edges in G_prime', cntr_sp
 
+    print >> Information, 'Number of edges in G_prime  (after removing edges under -e threshold (if not specified, default is -e 3): ', len(G_prime.edges())
+
+
     if param.development:
         h = guppy.hpy()
         after_scoring = h.heap()
@@ -293,7 +303,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
     if param.print_scores:
         score_file = open(os.path.join(param.output_directory,"score_file_pass_{0}.tsv".format(param.pass_number)), "w")
-        print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format("scf1/ctg1","scf2/ctg2" ,"gap", "link_variation_score", "link_dispersity_score", "number_of_links")
+        print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format("scf1/ctg1", "o1", "scf2/ctg2", "o2", "gap", "link_variation_score", "link_dispersity_score", "number_of_links")
 
     for edge in G.edges():
         mean_ = 0
@@ -394,21 +404,32 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 if edge[0][1] == 'R':
                     contig_objects = Scaffolds[edge[0][0]].contigs
                     contig_names = map(lambda x: x.name, contig_objects)
-                    scf1 =";".join(contig_names)
+                    scf1 = ";".join(contig_names)
+                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
+                    contig_directions1 = ";".join(map(lambda x: '+' if True else '-', contig_directions_bool))
+
                 else:
                     contig_objects = Scaffolds[edge[0][0]].contigs[::-1]
                     contig_names = map(lambda x: x.name, contig_objects)
                     scf1 =";".join(contig_names)
+                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
+                    contig_directions1 = ";".join(map(lambda x: '+' if False else '-', contig_directions_bool))
+
                 if edge[1][1] == 'L':
                     contig_objects = Scaffolds[edge[1][0]].contigs
                     contig_names = map(lambda x: x.name, contig_objects)
                     scf2 =";".join(contig_names)
+                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
+                    contig_directions2 = ";".join(map(lambda x: '+' if True else '-', contig_directions_bool))
+
                 else:
                     contig_objects = Scaffolds[edge[1][0]].contigs[::-1]
                     contig_names = map(lambda x: x.name, contig_objects)
                     scf2 =";".join(contig_names)
+                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
+                    contig_directions2 = ";".join(map(lambda x: '+' if False else '-', contig_directions_bool))
 
-                print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(scf1, scf2, gap, std_dev_score, span_score, n_obs)
+                print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format(scf1, contig_directions1, scf2, contig_directions2, gap, std_dev_score, span_score, n_obs)
 
     if param.print_scores:
         score_file.close()
