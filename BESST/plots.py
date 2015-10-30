@@ -26,11 +26,11 @@ def histogram(x_, param, bins=20, x_label='x', y_label='y', title='Histogram',nr
     plt.clf()
     return()
 
-def dot_plot(x_, y_, param, x_label='x', y_label='y', title='Dotplot'):
+def dot_plot(x_, y_, param, x_label='x', y_label='y', title='Dotplot', set_marker='o'):
     x = x_[:10000] # If many contigs/edges we only plot 10 000 for time and visuability purposes
     y = y_[:10000] # If many contigs/edges we only plot 10 000 for time and visuability purposes
     dest = os.path.join(param.output_directory, 'plots', title + '.png')
-    plt.scatter(x, y, marker='o')
+    plt.scatter(x, y, marker=set_marker)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.title(title)

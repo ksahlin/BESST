@@ -12,7 +12,7 @@ from heapq import nlargest
 from mathstats.normaldist.normal import MaxObsDistr
 from BESST import bam_parser
 from BESST import find_bimodality
-
+from BESST import plots
 
 def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
     k = MaxObsDistr(len(insert_list), 0.95)
@@ -125,10 +125,16 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
 def argmax(iterable):
     return max(enumerate(iterable), key=lambda x: x[1])[0]
 
-def getdistr(ins_size_reads, cont_lengths_list):
+def sum_chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in xrange(0, len(l), n):
+        yield sum(l[i:i+n])
+
+def getdistr(ins_size_reads, cont_lengths_list, param):
     largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
     #print largest_contigs
     #sorted_lengths = sorted(cont_lengths_list)
+
     min_ctg_length = min(largest_contigs)
     max_isize = int(max(ins_size_reads))
     adjusted_distribution = [0]*int(max_isize+1)
@@ -163,7 +169,7 @@ def getdistr(ins_size_reads, cont_lengths_list):
             continue
         nr_ctgs = ctgs_larger_than[obs][0]
         sum_ctgs = ctgs_larger_than[obs][1]
-        w = max(float(sum_ctgs - (obs-1)*nr_ctgs), 1)
+        w = float(max(sum_ctgs - (obs-1)*nr_ctgs, 10000))
         adjusted_distribution[obs] += 1/w
 
     # if min_ctg_length >= max_isize:
@@ -181,7 +187,23 @@ def getdistr(ins_size_reads, cont_lengths_list):
          curr_isize +=1
 
     median_adj = curr_isize
-    mode_adj = argmax(adjusted_distribution)
+
+    if param.plots:
+        plots.histogram(ins_size_reads, param, bins=100, x_label='fragment length', y_label='frequency', title='Frag_length_distribuion' + '.' + param.bamfile.split('/')[-1])
+        plots.dot_plot(range(len(adjusted_distribution)), adjusted_distribution, param, x_label='fragment length', y_label='frequency', title='Frag_length_distribuion_adjusted' + '.' + param.bamfile.split('/')[-1], set_marker= '.')
+
+    ## find a stable mode of the fitted distribution since our distribution is a sample.
+    ## It is not very stable just to chose the isize with the highest count
+    mode_for_different_windows = []
+    for chunk_size in range(1,102, 5):
+        adj_distr_chunked = list(sum_chunks(adjusted_distribution, chunk_size))
+        mode_adj = (argmax(adj_distr_chunked) + 0.5)*chunk_size
+        mode_for_different_windows.append(int(mode_adj))
+        print "mode for chunk size ", chunk_size, " : ", mode_adj
+    mode_adj = sorted(mode_for_different_windows)[int(len(mode_for_different_windows)/2)]
+    print "Choosing mode:", mode_adj
+
+    #mode_adj = argmax(adjusted_distribution)
     mu_adj = sum(map(lambda (i, f_x): i*f_x, enumerate(adjusted_distribution)))/tot_density
     sigma_adj = math.sqrt(sum(map(lambda (i, f_x): (i-mu_adj)**2 * f_x, enumerate(adjusted_distribution))) / tot_density)
     m_3 = sum(map(lambda (i, f_x): (i-mu_adj)**3 * f_x, enumerate(adjusted_distribution))) / tot_density
@@ -310,7 +332,7 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Skewness of distribution: ', param.skewness
 
         # weight each observation with how likely it is to see it
-        adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list)
+        adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list, param)
         param.skew_adj = skew_adj
         print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
         print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj

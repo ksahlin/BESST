@@ -203,6 +203,67 @@ def find_all_paths_for_start_node_BFS(graph, start, end, already_visited, is_wit
 
     return paths
 
+def find_all_paths_for_start_node_BFS_improved(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
+    paths = []
+    if start[1] == 'L':
+        forbidden = set()
+        forbidden.add((start[0], 'R'))
+    else:
+        forbidden = set()
+        forbidden.add((start[0], 'L'))
+
+    path = [start]
+    #Joining within scaffolds
+    if is_withing_scaf:
+        element = end.pop()
+        end.add(element)
+        if element[1] == 'L':
+            forbidden.add((element[0], 'R'))
+        else:
+            forbidden.add((element[0], 'L'))
+
+
+    #TODO: Have length criteria that limits the path lenght due to complecity reasons. Can also identify strange
+    #links by looking how many neighbors a contig has and how mych the library actually can span
+    queue = [path]#, sum_path)]
+    #prev_node = start
+    counter = 0
+    while queue:
+        counter += 1
+        if counter > param.path_threshold or len(path) > 100:
+            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            break
+            
+        path = queue.pop() 
+        prev_node = path[-1]
+
+        if len(path) > 1 and prev_node in already_visited or prev_node in forbidden:
+            continue
+
+        if len(path) > 1  and path[-2] in end:
+            path.pop()
+            paths.append(path)
+            continue
+
+
+        # if prev_node[1] == 'L' and (prev_node[0], 'R') not in forbidden:
+        #     path.append( (prev_node[0], 'R') )
+        #     #queue.append(path)
+        # elif prev_node[1] == 'R' and (prev_node[0], 'L') not in forbidden:
+        #     path.append( (prev_node[0], 'L') )
+        #     #queue.append(path)                
+
+        for node in set(graph[path[-1]]).difference(path):
+            if node not in forbidden: # and node not in already_visited: 
+                path.append(node)
+                if node[1] == 'L':
+                     path.append( (node[0], 'R') )
+                else:
+                     path.append( (node[0], 'L') )
+
+                queue.append(path)
+
+    return paths
 
 def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
     path = []
@@ -303,6 +364,13 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         end.difference_update(set([start_node]))
         if param.bfs_traversal:
             paths = find_all_paths_for_start_node_BFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+            paths2 = find_all_paths_for_start_node_BFS_improved(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+            p = map(lambda x: x[0], paths)
+            print 'NEW PATHS', paths2
+            print
+            print
+            print "OLD PATHS", p
+            assert p == paths2
         else:
             paths = find_all_paths_for_start_node_DFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
 
