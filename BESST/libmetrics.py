@@ -224,6 +224,8 @@ def get_metrics(bam_file, param, Information):
     indexes = [i for i in range(0, len(cont_lengths_list))]
     largest_contigs_indexes = set(nlargest(1000, indexes, key=lambda i: cont_lengths_list[i])) #get indexes of the 1000 longest contigs
 
+    param.lognormal = False #default as False, but cna change below dependant on skew
+
     try:
         bam_file.fetch(cont_names[0])
     except ValueError:
@@ -342,7 +344,6 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj
         param.mean_ins_size = mu_adj
         param.std_dev_ins_size = sigma_adj
-        param.lognormal = False #default as False, but cna change below dependant on skew
 
         #### If skewness (of original - not the getdistr)is positive and larger than 0.5 
         #### (big enough skew to have impact), we fit to the lognormal distribution 
