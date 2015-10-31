@@ -110,9 +110,9 @@ def ScorePaths(G, paths, all_paths, param):
 
 
     #print '\nSTARTING scoring paths:'
-    for path_ in paths:
-        path = path_[0]
-        path_len = path_[1]
+    for path in paths:
+        #path = path_[0]
+        #path_len = path_[1]
         #calculate spanning score s_ci
         if param.contamination_ratio:
             score, bad_link_weight = calculate_connectivity_contamination(path, G)
@@ -121,10 +121,10 @@ def ScorePaths(G, paths, all_paths, param):
 
 
         if param.no_score and score >= param.score_cutoff:
-            all_paths.append([score, bad_link_weight, path, path_len])
+            all_paths.append([score, bad_link_weight, path, len(path)])
             #Insert_path(all_paths, score, path , bad_link_weight, path_len)
         elif len(path) > 2 and score >= param.score_cutoff: #startnode and end node are not directly connected
-            all_paths.append([score, bad_link_weight, path, path_len])
+            all_paths.append([score, bad_link_weight, path, len(path)])
             #Insert_path(all_paths, score, path , bad_link_weight, path_len)
 
     return ()
@@ -253,15 +253,16 @@ def find_all_paths_for_start_node_BFS_improved(graph, start, end, already_visite
         #     path.append( (prev_node[0], 'L') )
         #     #queue.append(path)                
 
-        for node in set(graph[path[-1]]).difference(path):
+        for node in set(graph[prev_node]).difference(path):
             if node not in forbidden: # and node not in already_visited: 
-                path.append(node)
+                new_path = path + [node]
+                # path.append(node)
                 if node[1] == 'L':
-                     path.append( (node[0], 'R') )
+                     new_path.append( (node[0], 'R') )
                 else:
-                     path.append( (node[0], 'L') )
+                     new_path.append( (node[0], 'L') )
 
-                queue.append(path)
+                queue.append(new_path)
 
     return paths
 
@@ -287,8 +288,7 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
 
     #TODO: Have length criteria that limits the path lenght due to complecity reasons. Can also identify strange
     #links by looking how many neighbors a contig has and how mych the library actually can span
-    path_len = 0
-    heap = [(0,(start, path, path_len))]#, sum_path)]
+    heap = [(0,(start, path))]#, sum_path)]
     #prev_node = start
     counter = 0
     while heap:
@@ -300,7 +300,7 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
             print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
             break
             
-        nr_links, (start, path, path_len) = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
+        nr_links, (start, path) = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
         try:
             prev_node = path[-1]
         except IndexError:
@@ -320,16 +320,16 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
             #     nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
             # else:
             #     nodes_present_in_path[(start_node, start)] = set(path)
-            paths.append((path, path_len))
+            paths.append(path)
             continue
 
 
         if  prev_node[0] != start[0]:
             nr_links = 2**16 # large number to give high priority to this intra-contig edge in this two node representation
             if start[1] == 'L' and (start[0], 'R') not in forbidden:
-                heapq.heappush(heap, (nr_links, ((start[0], 'R'), path, path_len))) #, sum_path + graph[start][(start[0], 'R')]['nr_links']))
+                heapq.heappush(heap, (nr_links, ((start[0], 'R'), path))) #, sum_path + graph[start][(start[0], 'R')]['nr_links']))
             elif start[1] == 'R' and (start[0], 'L') not in forbidden:
-                heapq.heappush(heap, (nr_links, ((start[0], 'L'), path, path_len)))#, sum_path + graph[start][(start[0], 'L')]['nr_links']))                
+                heapq.heappush(heap, (nr_links, ((start[0], 'L'), path)))#, sum_path + graph[start][(start[0], 'L')]['nr_links']))                
         else:
             for node in set(graph[start]).difference(path):
                 if node not in forbidden: # and node not in already_visited: 
@@ -337,7 +337,7 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
                     #     heapq.heappush(heap, (nr_links, node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
                     # except KeyError:
                     nr_links = graph[start][node]['nr_links']
-                    heapq.heappush(heap, (nr_links, (node, path, path_len)))
+                    heapq.heappush(heap, (nr_links, (node, path)))
 
     return paths
 
@@ -363,14 +363,16 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
             print 'enter Betwween scaf node: ', cnter
         end.difference_update(set([start_node]))
         if param.bfs_traversal:
-            paths = find_all_paths_for_start_node_BFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
-            paths2 = find_all_paths_for_start_node_BFS_improved(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
-            p = map(lambda x: x[0], paths)
-            print 'NEW PATHS', paths2
-            print
-            print
-            print "OLD PATHS", p
-            assert p == paths2
+            #paths = find_all_paths_for_start_node_BFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+            paths = find_all_paths_for_start_node_BFS_improved(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+            #paths = map(lambda x: x[0], paths)
+            # print 'NEW PATHS', paths2
+            # print
+            # print
+            # print "OLD PATHS", p
+            #print len(paths)
+            #print len(p)
+            #assert p == paths2
         else:
             paths = find_all_paths_for_start_node_DFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
 

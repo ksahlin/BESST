@@ -1447,6 +1447,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes, param)
         elapsed = time.time() - start
         print >> Information, "Elapsed time single core pathfinder: ", elapsed
+        print "Elapsed time single core pathfinder: ", elapsed
 
     ################################################################
 
