@@ -32,7 +32,7 @@ From the MP libraries we have worked with, we usually see around 30% of each of 
 In case the MP distribution is wide and already has good short-range spanning coverge and good coverage in general, use only the links that were identified as MPs. Below is an example of such a distribution
 
 
-![Use only MPs](docs/figures/isize_wide_cont.pdf)
+![Use only MPs](docs/figures/isize_wide_cont.png)
 
 The safe approach is of course always to try both. 
 
