@@ -5,20 +5,36 @@ INSTALLATION
 ----------------
 See docs/INSTALL.md.
 
-TROUBLESHOOTING Q&A
+Q&A
 ------------------
 
-######  What aligner should I use?
+####  What aligner should I use?
 BESST requires only a sorted and indexed bamfile -- your favourite aligner can be used. However, we have had the best experience with BWA-mem using default parameters on most data used in our evaluations.
 
-######  What aligner options are good/bad?
+####  What aligner options are good/bad?
 BESST only work with uniquely aligned reads for now (under development to consider probability distribution over read placements). The uniqueness is detected in the sorted BAM file by looking at the flag. Therefore, it is NOT suitable to specify any parameter that makes the aligner output several (suboptimal) alignments of a read, and reporting the read as mapped to multiple locations. Bowtie's "-k <int>" (with int other than 1) is an example of a parameter that is not compatible with BESST. 
 
-######  My mate pair libraries contains paired-end contamination, what should i do?
-Good! BESST can handle paired-end contamination and results can even be improved it these are not removed before alignment. Removal of adapter sequence and trimming of reads (e.g. chimeric reads due to adapter in the middle of one read in the read pair are still good to do using you favourite tool (the effect of this has not been investigated). So, BESST will have better performance when scaffolding with all reads classified as mate-pairs, paired-ends and "unknown" ( definition from the trimmer [NxTrim](https://github.com/sequencing/NxTrim) ) are left in the read files. Simply leave them as they are in the original fast(a/q) files so that BESST can infer the original orientation and contamine rate from the alignments. (To see that a sound distribution and rate is estimated, see next question)
+####  My mate pair libraries contains paired-end contamination, what should i do?
+
+Firts off, always you an adaptertrimming tool. The trimming of adaprers greatly improves alignemtns as both adapters and resulting chimeric parts withing reads (sequence on different sides of each adapter) can greatly improve alignemtns and therefore scaffolding. We reccomend any tool that can separate the paired reads types into MP, PE and unknown orientation based on identifying and <em>removing</em> the adapters (we have had good experience with the tool NxTrim)
+
+###### Few adapters found -> read pairs have unknown orientation
+In case the  you cannot single out any (or only a small fraction) of mate pairs based on adapter finding, just run BESST as default. BESST identifies MP distribution, PE contamination level and distribution by alignemtns on contigs. Do not specify -m and -s in this case as BESST has a relatively advanced inference of library characteristics (some of it from theory described in [GetDistr](http://biorxiv.org/content/biorxiv/early/2015/08/04/023929.full.pdf) ).
+
+###### Significant amount of adapters found
+From the MP libraries we have worked with, we usually see around 30% of each of the three categories MP,PE and unknown and should be relatively normal (see contamination levels investigation in supplemental data in [NxTrim](http://bioinformatics.oxfordjournals.org/content/early/2015/02/05/bioinformatics.btv057/suppl/DC1)). In case you can single out approximately this amount of MPs and PEs: The paired end contamination can still help BESST scaffolding by providing short range links complimentaty to long range MP links. The usage of these information sources simultaneosly as partly described in [BESST-v2](http://www.biorxiv.org/content/early/2015/08/28/025650.abstract) improves scaffolding over the other wise stepwise approach that BESST and other stand-alone scaffolders take. We advise you to use the full <em>adapter trimmed</em> library (i.e., all MP, PE and unknown reads) together with original orientations preserved in case the distributions on the PE and MP are distinctively separated and the assembly contains enough small contigs where the short-range PE can help (say N75 < mean of MP as an approximation). See figure for an example of a clearly separated MP distribution.
+
+![Use additional PE-contamination](figures/isize_narrow_cont.png)
+
+In case the MP distribution is wide and already has good short-range spanning coverge and good coverage in general, use only the links that were identified as MPs. Below is an example of such a distribution
 
 
-######  BESST does not scaffold anything, what is going on?
+![Use only MPs](figures/isize_wide_cont.eps)
+
+The safe approach is of course always to try both. 
+
+
+####  BESST does not scaffold anything, what is going on?
 
 A lot of debugging can be done immediately in "< outputfolder >/BESST_output/Statistics.txt" file where outputfolder is specified with -o when running BESST. BESST outputs statistics of insert size distribution(s) (mate-pair and PE-contamination) as well as coverage statistics and how many read pair are used for scaffolding (for each library). Below is an example of the beginning of a file. Make sure library distribution, contamine distribution and rate looks ok, as well as coverage statistics. If this does not resolve issues or you are unsure about how to proceed, please mail **ksahlin@kth.se**.
 
