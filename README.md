@@ -27,12 +27,12 @@ In case the  you cannot single out any (or only a small fraction) of mate pairs 
 ###### Significant amount of adapters found
 From the MP libraries we have worked with, we usually see around 30% of each of the three categories MP,PE and unknown and should be relatively normal (see contamination levels investigation in supplemental data in [NxTrim](http://bioinformatics.oxfordjournals.org/content/early/2015/02/05/bioinformatics.btv057/suppl/DC1)). In case you can single out approximately this amount of MPs and PEs: The paired end contamination can still help BESST scaffolding by providing short range links complimentaty to long range MP links. The usage of these information sources simultaneosly as partly described in [BESST-v2](http://www.biorxiv.org/content/early/2015/08/28/025650.abstract) improves scaffolding over the other wise stepwise approach that BESST and other stand-alone scaffolders take. We advise you to use the full <em>adapter trimmed</em> library (i.e., all MP, PE and unknown reads) together with original orientations preserved in case the distributions on the PE and MP are distinctively separated and the assembly contains enough small contigs where the short-range PE can help (say N75 < mean of MP as an approximation). See figure for an example of a clearly separated MP distribution.
 
-![Use additional PE-contamination](figures/isize_narrow_cont.png)
+![Use additional PE-contamination](docs/figures/isize_narrow_cont.png)
 
 In case the MP distribution is wide and already has good short-range spanning coverge and good coverage in general, use only the links that were identified as MPs. Below is an example of such a distribution
 
 
-![Use only MPs](figures/isize_wide_cont.eps)
+![Use only MPs](docs/figures/isize_wide_cont.eps)
 
 The safe approach is of course always to try both. 
 
