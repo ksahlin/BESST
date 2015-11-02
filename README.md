@@ -12,20 +12,20 @@ Q&A
 ------------------
 
 ####  What aligner should I use?
-BESST requires only a sorted and indexed bamfile -- your favourite aligner can be used. However, we have had the best experience with BWA-mem using default parameters on most data used in our evaluations.
+BESST requires only a sorted and indexed BAM file -- your favourite aligner can be used. However, we have had the best experience with BWA-mem using default parameters on most data used in our evaluations.
 
 ####  What aligner options are good/bad?
 BESST only work with uniquely aligned reads for now (with the aim to extend it to consider probability distribution over multiple alignments). The uniqueness is detected in the sorted BAM file by looking at the flag. Therefore, it is NOT suitable to specify any parameter that makes the aligner output several (suboptimal) alignments of a read, and reporting the read as mapped to multiple locations. Bowtie's "-k <int>" (with int other than 1) is an example of a parameter that is not compatible with BESST. 
 
 ####  My mate pair libraries contains paired-end contamination, what should I do?
 
-First off, always use an adaptertrimming tool. The trimming of adapters greatly improves alignemtns as both adapters, and chimeric parts withing reads (result of read sequence on different sides of the adapter), can greatly improve alignments and therefore scaffolding. We recommend any tool that can separate the paired reads types into MP, PE and unknown orientation based on identifying and <em>removing</em> the adapters (we have had good experience with the tool NxTrim)
+First off, always use an adaptertrimming tool. The trimming of adapters greatly improves alignments as both adapters, and chimeric parts withing reads (result of read sequence on different sides of the adapter), can greatly improve alignments and therefore scaffolding. We recommend any tool that can separate the paired reads types into MP, PE, and unknown orientation based on identifying and <em>removing</em> the adapters (we have had good experience with the tool NxTrim)
 
 ###### Few adapters found -> read pairs have unknown orientation
 In case the  you cannot single out any (or only a small fraction) of mate pairs based on adapter finding, just run BESST as default. BESST identifies MP distribution, PE contamination level and distribution by alignemtns on contigs. Do not specify -m and -s in this case as BESST has a relatively advanced inference of library characteristics (some of it from theory described in [GetDistr](http://biorxiv.org/content/biorxiv/early/2015/08/04/023929.full.pdf) ).
 
 ###### Significant amount of adapters found
-From the MP libraries we have worked with, we usually see around 30% of each of the three categories MP,PE and unknown and should be relatively normal (see contamination levels investigation in supplemental data in [NxTrim](http://bioinformatics.oxfordjournals.org/content/early/2015/02/05/bioinformatics.btv057/suppl/DC1)). In case you can single out approximately this amount of MPs and PEs: The paired end contamination can still help BESST scaffolding by providing short range links complimentaty to long range MP links. The usage of these information sources simultaneosly as partly described in [BESST-v2](http://www.biorxiv.org/content/early/2015/08/28/025650.abstract) improves scaffolding over a stepwise approach that BESST and other stand-alone scaffolders takes in case of several separated libraries. We recommend to use the full <em>adapter trimmed</em> library i.e., all MP, PE and unknown reads together, with original orientations preserved, in case the distributions on the PE and MP are distinctively separated and the assembly contains enough small contigs where the short-range PE can help (say N75 < mean of MP as an approximation). See figure for an example of a clearly separated MP distribution. Notice that e.g. NxTrim will output all reads in fr orientation so the MPs will have to be reverse complemented back.
+From the MP libraries we have worked with, we usually see around 30% of each of the three categories MP, PE, and unknown and should be relatively normal (see contamination levels investigation in supplemental data in [NxTrim](http://bioinformatics.oxfordjournals.org/content/early/2015/02/05/bioinformatics.btv057/suppl/DC1)). In case you can single out approximately this amount of MPs and PEs: The paired end contamination can still help BESST scaffolding by providing short range links complimentaty to long range MP links. The usage of these information sources simultaneosly as partly described in [BESST-v2](http://www.biorxiv.org/content/early/2015/08/28/025650.abstract) improves scaffolding over a stepwise approach that BESST and other stand-alone scaffolders takes in case of several separated libraries. We recommend to use the full <em>adapter trimmed</em> library i.e., all MP, PE, and unknown reads together, with original orientations preserved, in case the distributions on the PE and MP are distinctively separated and the assembly contains enough small contigs where the short-range PE can help (say N75 < mean of MP as an approximation). See figure for an example of a clearly separated MP distribution. Notice that e.g. NxTrim will output all reads in fr orientation so the MPs will have to be reverse complemented back.
 
 ![Use additional PE-contamination](docs/figures/isize_narrow_cont.png)
 
@@ -97,20 +97,20 @@ NOTE:
 ----
 #### Common pitfall: ####
 
-If --orientation is not specified, BESST assumes that all libraries was aligned in fr orientation.
-(In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. --->  <---, matepairs thus need to be reverse complemented.)
+If `--orientation` is not specified, BESST assumes that all libraries was aligned in fr orientation.
+(In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. `--->  <---`, matepairs thus need to be reverse complemented.)
 
 
 #### Time and memory requirements: ####
 Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
 
-#### Bam files and mapping  ####
-BESST requires sorted and indexed bamfiles as input. Any read aligner + samtools can be used to obtain such files. Read pairs needs to be aligned in paired read mode. BESST provides a script (https://github.com/ksahlin/BESST/blob/master/scripts/reads_to_ctg_map.py) for obtaining sorted and indexed bamfiles with BWA-mem or BWA-sampe in one go. An example call for mapping with this script is
+#### BAM files and mapping  ####
+BESST requires sorted and indexed BAM files as input. Any read aligner + samtools can be used to obtain such files. Read pairs needs to be aligned in paired read mode. BESST provides a script (https://github.com/ksahlin/BESST/blob/master/scripts/reads_to_ctg_map.py) for obtaining sorted and indexed BAM files with BWA-mem or BWA-sampe in one go. An example call for mapping with this script is
 
 ```sh
 python reads_to_ctg_map.py /path/to/lib1_A.fq /path/to/lib1_A.fq /path/to/contigs.fasta --threads N
 ```
-where N is an integer specifying how many threads BWA-mem should use. --nomem can be specified to the above call to use BWA-sampe as the paired read alignment pipeline.
+where `N` is an integer specifying how many threads BWA-mem should use. `--nomem` can be specified to the above call to use BWA-sampe as the paired read alignment pipeline.
  
 INPUT:
 ------
@@ -118,7 +118,7 @@ Required arguments:
 
 * -c < path to a contig file >
 
-* -f < path to bamfiles >  (increasing order of insert size)
+* -f < path to BAM files >  (increasing order of insert size)
 
 * -o < path to location for the output >
 
@@ -141,15 +141,15 @@ The following arguments are computed internally / set by BESST. It is however go
 
 #### Library parameters: ####
 
-* -m < the means of the insert sizes of the library, one integer number for each library > (integer numbers)
+* -m <int> : the means of the insert sizes of the library, one integer number for each library.
 
-* -s < standard deviation of the libraries, one integer number for each library> (integer numbers)
+* -s <int> : standard deviation of the libraries, one integer number for each library.
  
-* -T < Thresholds that are some upper levels that you think not too many PE/MP will have a longer insert size than (in the end of the mode) > (integer numbers) 
+* -T <int> : Thresholds that are some upper levels that you think not too many PE/MP will have a longer insert size than (in the end of the mode).
 
-* -r < Mean read length for each of the libraries > (integer number) 
+* -r <int> : Mean read length for each of the libraries.
 
-* -z <ints> Coverage cutoff for repeat classification ( e.g. -z 100 says that contigs with coverages over 100 will be discarded from scaffolding). Integer numbers, one for each library) 
+* -z <int ... > Coverage cutoff for repeat classification ( e.g. -z 100 says that contigs with coverages over 100 will be discarded from scaffolding). One cutoff for each library.
 
 * -d Check for sequencing duplicates and count only one of them (when computing nr of links) if they are occurring.
 
@@ -178,26 +178,26 @@ The following arguments are computed internally / set by BESST. It is however go
 
 #### Under construction / proven unstable ####
 
-* -g < Haplotype detection function on or off > ( default = 0 (off) <0 or 1> )
+* -g [0/1] Haplotype detection function on or off. (default = 0 (off) <0 or 1>)
 
-* -a < Maximum length difference ratio for merging of haplotypic regions> (float nr)
+* -a <float> Maximum length difference ratio for merging of haplotypic regions.
  
-* -b < Nr of standard deviations over mean/2 of coverage to allow for clasification of haplotype> (integer value) 
+* -b <int> Nr of standard deviations over mean/2 of coverage to allow for clasification of haplotype
 
-* -q < optinal flag > Parallellize work load of path finder module in case of multiple processors available using multiprocessing library for pyhton.
+* -q Parallellize work load of path finder module in case of multiple processors available using multiprocessing library for pyhton.
 
 
-NOTE2:
+MORE NOTES:
 -------
 
 1. Definition of insert size: BESST assumes the following definitions: 
   * insert size = fragment length. 
   * For PE: 
-```
-   s                    t
-   ------>      <-------
-```
-from s to t, that is, insertsize = readlen1 + gap + readlen2. So when mean and/or threshold is supplied, it should be mean and threshold of this distance.
+    ```
+       s                    t
+       ------>      <-------
+    ```
+    from s to t, that is, insertsize = readlen1 + gap + readlen2. So when mean and/or threshold is supplied, it should be mean and threshold of this distance.
 
 2. Mapping reads: If you want to map a mate pair library, you will need to map them as paired end library i.e. forward-reverse mode. All read pair libraries should be in this order.
 
