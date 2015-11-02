@@ -1,7 +1,14 @@
 BESST
 ========
 
-BESST is a package for scaffolding genomic assemblies. It contains several modules for e.g. building a "contig graph" from available information, obtaining scaffolds from this graph, and accurate gap size information (based on GapEst http://www.ncbi.nlm.nih.gov/pubmed/22923455). BESST is described in http://www.biomedcentral.com/1471-2105/15/281 For installation, see docs/INSTALL.md. Manual is found in docs/MANUAL.md.
+BESST is a package for scaffolding genomic assemblies. It contains several modules for e.g. building a "contig graph" from available information, obtaining scaffolds from this graph, and accurate gap size information (based on GapEst [1]). BESST is first described in [2] and a paper describing later improvements is forthcoming.
+
+For installation, see docs/INSTALL.md. Manual is found in docs/MANUAL.md.
+
+Please cite [2] and later manuscripts when using BESST!
+
+1. Sahlin K, Street N, Lundeberg J, Arvestad L (2012) "Improved gap size estimation for scaffolding algorithms." Bioinformatics 28(17), 2215-2222 [Link](http://bioinformatics.oxfordjournals.org/content/28/17/2215.long)
+2. Sahlin K, Vezzi F, Nystedt B, Lundeberg J, Arvestad L (2014) "BESST--efficient scaffolding of large fragmented assemblies." BMC Bioinformatics 15, 281 [Link](http://www.biomedcentral.com/1471-2105/15/281)
 
 
 INSTALLATION
