@@ -5,7 +5,7 @@ BESST is a package for scaffolding genomic assemblies. It contains several modul
 
 For installation, see docs/INSTALL.md. Manual is found in docs/MANUAL.md.
 
-Please cite [2] and later manuscripts when using BESST!
+Please cite [2] and later manuscripts when using BESST! BiBTeX entries are available in the file besst.bib.
 
 1. Sahlin K, Street N, Lundeberg J, Arvestad L (2012) "Improved gap size estimation for scaffolding algorithms." Bioinformatics 28(17), 2215-2222 [Link](http://bioinformatics.oxfordjournals.org/content/28/17/2215.long)
 2. Sahlin K, Vezzi F, Nystedt B, Lundeberg J, Arvestad L (2014) "BESST--efficient scaffolding of large fragmented assemblies." BMC Bioinformatics 15, 281 [Link](http://www.biomedcentral.com/1471-2105/15/281)

@@ -1,0 +1,70 @@
+@article{Sahlin2014,
+	author = {Sahlin, K. and Vezzi, F. and Nystedt, B. and Lundeberg, J. and Arvestad, L.},
+	title = {{BESST}--efficient scaffolding of large fragmented assemblies.},
+	journal = {BMC Bioinformatics},
+	volume = {15},
+	year = {2014},
+	pages = {281},
+	pmid = {25128196},
+	doi = {10.1186/1471-2105-15-281},
+	abstract = {BACKGROUND: The use of short reads from High Throughput Sequencing
+(HTS) techniques is now commonplace in de novo assembly. Yet,
+obtaining contiguous assemblies from short reads is challenging,
+thus making scaffolding an important  step in the assembly pipeline.
+Different algorithms have been proposed but many of them use the
+number of read pairs supporting a linking of two contigs as an
+indicator of reliability. This reasoning is intuitive, but fails
+to account for variation in link count due to contig features.We
+have also noted that published  scaffolders are only evaluated
+on small datasets using output from only one assembler. Two issues
+arise from this. Firstly, some of the available tools are not
+well suited for complex genomes. Secondly, these evaluations provide
+little support for inferring a software's general performance.
+RESULTS: We propose a new algorithm, implemented in a tool called
+BESST, which can scaffold genomes of all  sizes and complexities
+and was used to scaffold the genome of P. abies (20 Gbp).  We
+performed a comprehensive comparison of BESST against the most
+popular stand-alone scaffolders on a large variety of datasets.
+Our results confirm that  some of the popular scaffolders are
+not practical to run on complex datasets. Furthermore, no single
+stand-alone scaffolder outperforms the others on all datasets.
+However, BESST fares favorably to the other tested scaffolders
+on GAGE  datasets and, moreover, outperforms the other methods
+when library insert size distribution is wide. CONCLUSION: We
+conclude from our results that information sources other than
+the quantity of links, as is commonly used, can provide useful
+information about genome structure when scaffolding.}
+}
+@article{Sahlin2012,
+	author = {Sahlin, K. and Street, N. and Lundeberg, J. and Arvestad, L.},
+	title = {Improved gap size estimation for scaffolding algorithms.},
+	journal = {Bioinformatics},
+	volume = {28},
+	number = {17},
+	year = {2012},
+	month = {Sep},
+	pages = {2215-2222},
+	pmid = {22923455},
+	doi = {10.1093/bioinformatics/bts441},
+	abstract = {MOTIVATION: One of the important steps of genome assembly is scaffolding,
+in which contigs are linked using information from read-pairs.
+Scaffolding provides  estimates about the order, relative orientation
+and distance between contigs. We  have found that contig distance
+estimates are generally strongly biased and based on false assumptions.
+Since erroneous distance estimates can mislead in subsequent analysis,
+it is important to provide unbiased estimation of contig distance.
+RESULTS: In this article, we show that state-of-the-art programs
+for scaffolding are using an incorrect model of gap size estimation.
+We discuss why current maximum likelihood estimators are biased
+and describe what different cases of bias we are facing. Furthermore,
+we provide a model for the distribution of reads that span a gap
+and derive the maximum likelihood equation for the gap length.
+We motivate why this estimate is sound and show empirically that
+it outperforms gap estimators in popular scaffolding programs.
+Our results have consequences both for scaffolding software, structural
+variation detection and for library insert-size estimation as
+is commonly performed by read aligners. AVAILABILITY: A reference
+implementation is provided at \verb+https://github.com/SciLifeLab/gapest.+
+SUPPLEMENTARY INFORMATION: Supplementary data are availible at
+Bioinformatics online.}
+}
