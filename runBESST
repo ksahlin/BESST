@@ -240,13 +240,13 @@ def main(options):
 
 
 
-parser = argparse.ArgumentParser(prog='BESST', description="BESST - scaffolder for genomic assemblies.")
+parser = argparse.ArgumentParser(prog='BESST', description="BESST - scaffolder for genomic assemblies.", epilog='''Source code and manual: http://github.com/ksahlin/BESST\n\nPlease cite:\nSahlin K, Vezzi F, Nystedt B, Lundeberg J, Arvestad L (2014) BESST--efficient scaffolding of large fragmented assemblies. BMC Bioinformatics 15, 281\n''', formatter_class=argparse.RawDescriptionHelpFormatter)
 
-required = parser.add_argument_group('required', 'Required arguments')
-libstats = parser.add_argument_group('read_library', 'Library parameters that can be set, e.g., read length, insert size mean/std_dev, coverage etc.')
-haplotypes = parser.add_argument_group('diploid', 'Options involving detection of split allele contigs in diploid assemblies.')
-parameters = parser.add_argument_group('parameters', 'Parameters/variables/threshold involved in BESST.')
-other = parser.add_argument_group('other', 'Various other parameters')
+required = parser.add_argument_group('Required arguments')
+libstats = parser.add_argument_group('Library information', 'Library parameters that can be set, e.g., read length, insert size mean/std_dev, coverage etc.')
+haplotypes = parser.add_argument_group('Ploidy', 'Options involving detection of split allele contigs in diploid assemblies.')
+parameters = parser.add_argument_group('Parameters/variables/threshold involved in BESST.')
+other = parser.add_argument_group('Various other parameters')
 group = parser.add_mutually_exclusive_group(required=False)
 
 ## required
