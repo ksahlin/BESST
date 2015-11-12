@@ -126,4 +126,10 @@ V1.3
 
 * Added merging of overlapping k-mers in contigs for final output
 
+V2.1
 
+* Ability to detect and scaffold with PE-contamination
+* More efficient (in practice) way to find paths with "good score" in contig graph.
+* Speed-ups in pathfinding algorithm
+* Better inference of gap sized when library is skewed (log-normal fitting - extending GapEst's assumptions of normal distribution)
+* Better inference of library insert size distribution on fragmented assemblies (based on theory from http://www.biorxiv.org/content/early/2015/08/04/023929.abstract)
