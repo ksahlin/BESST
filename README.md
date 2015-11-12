@@ -19,12 +19,12 @@ Q&A
 ------------------
 
 ####  What parameters should I call BESST with?
-BESST is designed to infer as much as possible from data. If this is your first time running BESST, it is highly reccomended to only run BESST as
+BESST is designed to infer as much as possible from data. If this is your first time running BESST, it is highly reccomended to run BESST with as few parameters set as possible, i.e.,
 
 ```sh
 runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam ... -o /path/to/output --orientation {fr/rf}
 ```
-For more details, see section "INPUT" further down. BESST will then infer ar much as possible from data and print everything to "/path/to/output/BESST_output/Statistics.txt". This file is useful for debugging.
+For more details, see section "INPUT" further down. BESST will then infer as much as possible from data and print inferred parameters and more to "/path/to/output/BESST_output/Statistics.txt". This file is useful for debugging.
 
 ####  What aligner should I use?
 BESST requires only a sorted and indexed BAM file -- your favourite aligner can be used. However, we have had the best experience with BWA-mem using default parameters on most data used in our evaluations.
