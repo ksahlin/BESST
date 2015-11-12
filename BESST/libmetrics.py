@@ -130,7 +130,7 @@ def sum_chunks(l, n):
     for i in xrange(0, len(l), n):
         yield sum(l[i:i+n])
 
-def getdistr(ins_size_reads, cont_lengths_list, param):
+def getdistr(ins_size_reads, cont_lengths_list, param, Information):
     largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
     #print largest_contigs
     #sorted_lengths = sorted(cont_lengths_list)
@@ -199,7 +199,7 @@ def getdistr(ins_size_reads, cont_lengths_list, param):
         adj_distr_chunked = list(sum_chunks(adjusted_distribution, chunk_size))
         mode_adj = (argmax(adj_distr_chunked) + 0.5)*chunk_size
         mode_for_different_windows.append(int(mode_adj))
-        print "mode for chunk size ", chunk_size, " : ", mode_adj
+        print >> Information, "mode for chunk size ", chunk_size, " : ", mode_adj
     mode_adj = sorted(mode_for_different_windows)[int(len(mode_for_different_windows)/2)]
     print "Choosing mode:", mode_adj
 
@@ -211,7 +211,7 @@ def getdistr(ins_size_reads, cont_lengths_list, param):
     # m_3 = sum(map(lambda x: (x - mean_isize) ** 3, ins_size_reads))/n
     skew_adj = m_3 / sigma_adj**3
 
-    print mu_adj, sigma_adj, skew_adj
+    print 'mu_adjusted:{0}, sigma_adjusted:{1}, skewness_adjusted:{2}'.format(mu_adj, sigma_adj, skew_adj)
     return adjusted_distribution, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj
 #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
 
@@ -334,7 +334,7 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Skewness of distribution: ', param.skewness
 
         # weight each observation with how likely it is to see it
-        adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list, param)
+        adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list, param, Information)
         param.skew_adj = skew_adj
         print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
         print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
