@@ -57,7 +57,8 @@ def PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs):
 def repeat_contigs_logger(Repeats, Contigs, output_dest, small_contigs, param):
     repeat_logger_file = open(output_dest + '/repeats_log.tsv', 'w')
     print >> repeat_logger_file, "contig_accession\tlength\tcoverage\tcov/mean_cov(exp number of placements)\tlib_mean\tplacable"
-    for cont_obj in Repeats:
+    repeats_sorted = sorted(Repeats, key=lambda x: x.coverage, reverse=True)
+    for cont_obj in repeats_sorted:
         placable = "Yes" if param.mean_ins_size > cont_obj.length else 'No'
         print >> repeat_logger_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, cont_obj.coverage, cont_obj.coverage/param.mean_coverage, param.mean_ins_size, placable)
 
