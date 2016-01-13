@@ -50,6 +50,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if param.first_lib:
         start_init = time()
         InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime, small_contigs, small_scaffolds, C_dict)
+
         print >> Information, 'Time initializing BESST objects: ', time() - start_init
 
     else:
@@ -58,7 +59,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_scaffolds)
         print >> Information, 'Time cleaning BESST objects for next library: ', time() - start_clean
 
-    print >> Information, 'Nr of contigs/scaffolds included in scaffolding: ' + str(len(Scaffolds)) #,Scaffolds.keys()
     if len(Scaffolds) == 0:
         if not os.path.isfile(param.output_directory + '/repeats.fa'):
             repeat_file = open(param.output_directory + '/repeats.fa', 'w')
@@ -245,11 +245,15 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     del cont_aligned_len
 
+
+
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
     if param.first_lib:
         Contigs, Scaffolds, G = RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
+        if param.lower_cov_cutoff:
+            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     print >> Information, 'Number of edges in G (after repeat removel): ', len(G.edges())
     print >> Information, 'Number of edges in G_prime (after repeat removel): ', len(G_prime.edges())
@@ -289,7 +293,42 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         after_scoring = h.heap()
         print 'After scoring:\n{0}\n'.format(after_scoring)
 
+    print >> Information, "\n -------------------------------------------------------------\n"
+    print >> Information, 'Nr of contigs/scaffolds included in this pass: ' + str(len(Scaffolds) + len(small_scaffolds))
+    print >> Information, 'Out of which {0} acts as border contigs.'.format(len(Scaffolds))
     return(G, G_prime)
+
+def filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
+    low_coverage_contigs = []
+    count_low_coverage_contigs = 0
+    print >> Information, 'Removing low coverage contigs if -z_min specified..'
+    for contig in Contigs:
+        if Contigs[contig].coverage < param.lower_cov_cutoff:
+            count_low_coverage_contigs += 1
+            cont_obj_ref = Contigs[contig]
+            low_coverage_contigs.append(cont_obj_ref)
+            scaf_ = Contigs[contig].scaffold
+            del Scaffolds[scaf_]
+            G.remove_nodes_from([(scaf_, 'L'), (scaf_, 'R')])
+            if param.extend_paths:
+                G_prime.remove_nodes_from([(scaf_, 'L'), (scaf_, 'R')])
+
+    for contig in small_contigs:
+        if small_contigs[contig].coverage <  param.lower_cov_cutoff:
+            count_low_coverage_contigs += 1
+            cont_obj_ref = small_contigs[contig]
+            low_coverage_contigs.append(cont_obj_ref)
+            scaf_ = small_contigs[contig].scaffold
+            del small_scaffolds[scaf_]
+            G_prime.remove_nodes_from([(scaf_, 'L'), (scaf_, 'R')])
+
+
+    GO.PrintOut_low_cowerage_contigs(low_coverage_contigs, Contigs, param.output_directory, small_contigs)
+    print >> Information, 'Removed a total of: ', count_low_coverage_contigs, ' low coverage contigs. With coverage lower than ', param.lower_cov_cutoff
+
+
+
+
 
 
 def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
@@ -562,8 +601,6 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
                 singeled_out += 1
     del C_dict
 
-
-    print >> Information, 'Nr of contigs that was singeled out due to length constraints ' + str(singeled_out)
     return()
 
 def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_scaffolds):
@@ -726,18 +763,17 @@ def RemoveOutliers(mean_cov, std_dev, cov_list):
         return(False, filtered_list)
 
 def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
-    param.output_directory
     mean_cov = param.mean_coverage
     std_dev = param.std_dev_coverage
-    cov_cutoff = param.cov_cutoff
     Repeats = []
     count_repeats = 0
     count_hapl = 0
     nr_of_contigs = len(Contigs)
     k = normal.MaxObsDistr(nr_of_contigs, 0.95)
-    repeat_thresh = max(mean_cov + k * std_dev, 2 * mean_cov - 3*std_dev)
-    if cov_cutoff:
-        repeat_thresh = cov_cutoff
+    if param.cov_cutoff:
+        repeat_thresh = param.cov_cutoff
+    else:
+        repeat_thresh = max(mean_cov + k * std_dev, 2 * mean_cov - 3*std_dev)
     print >> Information, 'Detecting repeats..'
     plot_cov_list = []
     for contig in Contigs:
@@ -776,9 +812,10 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
 
 
     if param.plots:
-        plotting_ = filter(lambda x: x < 55 , plot_cov_list)
+        plotting_ = filter(lambda x: x < 1000, plot_cov_list)
         plots.histogram(plotting_, param, bins=100, x_label='coverage' , y_label='frequency' , title='contigs_coverage' + param.bamfile.split('/')[-1])
 
+    GO.repeat_contigs_logger(Repeats, Contigs, param.output_directory, small_contigs, param)
     GO.PrintOutRepeats(Repeats, Contigs, param.output_directory, small_contigs)
     print >> Information, 'Removed a total of: ', count_repeats, ' repeats. With coverage larger than ', repeat_thresh
     #sys.exit()

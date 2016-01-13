@@ -54,6 +54,26 @@ def PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs):
             del small_contigs[cont_obj.name]
     return()
 
+def repeat_contigs_logger(Repeats, Contigs, output_dest, small_contigs, param):
+    repeat_logger_file = open(output_dest + '/repeats_log.tsv', 'w')
+    print >> repeat_logger_file, "contig_accession\tlength\tcoverage\tcov/mean_cov(exp number of placements)\tlib_mean\tplacable"
+    for cont_obj in Repeats:
+        placable = "Yes" if param.mean_ins_size > cont_obj.length else 'No'
+        print >> repeat_logger_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, cont_obj.coverage, cont_obj.coverage/param.mean_coverage, param.mean_ins_size, placable)
+
+def PrintOut_low_cowerage_contigs(low_coverage_contigs, Contigs, output_dest, small_contigs):
+    low_coverage_contigs_file = open(output_dest + '/low_coverage_contigs.fa', 'w')
+    for cont_obj in low_coverage_contigs:
+        print >> low_coverage_contigs_file, '>' + cont_obj.name
+        low_coverage_contig = cont_obj.sequence
+        for i in range(0, len(low_coverage_contig), 60):
+            print >> low_coverage_contigs_file, low_coverage_contig[i:i + 60]
+        try:
+            del Contigs[cont_obj.name]
+        except KeyError:
+            del small_contigs[cont_obj.name]
+    return()
+
 def ChangeToSmallContigs(Contigs, list_of_contigs, small_contigs):
     #change from Contigs to small_contige (contigs are included in scaffolds that does not meet the lenght criteria, they will be used in path extension algorithm)
     for cont_obj in list_of_contigs:
@@ -99,7 +119,7 @@ class Scaffold(object):
             return RevComp(string,rev_nuc)
 
 
-    def make_fasta_string(self,fasta_file,k_mer_overlap=200):
+    def make_fasta_string(self,fasta_file):
         fasta = []
         #fasta.append('>{0}\n'.format(self.name))
         fasta.append('>'+str(self.name)+'\n')
@@ -110,10 +130,10 @@ class Scaffold(object):
         for i in range(len(self.seqs)-1):
             gap = self.gaps[i]
             if gap <= 2*self.param.std_dev_ins_size:
-                overlap = self.check_kmer_overlap( self.get_sequence(self.seqs[i], self.directions[i])[-k_mer_overlap:], self.get_sequence(self.seqs[i+1], self.directions[i+1])[:k_mer_overlap])
+                overlap = self.check_kmer_overlap( self.get_sequence(self.seqs[i], self.directions[i])[-self.param.max_contig_overlap:], self.get_sequence(self.seqs[i+1], self.directions[i+1])[:self.param.max_contig_overlap])
                 if overlap >= 20:
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1])[overlap:])
-                    print 'merging {0} bp here'.format(overlap)
+                    print >> self.param.information_file, 'merging {0} bp here'.format(overlap)
                 else:
                     #print gap
                     if gap <= 1:

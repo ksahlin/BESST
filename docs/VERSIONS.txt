@@ -133,3 +133,9 @@ V2.1
 * Speed-ups in pathfinding algorithm
 * Better inference of gap sized when library is skewed (log-normal fitting - extending GapEst's assumptions of normal distribution)
 * Better inference of library insert size distribution on fragmented assemblies (based on theory from http://www.biorxiv.org/content/early/2015/08/04/023929.abstract)
+
+V2.2
+* Added an output file repeats_log.tsv on the following format: `contig_accession    length  coverage    cov/mean_cov(exp number of placements)  lib_mean    placable`. This file serves as som information to future repeat placement in scaffolding.
+* Added parameters `-z_min` (lower coverage cutoff), `-max_contig_overlap` how many bases in contig ends that are merged between two adjacent contigs in a created scaffold (default 200).
+* Added better logging to Statistics.txt and fixed minour logging bugs.
+

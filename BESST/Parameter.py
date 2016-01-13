@@ -41,19 +41,23 @@ class parameter(object):
                  path_gaps_estimated =0, parameter_gap_estimations = [],
                  contamination_mean=None, contamination_stddev = None, contamination_ratio=0,
                  no_score=None, orientation = None, contig_index= None,
-                 score_cutoff = None, max_extensions = None, NO_ILP=None, print_scores=None,pass_number=None):
+                 score_cutoff = None, max_extensions = None, NO_ILP=None, print_scores=None,
+                 pass_number=None, max_contig_overlap=None, lower_cov_cutoff=None):
 
 
 
         # Library information
         self.mean_ins_size = parameter_mean_ins_size
         self.std_dev_ins_size = parameter_std_dev_ins_size
+        self.lower_cov_cutoff = lower_cov_cutoff
+        self.cov_cutoff = parameter_cov_cutoff
 
         # Contig information
         self.contig_index = contig_index
         # Algorithm parameters
         self.score_cutoff = score_cutoff
         self.max_extensions = max_extensions
+        self.max_contig_overlap = max_contig_overlap
         # Assembly information
         # Algorithm information
         # Output information
@@ -68,7 +72,6 @@ class parameter(object):
         self.contig_threshold = parameter_contig_threshold
         self.scaffold_indexer = parameter_scaffold_indexer
         self.first_lib = parameter_first_lib
-        self.cov_cutoff = parameter_cov_cutoff
         self.tot_assembly_length = parameter_tot_assembly_length
         self.current_N50 = parameter_current_N50
         self.current_L50 = parameter_current_L50

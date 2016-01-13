@@ -416,6 +416,7 @@ def get_metrics(bam_file, param, Information):
     print >> Information, '-T (library insert size threshold) set to: ', param.ins_size_threshold
     print >> Information, '-k set to (Scaffolding with contigs larger than): ', param.contig_threshold
     print >> Information, 'Number of links required to create an edge: ', param.edgesupport
+    print >> Information, 'Maximum identical contig-end overlap-length to merge of contigs that are adjacent in a scaffold: ', param.max_contig_overlap
     print >> Information, 'Read length set to: ', param.read_len
     print >> Information, ''
     return()

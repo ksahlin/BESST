@@ -41,6 +41,8 @@ def ScorePaths(G, paths, all_paths, param):
         links_not_in_path = 0
         links_wrong_orientation_in_path = 0
         even, odd = path[::2], path[1::2]
+        # print path
+        # print even, odd
         nodes_even = set(even)
         nodes_odd = set(odd)
         visited = set()
@@ -161,7 +163,8 @@ def find_all_paths_for_start_node_BFS(graph, start, end, already_visited, is_wit
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
         if counter > param.path_threshold or len(path) > 100:
-            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            #print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            param.hit_path_threshold = True
             break
             
         start, path, path_len = queue.pop() #start, end, path, sum_path = queue.pop()  
@@ -231,7 +234,8 @@ def find_all_paths_for_start_node_BFS_improved(graph, start, end, already_visite
     while queue:
         counter += 1
         if counter > param.path_threshold or len(path) > 100:
-            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            #print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            param.hit_path_threshold = True
             break
             
         path = queue.pop() 
@@ -297,7 +301,8 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
         #if counter % 100 == 0:
         #    print 'Potential paths:', counter, 'paths found: ', len(paths)
         if counter > param.path_threshold or len(path) > 100:
-            print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            #print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            param.hit_path_threshold = True
             break
             
         nr_links, (start, path) = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
@@ -351,16 +356,17 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     cnter = 0
     if param.max_extensions:
         iter_threshold = param.max_extensions
-    else: 
+    else:
         iter_threshold = len(end)
 
+    param.hit_path_threshold = False
     print 'iterating until maximum of {0} extensions.'.format(iter_threshold) 
-    print 'nodes:{0}, edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
+    print 'Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
     while len(iter_nodes) > 0 and iter_count <= iter_threshold:
         iter_count += 1
         start_node = iter_nodes.pop()
         if cnter % 100 == 0:
-            print 'enter Betwween scaf node: ', cnter
+            print 'enter Betwween scaf node:{0}, scaffold progression {1}%. '.format(cnter, round( cnter / float(iter_threshold)*100, 1 ))
         end.difference_update(set([start_node]))
         if param.bfs_traversal:
             #paths = find_all_paths_for_start_node_BFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
@@ -382,7 +388,9 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     #all_paths = ExtendScaffolds(all_paths)
     #print all_paths
     print 'Total nr of paths found: {0} with score larger than: {1}'.format(len(all_paths), param.score_cutoff)
-    all_paths.sort(key=lambda list_: list_[0]) 
+    all_paths.sort(key=lambda list_: list_[0])
+    if param.hit_path_threshold:
+        print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
     #print all_paths
     return(all_paths)
 
@@ -392,7 +400,7 @@ def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_lengt
     all_paths = []
     already_visited.difference_update(set([start, end_node]))
     if param.bfs_traversal:
-        paths = find_all_paths_for_start_node_BFS(G_prime, start, end, already_visited, 1, max_path_length, param)
+        paths = find_all_paths_for_start_node_BFS_improved(G_prime, start, end, already_visited, 1, max_path_length, param)
     else:
         paths = find_all_paths_for_start_node_DFS(G_prime, start, end, already_visited, 1, max_path_length, param)
 

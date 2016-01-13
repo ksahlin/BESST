@@ -57,6 +57,8 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
 
     # for contig in cont_dict.keys():
     #     print 'Initial length:', len(cont_dict[contig])
+    print >> Information, 'Initial number of contigs: {}. '.format(len(cont_dict.keys()))
+
     if contig_filter_length:
         singled_out = 0
         for contig in cont_dict.keys():
@@ -94,7 +96,9 @@ def main(options):
     param.bfs_traversal = options.bfs_traversal
     param.print_scores = options.print_scores
     param.min_mapq = options.min_mapq
-
+    param.max_contig_overlap = options.max_contig_overlap
+    param.cov_cutoff = options.covcutoff
+    param.lower_cov_cutoff = options.lower_covcutoff
     if args.devel:
         h = guppy.hpy()
         initial = h.heap()
@@ -142,7 +146,6 @@ def main(options):
         param.output_directory = options.output
         param.std_dev_ins_size = options.stddev[i] if options.stddev != None else None
         param.contig_threshold = options.minsize[i] if options.minsize != None else None
-        param.cov_cutoff = options.covcutoff[i] if options.covcutoff != None else None
         param.hapl_ratio = options.haplratio
         param.hapl_threshold = options.haplthreshold
         param.detect_haplotype = options.haplotype
@@ -268,10 +271,13 @@ libstats.add_argument("-m", dest="mean", type=float, nargs='+',
 libstats.add_argument("-s", dest="stddev", type=float, nargs='+',
                   help="Estimated standard deviation of libraries.")
 
-libstats.add_argument("-z", dest="covcutoff", type=int, nargs='+',
+libstats.add_argument("-z", dest="covcutoff", type=int, default=None,
                   help="User specified coverage cutoff. (Manually filter \
                   out contigs with coverage over this value)")
 
+libstats.add_argument("-z_min", dest="lower_covcutoff", type=int, default=0,
+                  help="User specified coverage cutoff. (Manually filter \
+                  out contigs with coverage under this value)")
 
 ## parameters
 
@@ -279,7 +285,7 @@ parameters.add_argument("-T", dest="threshold", type=int, nargs='+',
                   help="Threshold value filter out reads that are mapped too far apart given insert size. ")
 
 parameters.add_argument("-e", dest="edgesupport", type=int, nargs='+',
-                  help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 5 ")
+                  help="Threshold value for the least nr of links that is needed to create an edge. Default for all libs: 3 ")
 
 parameters.add_argument("-k", dest="minsize", type=int, nargs='+',
                     help="Contig size threshold for the library (all contigs below this size is discarded from the \
@@ -302,11 +308,6 @@ parameters.add_argument("--score_cutoff", dest="score_cutoff", type=float, defau
 
 parameters.add_argument("--max_extensions", dest="max_extensions", type=int,
                   help="Maximum number of (large) scaffolds to search for paths extensions with. ")
-
-other.add_argument("--bfs_traversal", dest="bfs_traversal", action="store_true",
-                help="Choose a breadth first search in the contig graph. Default is using the extenstion with the most \
-                links to investigate first (Sort of depth first-ish)",)
-
 
 ## related to scaffolding high heterozygozity assemblies with lots of split haplotype contigs
 
@@ -369,8 +370,15 @@ parameters.add_argument("--FASTER_ILP", dest="FASTER_ILP", action="store_true",
 parameters.add_argument("--print_scores", dest="print_scores", action="store_true",
                   help="Print BESST scores on edges in the Scaffolding graph.")
 
+other.add_argument("--bfs_traversal", dest="bfs_traversal", action="store_true",
+                help="Choose a breadth first search in the contig graph. Default is using the extenstion with the most \
+                links to investigate first (Sort of depth first-ish)")
 
-other.add_argument('--version', action='version', version='%(prog)s 2.0.0')
+other.add_argument("-max_contig_overlap", dest="max_contig_overlap", type=int, default=200,
+                  help="BESST checks for overlapping ends in contigs that are adjacent in a scaffold. This parameter sets the maximum identical overlap to search for, default is 200. ")
+
+
+other.add_argument('--version', action='version', version='%(prog)s 2.2.0')
 
 
 
