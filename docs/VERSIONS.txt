@@ -135,6 +135,7 @@ V2.1
 * Better inference of library insert size distribution on fragmented assemblies (based on theory from http://www.biorxiv.org/content/early/2015/08/04/023929.abstract)
 
 V2.2
+* !!! An order of magnitude more efficient path traversal algorithm. It reduces the number of paths tried based on DP-ish, therefore we can explore more of the graph in less time. Both quality and speed is improved !!!
 * Added an output file repeats_log.tsv on the following format: `contig_accession    length  coverage    cov/mean_cov(exp number of placements)  lib_mean    placable`. This file serves as som information to future repeat placement in scaffolding.
 * Added parameters `-z_min` (lower coverage cutoff), `-max_contig_overlap` how many bases in contig ends that are merged between two adjacent contigs in a created scaffold (default 200).
 * Added better logging to Statistics.txt and fixed minour logging bugs.
