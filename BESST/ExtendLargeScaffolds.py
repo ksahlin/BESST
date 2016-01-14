@@ -367,7 +367,7 @@ def find_all_paths_for_start_node_BFS_Dynamic_Programming_ish(graph, start, end,
             #             queue.append((node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
             #         except KeyError:
             #             queue.append((node, path, path_len))
-    print "paths:", len(paths)
+    # print "paths:", len(paths)
     return paths
 
 
