@@ -112,6 +112,7 @@ def ScorePaths(G, paths, all_paths, param):
 
 
     #print '\nSTARTING scoring paths:'
+    #print 'scores:',
     for path in paths:
         #path = path_[0]
         #path_len = path_[1]
@@ -121,7 +122,7 @@ def ScorePaths(G, paths, all_paths, param):
         else:
             score, bad_link_weight = calculate_connectivity(path, G)
 
-
+        #print int(score),' ',
         if param.no_score and score >= param.score_cutoff:
             all_paths.append([score, bad_link_weight, path, len(path)])
             #Insert_path(all_paths, score, path , bad_link_weight, path_len)
@@ -273,6 +274,7 @@ def find_all_paths_for_start_node_BFS_improved(graph, start, end, already_visite
 def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
     path = []
     paths = []
+    max_size_heap = 0
     if start[1] == 'L':
         forbidden = set()
         forbidden.add((start[0], 'R'))
@@ -343,7 +345,142 @@ def find_all_paths_for_start_node_DFS(graph, start, end, already_visited, is_wit
                     # except KeyError:
                     nr_links = graph[start][node]['nr_links']
                     heapq.heappush(heap, (nr_links, (node, path)))
+            if len(heap) > max_size_heap:
+                max_size_heap = len(heap)
+    print "max lenght heap:", max_size_heap, "paths:", len(paths)
+    return paths
 
+def find_all_paths_for_start_node_DFS_no_contamination(graph, start, end, already_visited, is_withing_scaf, max_path_length_allowed, param):
+    path = []
+    paths = []
+    max_size_heap = 0
+    if start[1] == 'L':
+        forbidden = set()
+        forbidden.add((start[0], 'R'))
+    else:
+        forbidden = set()
+        forbidden.add((start[0], 'L'))
+
+    #Joining within scaffolds
+    if is_withing_scaf:
+        element = end.pop()
+        end.add(element)
+        if element[1] == 'L':
+            forbidden.add((element[0], 'R'))
+        else:
+            forbidden.add((element[0], 'L'))
+
+
+    #TODO: Have length criteria that limits the path lenght due to complecity reasons. Can also identify strange
+    #links by looking how many neighbors a contig has and how mych the library actually can span
+    heap = [(0,(start, path), (set([start]), set(), 0, 0))] #last tuple is: current contigs in path, and how many bad neighbours (skipped contigs hanging from contigs included in path on 3_prime end)
+    #prev_node = start
+    counter = 0
+    head_dict = {} # contains current best paths for 3_prime contigs
+    while heap:
+        #prev_node = start
+        # print head_dict
+        counter += 1
+        #if counter % 100 == 0:
+        #    print 'Potential paths:', counter, 'paths found: ', len(paths)
+        if counter > param.path_threshold or len(path) > 100:
+            #print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+            param.hit_path_threshold = True
+            break
+            
+        nr_links, (start, path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs, bad_link_count)  = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
+        # print path
+        try:
+            prev_node = path[-1]
+        except IndexError:
+            prev_node = start
+        path = path + [start]
+        path_len = len(path)
+        #print 'PATH', path ,'end', end 
+        if path_len > max_path_length_allowed: #All possible paths can be exponential!! need something to stop algorithm in time
+            continue
+        #if score < score_best_path: # need something to stop a bad path
+        #    continue
+        if start in already_visited or start in forbidden:
+            continue
+
+        if start in end:
+            # if (start_node, start) in nodes_present_in_path:
+            #     nodes_present_in_path[(start_node, start)] = nodes_present_in_path[(start_node, start)].union(path)
+            # else:
+            #     nodes_present_in_path[(start_node, start)] = set(path)
+            paths.append(path)
+            continue
+
+
+        if  prev_node[0] != start[0]:
+            nr_links = 2**16 # large number to give high priority to this intra-contig edge in this two node representation
+            if start[1] == 'L' and (start[0], 'R') not in forbidden:
+                additional_bad_nbrs = 0 
+                additional_bad_link_count = 0
+                for nbr in graph.neighbors(start):
+                    if nbr[0] != start[0] and nbr not in ctg_ends_in_path and nbr not in bad_ctgs:
+                        additional_bad_nbrs += 1
+                        additional_bad_link_count += graph[start][nbr]['nr_links']
+                        bad_ctgs.add(nbr)
+
+                if (start[0], 'R') not in head_dict:
+                    head_dict[(start[0], 'R')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
+                    # print "Here", (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count), start[0]
+                    ctg_ends_in_path.add((start[0], 'R'))
+                    heapq.heappush(heap, (nr_links, ((start[0], 'R'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
+
+                elif (start[0], 'R') in head_dict:
+                    # print 'Were in!!'
+                    # print "OK", (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count), start[0]
+                    if nr_bad_nbrs + additional_bad_nbrs > head_dict[(start[0], 'R')][0] and bad_link_count + additional_bad_link_count > head_dict[(start[0], 'R')][1]:
+                        print "Skipping path here"
+                        continue
+                    else:  
+                        # print "FINAL LEVEL"
+                        ctg_ends_in_path.add((start[0], 'R'))
+                        heapq.heappush(heap, (nr_links, ((start[0], 'R'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
+
+
+            elif start[1] == 'R' and (start[0], 'L') not in forbidden:
+                additional_bad_nbrs = 0 
+                additional_bad_link_count = 0
+                for nbr in graph.neighbors(start):
+                    if nbr[0] != start[0] and nbr not in ctg_ends_in_path and nbr not in bad_ctgs:
+                        additional_bad_nbrs += 1 
+                        additional_bad_link_count += graph[start][nbr]['nr_links']
+                        bad_ctgs.add(nbr)
+                        
+                if (start[0], 'L') not in head_dict:
+                    head_dict[(start[0], 'L')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
+                    # print "Here", (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count), start[0]
+                    ctg_ends_in_path.add((start[0], 'L'))
+                    heapq.heappush(heap, (nr_links, ((start[0], 'L'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
+
+                elif (start[0], 'L') in head_dict:
+                    # print 'Were in!!'
+                    if nr_bad_nbrs + additional_bad_nbrs > head_dict[(start[0], 'L')][0] and bad_link_count + additional_bad_link_count > head_dict[(start[0], 'L')][1]:
+                        print "Skipping path here"
+                        continue
+                    else:
+                        # print "FINAL LEVEL"
+                        ctg_ends_in_path.add((start[0], 'L'))
+                        heapq.heappush(heap, (nr_links, ((start[0], 'L'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
+
+        else:
+            for node in set(graph[start]).difference(path):
+                path_new = path + [node]
+                ctg_ends_in_path_new = set(path_new)
+                if node not in forbidden: # and node not in already_visited: 
+                    # try: # if last node (i.e. "end") it is not present in small_scaffolds and it should not be included in the length
+                    #     heapq.heappush(heap, (nr_links, node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
+                    # except KeyError:
+                    nr_links = graph[start][node]['nr_links']
+                    heapq.heappush(heap, (nr_links, (node, path), (ctg_ends_in_path_new, bad_ctgs, nr_bad_nbrs, bad_link_count) ))
+                    # print 'Added', ctg_ends_in_path_new
+            if len(heap) > max_size_heap:
+                max_size_heap = len(heap)
+    print "max lenght heap:", max_size_heap, "paths:", len(paths)
     return paths
 
 
@@ -362,6 +499,8 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     param.hit_path_threshold = False
     print 'iterating until maximum of {0} extensions.'.format(iter_threshold) 
     print 'Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
+    print >> param.information_file,  'iterating until maximum of {0} extensions.'.format(iter_threshold)
+    print >> param.information_file, 'Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
     while len(iter_nodes) > 0 and iter_count <= iter_threshold:
         iter_count += 1
         start_node = iter_nodes.pop()
@@ -380,7 +519,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
             #print len(p)
             #assert p == paths2
         else:
-            paths = find_all_paths_for_start_node_DFS(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
+            paths = find_all_paths_for_start_node_DFS_no_contamination(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
 
         already_visited.add(start_node)
         ScorePaths(G_prime, paths, all_paths, param)
