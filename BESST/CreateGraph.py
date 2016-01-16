@@ -22,7 +22,7 @@
 import sys
 import os
 from collections import defaultdict
-from math import pi
+from math import pi, sqrt
 from time import time
 
 from scipy.stats import ks_2samp
@@ -34,6 +34,7 @@ from Parameter import counters
 from mathstats.normaldist import normal
 import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
+import mathstats.log_normal_param_est as lnpe
 import errorhandle
 import plots
 
@@ -329,6 +330,39 @@ def filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_con
 
 
 
+def get_conditional_stddevs(steps, empirical_isize_distr, max_isize):
+    # create list of contiditional stddevs
+    expected_stddev = []
+
+    previous_gap = 0
+    for gap in steps:
+        # calculate conditional distribution given a gap
+        conditional_density = [0]*(max_isize+1)
+
+        for x in empirical_isize_distr.keys():
+            w_x = max(0, x-gap+1)
+            f_x = empirical_isize_distr[x]
+            if w_x > 0:
+                conditional_density[x] = f_x * w_x
+
+        # get conditional stddev from distribution
+        tot_density = float(sum(conditional_density))
+        conditional_mu = sum(map(lambda (i, f_x): i*f_x, enumerate(conditional_density)))/tot_density
+        conditional_sigma = sqrt(sum(map(lambda (i, f_x): (i-conditional_mu)**2 * f_x, enumerate(conditional_density))) / tot_density)
+        
+
+        # add to our conditional stddev vector
+        if gap == 0:
+            expected_stddev.append([conditional_sigma])
+        else:
+            expected_stddev.append([conditional_sigma]*(gap - previous_gap))
+        previous_gap = gap
+        # print gap, conditional_mu, conditional_sigma
+    # print expected_stddev
+    conditional_stddevs = [item for sublist in expected_stddev for item in sublist] # flatten list
+
+    return conditional_stddevs
+
 
 
 def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot):
@@ -343,13 +377,30 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
         score_file = open(os.path.join(param.output_directory,"score_file_pass_{0}.tsv".format(param.pass_number)), "w")
         print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format("scf1/ctg1", "o1", "scf2/ctg2", "o2", "gap", "link_variation_score", "link_dispersity_score", "number_of_links")
 
+    if param.lognormal:
+        emp_distr = param.empirical_distribution
+        #print emp_distr
+        isize_range = sorted(emp_distr.keys())
+        max_isize = isize_range[-1]
+        steps = range(0, int(max_isize*0.8), max_isize/50)  # isize_range[:int(0.8*len(isize_range)):len(isize_range)/50] # not the upper most values
+        #print steps
+        conditional_stddevs = get_conditional_stddevs(steps, emp_distr, max_isize)
+        # print conditional_stddevs
+
+
     for edge in G.edges():
         mean_ = 0
         std_dev = 0
         if G[edge[0]][edge[1]]['nr_links'] != None:
+
             n = G[edge[0]][edge[1]]['nr_links']
             obs_squ = G[edge[0]][edge[1]]['obs_sq']
             mean_ = G[edge[0]][edge[1]]['obs'] / float(n)
+            samples = G[edge[0]][edge[1]]['observations']
+            #print samples
+            # mu = sum(samples)/len(samples)
+            # sigma = (sum(list(map((lambda x: x ** 2 - 2 * x * mu + mu ** 2), samples))) / (n - 1)) ** 0.5
+
             data_observation = (n * param.mean_ins_size - G[edge[0]][edge[1]]['obs']) / float(n)
             try:
                 len1 = Scaffolds[ edge[0][0] ].s_length
@@ -359,10 +410,24 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 len2 = Scaffolds[ edge[1][0] ].s_length
             except KeyError:
                 len2 = small_scaffolds[ edge[1][0] ].s_length
-            if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
-                gap = param_est.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_, len1, len2)
+
+
+            # Distribution has skew
+            if param.lognormal:
+                if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
+                    samples = G[edge[0]][edge[1]]['observations']
+                    gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, len1, c2_len=len2)
+                    # print 'GAP', gap
+                else:
+                    gap = data_observation
+
+            # Normal-ish distribution
             else:
-                gap = data_observation
+
+                if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
+                    gap = param_est.GapEstimator(param.mean_ins_size, param.std_dev_ins_size, param.read_len, mean_, len1, len2)
+                else:
+                    gap = data_observation
 
             G[edge[0]][edge[1]]['gap'] = int(gap)
             if -gap > len1 or -gap > len2:
@@ -372,7 +437,14 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             #std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
 
             if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
-                std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+                if param.lognormal:
+                    if gap > 0:
+                        std_dev_d_eq_0 = conditional_stddevs[int(gap)]
+                    else:
+                        std_dev_d_eq_0 = conditional_stddevs[0]
+                else:
+                    std_dev_d_eq_0 = param_est.tr_sk_std_dev(param.mean_ins_size, param.std_dev_ins_size, param.read_len, len1, len2, gap)
+
             else:
                 std_dev_d_eq_0 = 2 ** 32
 
@@ -383,7 +455,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 std_dev = 2 ** 32
                 #chi_sq = 0
 
-
+            # print std_dev_d_eq_0, std_dev #, 'New sigma:', sigma 
             try:
                 l1 = G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]
                 del G[edge[0]][edge[1]][Scaffolds[edge[0][0]].name]

@@ -179,7 +179,7 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
 
     # Remove lower non zero score edges
     if len(non_zero_score_edges) > 1:
-        if non_zero_score_edges[-2][0] / non_zero_score_edges[-1][0] > 0.9:
+        if non_zero_score_edges[-2][0] / non_zero_score_edges[-1][0] > 0.8: # lowered threshold due to the unceartinaty in scores
             print >> Information, 'SCORES AMBVIVALENT', non_zero_score_edges[-1][0], non_zero_score_edges[-2][0]
             remove_non_zero_edges = map(lambda item: (node, item[1]) , non_zero_score_edges) # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
         else:
@@ -420,8 +420,8 @@ def UpdateInfo(G, Contigs, small_contigs, Scaffolds, small_scaffolds, node, prev
                 c1_len = Scaffolds[scaf].s_length
                 c2_len = Scaffolds[nbr_scaf].s_length
                 if param.lognormal:
-                    print G[(scaf, side)][(nbr_scaf, nbr_side)]
-                    print G[(scaf, side)]
+                    # print G[(scaf, side)][(nbr_scaf, nbr_side)]
+                    # print G[(scaf, side)]
                     samples = G[(scaf, side)][(nbr_scaf, nbr_side)]['observations']
                     avg_gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, c1_len, c2_len=c2_len)
                 else:

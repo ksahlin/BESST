@@ -8,14 +8,18 @@ import sys
 import math
 
 from heapq import nlargest
+from collections import Counter
 
 from mathstats.normaldist.normal import MaxObsDistr
 from BESST import bam_parser
 from BESST import find_bimodality
 from BESST import plots
 
-def AdjustInsertsizeDist(mean_insert, std_dev_insert, insert_list):
-    k = MaxObsDistr(len(insert_list), 0.95)
+
+
+
+def AdjustInsertsizeDist(param, mean_insert, std_dev_insert, insert_list): 
+    k = 1.5*MaxObsDistr(len(insert_list), 0.95) # allow 1.5x for thicker tails and skewed distributions
     filtered_list = list(filter((lambda x : (x < mean_insert + k * std_dev_insert and x > mean_insert - k * std_dev_insert)), insert_list))
     if len(insert_list) > len(filtered_list):
         return(True, filtered_list)
@@ -31,7 +35,7 @@ def remove_outliers(ins_size_reads):
     std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
     while extreme_obs_occur:
-        extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, ins_size_reads)
+        extreme_obs_occur, filtered_list = AdjustInsertsizeDist(param, mean_isize, std_dev_isize, ins_size_reads)
         n = float(len(filtered_list))
         mean_isize = sum(filtered_list) / n
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n - 1)) ** 0.5
@@ -93,7 +97,7 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         # n_contamine = len(dist1)
         extreme_obs_occur = True
         while extreme_obs_occur:
-            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, contamination_reads)
+            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(param, mean_isize, std_dev_isize, contamination_reads)
             n_contamine = float(len(filtered_list))
             if n_contamine > 2:
                 mean_isize = sum(filtered_list) / n_contamine
@@ -312,7 +316,7 @@ def get_metrics(bam_file, param, Information):
         print >> Information, 'Std_est  before filtering: ', std_dev_isize
         extreme_obs_occur = True
         while extreme_obs_occur:
-            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(mean_isize, std_dev_isize, ins_size_reads)
+            extreme_obs_occur, filtered_list = AdjustInsertsizeDist(param, mean_isize, std_dev_isize, ins_size_reads)
             n = float(len(filtered_list))
             mean_isize = sum(filtered_list) / n
             std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), filtered_list))) / (n - 1)) ** 0.5
@@ -336,6 +340,7 @@ def get_metrics(bam_file, param, Information):
         # weight each observation with how likely it is to see it
         adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list, param, Information)
         param.skew_adj = skew_adj
+        param.empirical_distribution = dict(zip(range(len(adj_distr)), adj_distr)) #Counter(ins_size_reads)
         print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
         print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
         print >> Information, 'Skewness of getdistr adjusted distribution: ', skew_adj
