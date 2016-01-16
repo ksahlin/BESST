@@ -256,8 +256,8 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         if param.lower_cov_cutoff:
             filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
-    print >> Information, 'Number of edges in G (after repeat removel): ', len(G.edges())
-    print >> Information, 'Number of edges in G_prime (after repeat removel): ', len(G_prime.edges())
+    print >> Information, 'Number of edges in G (after repeat removal): ', len(G.edges())
+    print >> Information, 'Number of edges in G_prime (after repeat removal): ', len(G_prime.edges())
 
     ### Remove edges created by false reporting of BWA ###
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
@@ -278,7 +278,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
 
-    #Remove all edges with link support less than 3 to be able to compute statistics: 
+    #Remove all edges with link support less than param.edgesupport to be able to compute statistics: 
     cntr_sp = 0
     for edge in G_prime.edges():
         if G_prime[edge[0]][edge[1]]['nr_links'] != None:

@@ -669,7 +669,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         iter_count += 1
         start_node = iter_nodes.pop()
         if cnter % 100 == 0:
-            print 'enter Betwween scaf node:{0}, scaffold progression {1}%. '.format(cnter, round( cnter / float(iter_threshold)*100, 1 ))
+            print 'enter Between scaf node:{0}, scaffold progression {1}%. '.format(cnter, round( cnter / float(iter_threshold)*100, 1 ))
         end.difference_update(set([start_node]))
         if param.dfs_traversal:
             paths = find_all_paths_for_start_node_DFS_dynamic_programming_ish(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
@@ -694,6 +694,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     all_paths.sort(key=lambda list_: list_[0])
     if param.hit_path_threshold:
         print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+        print >> param.information_file, 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
     #print all_paths
     return(all_paths)
 

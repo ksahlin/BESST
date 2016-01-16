@@ -60,7 +60,7 @@ def repeat_contigs_logger(Repeats, Contigs, output_dest, small_contigs, param):
     repeats_sorted = sorted(Repeats, key=lambda x: x.coverage, reverse=True)
     for cont_obj in repeats_sorted:
         placable = "Yes" if param.mean_ins_size > cont_obj.length else 'No'
-        print >> repeat_logger_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, cont_obj.coverage, cont_obj.coverage/param.mean_coverage, param.mean_ins_size, placable)
+        print >> repeat_logger_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, round(cont_obj.coverage,1), round(cont_obj.coverage/param.mean_coverage,0), round(param.mean_ins_size,0), placable)
 
 def PrintOut_low_cowerage_contigs(low_coverage_contigs, Contigs, output_dest, small_contigs):
     low_coverage_contigs_file = open(output_dest + '/low_coverage_contigs.fa', 'w')
