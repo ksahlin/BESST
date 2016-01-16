@@ -552,7 +552,13 @@ def find_all_paths_for_start_node_DFS_dynamic_programming_ish(graph, start, end,
             param.hit_path_threshold = True
             break
             
-        nr_links, (start, path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs, bad_link_count)  = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()  
+        nr_links, (start, path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs, bad_link_count)  = heapq.heappop(heap) #start, end, path, sum_path = heapq.pop()
+
+        if start in head_dict:
+            # strictly worse path than previous seen one
+            if nr_bad_nbrs > head_dict[start][0] and bad_link_count > head_dict[start][1]:
+                continue
+
         # print path
         try:
             prev_node = path[-1]
@@ -590,6 +596,7 @@ def find_all_paths_for_start_node_DFS_dynamic_programming_ish(graph, start, end,
 
                 if (start[0], 'R') not in head_dict:
                     head_dict[(start[0], 'R')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
+                    head_dict[(start[0], 'L')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
                     # print "Here", (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count), start[0]
                     ctg_ends_in_path.add((start[0], 'R'))
                     heapq.heappush(heap, (nr_links, ((start[0], 'R'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
@@ -617,6 +624,7 @@ def find_all_paths_for_start_node_DFS_dynamic_programming_ish(graph, start, end,
                         
                 if (start[0], 'L') not in head_dict:
                     head_dict[(start[0], 'L')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
+                    head_dict[(start[0], 'R')] = (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)
                     # print "Here", (nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count), start[0]
                     ctg_ends_in_path.add((start[0], 'L'))
                     heapq.heappush(heap, (nr_links, ((start[0], 'L'), path), (ctg_ends_in_path, bad_ctgs, nr_bad_nbrs + additional_bad_nbrs, bad_link_count + additional_bad_link_count)) ) 
@@ -636,15 +644,12 @@ def find_all_paths_for_start_node_DFS_dynamic_programming_ish(graph, start, end,
                 path_new = path + [node]
                 ctg_ends_in_path_new = set(path_new)
                 if node not in forbidden: # and node not in already_visited: 
-                    # try: # if last node (i.e. "end") it is not present in small_scaffolds and it should not be included in the length
-                    #     heapq.heappush(heap, (nr_links, node, path, path_len + graph[node[0]]['length'])) #  small_scaffolds[node[0]].s_length))   #
-                    # except KeyError:
                     nr_links = graph[start][node]['nr_links']
                     heapq.heappush(heap, (nr_links, (node, path), (ctg_ends_in_path_new, bad_ctgs, nr_bad_nbrs, bad_link_count) ))
                     # print 'Added', ctg_ends_in_path_new
-            if len(heap) > max_size_heap:
-                max_size_heap = len(heap)
-    print "max lenght heap:", max_size_heap, "paths:", len(paths)
+            # if len(heap) > max_size_heap:
+                # max_size_heap = len(heap)
+    # print "max lenght heap:", max_size_heap, "paths:", len(paths)
     return paths
 
 
