@@ -21,7 +21,7 @@
 
 import sys
 import os
-from collections import defaultdict
+from collections import defaultdict, Counter
 from math import pi, sqrt
 from time import time
 
@@ -37,6 +37,7 @@ from mathstats.normaldist.truncatedskewed import param_est
 import mathstats.log_normal_param_est as lnpe
 import errorhandle
 import plots
+import e_nr_links
 
 
 
@@ -270,22 +271,34 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         after_coverage = h.heap()
         print 'Just after calc coverage:\n{0}\n'.format(after_coverage)
 
+
+    #Remove all edges with link support less than inferred parameter of param.edgesupport (unless specified by user) to be able to compute statistics.
+    e_threshold = infer_spurious_link_count_threshold(G_prime, param)
+    if not param.edgesupport:
+        param.edgesupport = e_threshold
+        print >> Information, 'Letting -e be {0} for this library.'.format(e_threshold)
+    else:
+        print >> Information, 'User has set -e to be {0} for this library.'.format(param.edgesupport)
+
+    counter_low_support = 0
+    for edge in G.edges():
+        if G[edge[0]][edge[1]]['nr_links'] != None:
+            if G[edge[0]][edge[1]]['nr_links'] < 3:
+                G.remove_edge(edge[0], edge[1])
+                counter_low_support += 1
+
+    # counter_low_support = remove_edges_below_threshold(G, param)
+
+    print >> Information, 'Removed {0} edges from graph G of border contigs.'.format(counter_low_support)
+    counter_low_support = remove_edges_below_threshold(G_prime, param)
+    print >> Information, 'Removed {0} edges from full graph G_prime of all contigs.'.format(counter_low_support)
+
     ## Score edges in graph
     plot = 'G'
     if not param.no_score:
         GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
     #plot = 'G_prime'
     #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
-
-
-    #Remove all edges with link support less than param.edgesupport to be able to compute statistics: 
-    cntr_sp = 0
-    for edge in G_prime.edges():
-        if G_prime[edge[0]][edge[1]]['nr_links'] != None:
-            if G_prime[edge[0]][edge[1]]['nr_links'] < param.edgesupport:
-                G_prime.remove_edge(edge[0], edge[1])
-                cntr_sp += 1
-    print >> Information, 'Number of fishy edges in G_prime', cntr_sp
 
     print >> Information, 'Number of edges in G_prime  (after removing edges under -e threshold (if not specified, default is -e 3): ', len(G_prime.edges())
 
@@ -298,6 +311,88 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'Nr of contigs/scaffolds included in this pass: ' + str(len(Scaffolds) + len(small_scaffolds))
     print >> Information, 'Out of which {0} acts as border contigs.'.format(len(Scaffolds))
     return(G, G_prime)
+
+def infer_spurious_link_count_threshold(G_prime, param):
+    # Finding a base value estimation  for the cutoff be expected number of links that spans the mean (from a normal distribution)
+    # this is probably an underestimation for a positive skev library and definitely
+    # an underestimation for a negative skew library, however it's better with an undersetimation rather
+    # than removing to many edges..
+
+    nr_nodes = nx.number_of_nodes(G_prime)/2
+    contamination_ratio = param.contamination_ratio if param.contamination_ratio else 0
+    cov = param.mean_coverage *(1 - contamination_ratio )
+    link_params = e_nr_links.Param(param.mean_ins_size, param.std_dev_ins_size, cov, param.read_len, 0)
+    gap = param.mean_ins_size +  param.std_dev_ins_size - 2* param.read_len
+    # print cov, gap, param.mean_ins_size, param.std_dev_ins_size, cov, param.read_len, 0
+    expected_links_over_mean_plus_stddev = e_nr_links.ExpectedLinks(100000, 100000, gap, link_params)
+    param.expected_links_over_mean_plus_stddev = int(expected_links_over_mean_plus_stddev)
+    link_stats = []
+    for edge in G_prime.edges():
+        if G_prime[edge[0]][edge[1]]['nr_links'] != None:
+            link_count = G_prime[edge[0]][edge[1]]['nr_links']
+            link_stats.append(link_count)
+    link_counter = Counter(link_stats)
+    total_included_edges = 0
+    for link_number in sorted(link_counter.keys(), reverse=True):
+        # print >> param.information_file, 'Number of links: {0}\tFound in {1} edges.'.format(link_number, link_counter[link_number])
+        total_included_edges += link_counter[link_number]
+        print >> param.information_file, 'Nodes: {0}.\t Total edges over with over {1} links:{2}. \tAverage density: {3}'.format(nr_nodes, link_number, total_included_edges, total_included_edges/float(nr_nodes))
+
+    # print "expected_links_over_mean_plus_stddev:", expected_links_over_mean_plus_stddev
+    if expected_links_over_mean_plus_stddev < 3:
+        e_threshold = 3
+    else:
+        e_threshold = int(expected_links_over_mean_plus_stddev)
+    return e_threshold
+
+def remove_edges_below_threshold(graph, param):
+    #Remove all edges with link support less than param.edgesupport in high complexity areas
+
+    print >> param.information_file, 'Remove edges in high complexity areas.'
+    counter = 0
+    nr_nbrs_counter = []
+    # print "NR EDGES", len(graph.edges())
+    for node1, node2 in sorted(graph.edges(), key=lambda x: graph[x[0]][x[1]]["nr_links"]):
+        if  graph[node1][node2]["nr_links"] == None:
+            continue
+        elif graph[node1][node2]["nr_links"] < param.edgesupport:
+            # print graph[node1][node2]["nr_links"]
+            nbrs1 = graph.neighbors(node1)
+            nbrs2 = graph.neighbors(node2)
+            if len(nbrs1) > 4 and len(nbrs2) > 4:
+                graph.remove_edge(node1, node2)
+                # nr_nbrs_counter.append(len(nbrs))
+                counter += 1
+        else:
+            break
+
+
+
+
+    # for node in graph.nodes():
+    #     nbrs = graph.neighbors(node)
+    #     if len(nbrs) > 3:
+    #         nr_nbrs_counter.append(len(nbrs))
+    #         for nbr in nbrs:
+    #             if node[0] != nbr[0] and graph[node][nbr]['nr_links'] < param.edgesupport:
+    #                 graph.remove_edge(node, nbr)
+    #                 counter += 1
+
+    # density_nbr_counter = Counter(nr_nbrs_counter)
+    print >> param.information_file, 'Removed total of {0} edges in high density areas.'.format(counter)
+    # print >> param.information_file, "DENSITY PROFILE:"
+    # for nbr_number in sorted(density_nbr_counter.keys(), reverse=True):
+    #     print >> param.information_file, 'Number of nbrs: {0}\t found in {1} edges.'.format(nbr_number, density_nbr_counter[nbr_number])
+
+
+    # remove edges below 3 links (independent of region complexity) to be able to compute statistics
+    cntr_sp = 0
+    for edge in graph.edges():
+        if graph[edge[0]][edge[1]]['nr_links'] != None:
+            if graph[edge[0]][edge[1]]['nr_links'] < 3:
+                graph.remove_edge(edge[0], edge[1])
+                cntr_sp += 1
+    return cntr_sp
 
 def filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
     low_coverage_contigs = []

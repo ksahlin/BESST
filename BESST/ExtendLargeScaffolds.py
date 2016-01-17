@@ -355,10 +355,19 @@ def find_all_paths_for_start_node_BFS_Dynamic_Programming_ish(graph, start, end,
             # elif start[1] == 'R' and (start[0], 'L') not in forbidden:
             #     queue.append(((start[0], 'L'), path, path_len))          
         else:
-            for node in set(graph[start]).difference(path):
-                path_new = path + [node]
-                ctg_ends_in_path_new = set(path_new)
-                if node not in forbidden: # and node not in already_visited: 
+            # nbrs = set(graph[start]).difference(path)
+            # nr_nbrs = len(nbrs)
+            # if nr_nbrs > 1:
+            #     # print 'Complex area'
+            #     least_nr_of_links = param.edgesupport
+            # else:
+            #     least_nr_of_links = 0
+            for node in set(graph[start]).difference(path): #nbrs:
+                if node not in forbidden: # and node not in already_visited:
+                    # nr_links = graph[start][node]['nr_links']
+                    # if  nr_links >= least_nr_of_links:
+                    path_new = path + [node]
+                    ctg_ends_in_path_new = set(path_new)
                     queue.append((node, path, path_len, (ctg_ends_in_path_new, bad_ctgs, nr_bad_nbrs, bad_link_count) ))
 
             # for node in set(graph[start]).difference(path):

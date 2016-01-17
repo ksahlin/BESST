@@ -49,6 +49,8 @@ class parameter(object):
         # Library information
         self.mean_ins_size = parameter_mean_ins_size
         self.std_dev_ins_size = parameter_std_dev_ins_size
+        self.read_len = parameter_read_len
+        self.mean_coverage = parameter_mean_coverage
         self.lower_cov_cutoff = lower_cov_cutoff
         self.cov_cutoff = parameter_cov_cutoff
 
@@ -61,11 +63,9 @@ class parameter(object):
         # Assembly information
         # Algorithm information
         # Output information
-        self.mean_coverage = parameter_mean_coverage
         self.std_dev_coverage = parameter_std_dev_coverage
         self.output_directory = parameter_output_directory
         self.bamfile = parameter_bamfile
-        self.read_len = parameter_read_len
         self.ins_size_threshold = parameter_ins_size_threshold
         self.contigfile = parameter_contigfile
         self.edgesupport = parameter_edgesupport
