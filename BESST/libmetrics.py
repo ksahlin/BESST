@@ -269,9 +269,9 @@ def get_metrics(bam_file, param, Information):
         bam_file.reset()
 
     if param.mean_ins_size and param.std_dev_ins_size and not param.ins_size_threshold: # user has specified mean and std dev but no thresholds
-        param.ins_size_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
+        param.ins_size_threshold = param.mean_ins_size + 6 * param.std_dev_ins_size
         if param.extend_paths:
-            param.contig_threshold = param.ins_size_threshold
+            param.contig_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
         else:
             param.contig_threshold = param.mean_ins_size + (param.std_dev_ins_size / float(param.mean_ins_size)) * param.std_dev_ins_size
         print >> Information, '-T', param.ins_size_threshold, '-t', param.contig_threshold
@@ -397,9 +397,9 @@ def get_metrics(bam_file, param, Information):
         total_reads_iterated_through = None
 
     if not param.ins_size_threshold:
-        param.ins_size_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
+        param.ins_size_threshold = param.mean_ins_size + 6 * param.std_dev_ins_size
         if param.extend_paths:
-            param.contig_threshold = param.ins_size_threshold
+            param.contig_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
         else:
             param.contig_threshold = param.mean_ins_size + (param.std_dev_ins_size / float(param.mean_ins_size)) * param.std_dev_ins_size
 

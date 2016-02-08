@@ -823,7 +823,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
         if param.detect_duplicate:
             return(1)
 
-    if obs1 + obs2 < param.mean_ins_size + 6 * param.std_dev_ins_size and obs1 > 25 and obs2 > 25:
+    if obs1 + obs2 < param.ins_size_threshold and obs1 > 25 and obs2 > 25:
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
