@@ -1384,7 +1384,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
     if len(G.nodes()) / 2.0 > 10000:
         # Too few short contigs compared to long (ratio set to 0.1) or lib ins size + 2*std_dev - 2*read_len < 200 ) and too many large contigs (> 10 000) do not enter path extension algm since to low payoff:
 
-        if len(small_scaffolds) / float(len(Scaffolds)) < 0.1:
+        if len(small_scaffolds) / float(len(Scaffolds)) < 0.1 and not param.no_score:
             print >> Information, "Did not enter path seartching algorithm between scaffolds due to too small fraction of small scaffolds, fraction were: ", len(small_scaffolds) / float(len(Scaffolds))
             return(start_scaf_index)
 
