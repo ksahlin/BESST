@@ -55,6 +55,8 @@ def parse_check(arg, parser):
 
     ##
     # Error handling when parsing arguments
+
+
     if arg.orientation == None:
         sys.stdout.write('Warning: Orientations of library mappings not specified. Treating all libraries as fr mapped.\
          If this is not the case, please provide orientations with the --orientations parameter.\n')
@@ -89,6 +91,10 @@ def parse_check(arg, parser):
         sys.stdout.write('Warning: -g (haplotype aware scaffolding) specified but this option is under construction and not stable. \
          This option will therefore be inactivated. \n')
         arg.haplotype = False
+
+    if (arg.bfs_traversal == True and arg.dfs_traversal == True):
+        print "Do not specify both --dfs_traversal and --bfs_traversal"
+        sys.exit(0)
 
     return()
 

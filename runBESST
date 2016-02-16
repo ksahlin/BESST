@@ -93,7 +93,7 @@ def main(options):
     param.max_extensions = options.max_extensions
     param.NO_ILP = options.NO_ILP
     param.FASTER_ILP = options.FASTER_ILP
-    param.dfs_traversal = options.dfs_traversal
+    param.dfs_traversal = True if not options.bfs_traversal else False
     param.print_scores = options.print_scores
     param.min_mapq = options.min_mapq
     param.max_contig_overlap = options.max_contig_overlap
@@ -371,8 +371,11 @@ parameters.add_argument("--print_scores", dest="print_scores", action="store_tru
                   help="Print BESST scores on edges in the Scaffolding graph.")
 
 other.add_argument("--dfs_traversal", dest="dfs_traversal", action="store_true",
-                help="Choose a depth first search in the contig graph. Default is the new breath first search with a DP approch that seems to outperform\
-                all previous traversals. This option is kept for evaluation but is not reccomended to specify.")
+                help="Depth first search with DP in the contig graph (default).")
+
+other.add_argument("--bfs_traversal", dest="bfs_traversal", action="store_true",
+                help="Choose a breadth first search in the contig graph. Default is the new depth first search with a DP approch that seems to outperform\
+                previous traversals. This option is kept for evaluation but is not reccomended to specify.")
 
 other.add_argument("-max_contig_overlap", dest="max_contig_overlap", type=int, default=200,
                   help="BESST checks for overlapping ends in contigs that are adjacent in a scaffold. This parameter sets the maximum identical overlap to search for, default is 200. ")
