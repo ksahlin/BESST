@@ -219,7 +219,10 @@ def main(options):
             shutil.copyfileobj(open("{0}/repeats.fa".format(param.output_directory, str(i+1) ), 'rb'), destination)
             destination.close()
             os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
-        
+
+        all_parameter_settings = param.get_params()  
+        print >> Information, all_parameter_settings
+
         param.first_lib = False   #not the first lib any more    
 
     if not options.separate_repeats:

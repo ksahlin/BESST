@@ -103,6 +103,12 @@ class parameter(object):
         self.NO_ILP = NO_ILP
         self.FASTER_ILP = FASTER_ILP
 
+    def get_params(self):
+        output = "param\tvalue\n"
+        values = "".join([ "{0}\t{1}\n".format(attr, value) if value == None or type(value) in [bool, int,float, file] or len(value) < 5 else "" for attr, value in self.__dict__.items() if not callable(value)])
+        output += values
+        return output
+
 class counters(object):
     def __init__(self, param_count=None, param_non_unique=None, param_non_unique_for_scaf=None,
                  param_nr_of_duplicates=None, param_prev_obs1=None, param_prev_obs2=None,
