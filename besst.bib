@@ -1,3 +1,13 @@
+@article{Sahlin02032016,
+author = {Sahlin, Kristoffer and Chikhi, Rayan and Arvestad, Lars}, 
+title = {Assembly scaffolding with PE-contaminated mate-pair libraries},
+year = {2016}, 
+doi = {10.1093/bioinformatics/btw064}, 
+abstract ={Motivation: Scaffolding is often an essential step in a genome assembly process, in which contigs are ordered and oriented using read pairs from a combination of paired-end libraries and longer-range mate-pair libraries. Although a simple idea, scaffolding is unfortunately hard to get right in practice. One source of problems is so-called PE-contamination in mate-pair libraries, in which a non-negligible fraction of the read pairs get the wrong orientation and a much smaller insert size than what is expected. This contamination has been discussed before, in relation to integrated scaffolders, but solutions rely on the orientation being observable, e.g. by finding the junction adapter sequence in the reads. This is not always possible, making orientation and insert size of a read pair stochastic. To our knowledge, there is neither previous work on modeling PE-contamination, nor a study on the effect PE-contamination has on scaffolding quality.Results: We have addressed PE-contamination in an update to our scaffolder BESST. We formulate the problem as an integer linear program which is solved using an efficient heuristic. The new method shows significant improvement over both integrated and stand-alone scaffolders in our experiments. The impact of modeling PE-contamination is quantified by comparing with the previous BESST model. We also show how other scaffolders are vulnerable to PE-contaminated libraries, resulting in an increased number of misassemblies, more conservative scaffolding and inflated assembly sizes.Availability and implementation: The model is implemented in BESST. Source code and usage instructions are found at https://github.com/ksahlin/BESST. BESST can also be downloaded using PyPI.Contact: ksahlin@kth.seSupplementary information: Supplementary data are available at Bioinformatics online.}, 
+URL = {http://bioinformatics.oxfordjournals.org/content/early/2016/03/09/bioinformatics.btw064.abstract}, 
+eprint = {http://bioinformatics.oxfordjournals.org/content/early/2016/03/09/bioinformatics.btw064.full.pdf+html}, 
+journal = {Bioinformatics} 
+}
 @article{Sahlin2014,
 	author = {Sahlin, K. and Vezzi, F. and Nystedt, B. and Lundeberg, J. and Arvestad, L.},
 	title = {{BESST}--efficient scaffolding of large fragmented assemblies.},

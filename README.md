@@ -9,6 +9,7 @@ Please cite [2] and later manuscripts when using BESST! BiBTeX entries are avail
 
 1. Sahlin K, Street N, Lundeberg J, Arvestad L (2012) "Improved gap size estimation for scaffolding algorithms." Bioinformatics 28(17), 2215-2222 [Link](http://bioinformatics.oxfordjournals.org/content/28/17/2215.long)
 2. Sahlin K, Vezzi F, Nystedt B, Lundeberg J, Arvestad L (2014) "BESST--efficient scaffolding of large fragmented assemblies." BMC Bioinformatics 15, 281 [Link](http://www.biomedcentral.com/1471-2105/15/281)
+3. Sahlin K, Chikhi R, Arvestad L (2016) "Assembly scaffolding with PE-contaminated mate-pair libraries." Bioinformatics [Link](https://bioinformatics.oxfordjournals.org/content/early/2016/03/09/bioinformatics.btw064)
 
 
 INSTALLATION
