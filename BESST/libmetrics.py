@@ -352,7 +352,7 @@ def get_metrics(bam_file, param, Information):
 
         #### If skewness (of original - not the getdistr)is positive and larger than 0.5 
         #### (big enough skew to have impact), we fit to the lognormal distribution 
-        if param.skew_adj > 0.5:
+        if param.skew_adj > 0.5 and math.log(median_adj) > math.log(mode_adj):
 
             ###################################################
             #### NOTE: Fitting lognormal of original sample, not getdistr adjusted for 
