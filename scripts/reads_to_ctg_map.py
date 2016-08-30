@@ -40,7 +40,7 @@ def sam_to_bam(sam_path, bam_path):
 # @param genome_path Path to the reference genome.
 # @param output_path Path of the output file without extension ".bam".
 #
-def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, clear_tmp):
+def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, threads, tmp_dir, bwa_path, clear_tmp):
     print
     print 'Aligning with bwa aln/sampe.'
     stdout.flush()
@@ -64,7 +64,7 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, c
     with open(pe1_output, "w") as pe1_file:
         print 'Align forward reads with bwa aln...',
         stdout.flush()
-        subprocess.check_call([ bwa_path, "aln", "-t 8", genome_db, pe1_path ], 
+        subprocess.check_call([ bwa_path, "aln", "-t", threads, genome_db, pe1_path ], 
                               stdout=pe1_file, stderr=stderr_file)
         print 'Done.'
         stdout.flush()
@@ -72,7 +72,7 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, c
     with open(pe2_output, "w") as pe2_file:
         print 'Align reverse reads with bwa aln...',
         stdout.flush()
-        subprocess.check_call([ bwa_path, "aln", "-t 8", genome_db, pe2_path ], 
+        subprocess.check_call([ bwa_path, "aln", "-t", threads, genome_db, pe2_path ], 
                               stdout=pe2_file, stderr=stderr_file)
         print 'Done.'
         stdout.flush()
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     print 'Start processing.'
     stdout.flush()
     if args.pe2_path and args.nomem:
-        bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, output_path, tmp_path, 
+        bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, args.threads, output_path, tmp_path, 
                   args.bwa_path, args.clear)
     elif args.pe2_path:
         bwa_mem(args.pe1_path, args.pe2_path, args.genome_path, args.threads, output_path, 
