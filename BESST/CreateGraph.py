@@ -905,6 +905,8 @@ def CalculateMeanCoverage(Contigs, Information, param):
         extreme_obs_occur, filtered_list = RemoveOutliers(mean_cov, std_dev, cov_of_longest_contigs)
         n = float(len(filtered_list))
         try:
+            if sum(filtered_list) == 0: # if the result of filtering brings a zero mean, keep the previous mean and don't remove any outliers
+                break
             mean_cov = sum(filtered_list) / n
         except ZeroDivisionError:
             break
