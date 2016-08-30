@@ -156,7 +156,7 @@ def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path, tmp_dir, bwa_
     with open(bwa_output, "w") as bwa_file:
         print 'Align with bwa mem...',
         stdout.flush()
-        subprocess.check_call([ bwa_path, "mem", "-t", threads,
+        subprocess.check_call([ bwa_path, "mem", "-t", threads, "-w", "0", "-O", "99", # new params found by sebastien/guillaume
                                 genome_db, pe1_path, pe2_path ],
                                 stdout=bwa_file,
                                 stderr=stderr_file)
