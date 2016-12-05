@@ -1,6 +1,6 @@
 '''
     Created on Sep 29, 2011
-    
+ 
     @author: ksahlin
     
     This file is part of BESST.
@@ -156,9 +156,20 @@ class Scaffold(object):
             sign = '+' if self.directions[i] else '-'           
             if i > 0 and self.gaps[i-1] > 0:
                 component_count += 1
-                print >> AGP_file, self.name + '\t' + str(self.positions[i-1][1] + 1) + '\t' + str(self.positions[i][0]-1) + '\t' + str(component_count) + '\t' + 'N\t' + str(self.gaps[i]) + '\tfragment\tyes\t'
+            	obj_start = self.positions[i-1][1] + 2
+            	obj_end   = self.positions[i][0]
+            	compo_len = self.gaps[i-1] # gaps computation was useless as it could be done here
+            	l_elts = [ self.name, obj_start, obj_end, component_count ]
+            	l_elts +=[ 'N', compo_len, 'scaffold', 'yes', 'paired-ends' ]
+            	print >> AGP_file, '\t'.join([ str(x) for x in l_elts ])
+
             component_count += 1
-            print >> AGP_file, self.name + '\t' + str(self.positions[i][0]) + '\t' + str(self.positions[i][1]) + '\t' + str(component_count) + '\t' + 'W\t' + self.contigs[i] + '\t1\t' + str(self.positions[i][1] - self.positions[i][0] + 1) + '\t' + sign
+            obj_start = self.positions[i][0] + 1
+            obj_end   = self.positions[i][1] + 1
+            compo_len = self.positions[i][1] - self.positions[i][0] + 1
+            l_elts = [ self.name, obj_start, obj_end, component_count ]
+            l_elts +=[ 'W', self.contigs[i],'1', compo_len, sign ]
+            print >> AGP_file, '\t'.join([ str(x) for x in l_elts ])
 
 
 def PrintOutput(F, Information, output_dest, param, pass_nr):
@@ -174,7 +185,7 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
     gff_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.gff', 'w')
     AGP_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.agp', 'w')
     print >> gff_file, '#gff-version 3'
-    print >> AGP_file, '#APG file\n#lw-scaffolder output'
+    print >> AGP_file, '##agp-version 2.0\n#lw-scaffolder output'
     fasta_file = open(param.output_directory + '/pass' + str(pass_nr) + '/Scaffolds-pass' + str(pass_nr) + '.fa', 'w')
     header_index = 0
 
