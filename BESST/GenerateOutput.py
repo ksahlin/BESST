@@ -180,7 +180,7 @@ class Scaffold(object):
                 obj_end   = self.positions[i][0]
                 l_attrs   = []
                 l_elts  = [ self.name, source, 'gap', obj_start, obj_end ]
-                l_elts += [ '.', sign, '.', ';'.join( l_attrs ) ]
+                l_elts += [ '.', '.', '.', ';'.join( l_attrs ) ]
                 print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
 
             obj_start = self.positions[i][0] + 1
