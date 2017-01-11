@@ -152,7 +152,7 @@ class Scaffold(object):
 
     def make_AGP_string(self, AGP_file):
         component_count = 0
-        for i in range(len(self.seqs)-1):
+        for i in range( len(self.seqs) ):
             sign = '+' if self.directions[i] else '-'
             if i > 0 and self.gaps[i-1] > 0:
                 component_count += 1
@@ -173,7 +173,7 @@ class Scaffold(object):
 
     def make_GFF_string( self, gff_file ):
         source = 'besst_assembly'
-        for i in range(len(self.seqs)-1):
+        for i in range( len(self.seqs) ):
             sign = '+' if self.directions[i] else '-'
             if i > 0 and self.gaps[i-1] > 0:
                 obj_start = self.positions[i-1][1] + 2
