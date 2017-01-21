@@ -145,21 +145,51 @@ class Scaffold(object):
                 if gap <= 1:
                     fasta.append('n' + self.get_sequence(self.seqs[i+1], self.directions[i+1]))
                 else:
-                    fasta.append('N'*int(gap) + self.get_sequence(self.seqs[i+1], self.directions[i+1]))               
+                    fasta.append('N'*int(gap) + self.get_sequence(self.seqs[i+1], self.directions[i+1]))
 
 
         print >> fasta_file, ''.join([ x for x in fasta])
 
     def make_AGP_string(self, AGP_file):
         component_count = 0
-        for i in range(len(self.seqs)-1):
-            sign = '+' if self.directions[i] else '-'           
+        for i in range( len(self.seqs) ):
+            sign = '+' if self.directions[i] else '-'
             if i > 0 and self.gaps[i-1] > 0:
                 component_count += 1
-                print >> AGP_file, self.name + '\t' + str(self.positions[i-1][1] + 1) + '\t' + str(self.positions[i][0]-1) + '\t' + str(component_count) + '\t' + 'N\t' + str(self.gaps[i]) + '\tfragment\tyes\t'
-            component_count += 1
-            print >> AGP_file, self.name + '\t' + str(self.positions[i][0]) + '\t' + str(self.positions[i][1]) + '\t' + str(component_count) + '\t' + 'W\t' + self.contigs[i] + '\t1\t' + str(self.positions[i][1] - self.positions[i][0] + 1) + '\t' + sign
+            	obj_start = self.positions[i-1][1] + 2
+            	obj_end   = self.positions[i][0]
+            	compo_len = self.gaps[i-1]
+            	l_elts = [ self.name, obj_start, obj_end, component_count ]
+            	l_elts +=[ 'N', compo_len, 'scaffold', 'yes', 'paired-ends' ]
+            	print >> AGP_file, '\t'.join([ str(x) for x in l_elts ])
 
+            component_count += 1
+            obj_start = self.positions[i][0] + 1
+            obj_end   = self.positions[i][1] + 1
+            compo_len = self.positions[i][1] - self.positions[i][0] + 1
+            l_elts = [ self.name, obj_start, obj_end, component_count ]
+            l_elts +=[ 'W', self.contigs[i],'1', compo_len, sign ]
+            print >> AGP_file, '\t'.join([ str(x) for x in l_elts ])
+
+    def make_GFF_string( self, gff_file ):
+        source = 'besst_assembly'
+        for i in range( len(self.seqs) ):
+            sign = '+' if self.directions[i] else '-'
+            if i > 0 and self.gaps[i-1] > 0:
+                obj_start = self.positions[i-1][1] + 2
+                obj_end   = self.positions[i][0]
+                l_attrs   = []
+                l_elts  = [ self.name, source, 'gap', obj_start, obj_end ]
+                l_elts += [ '.', '.', '.', ';'.join( l_attrs ) ]
+                print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
+
+            obj_start = self.positions[i][0] + 1
+            obj_end   = self.positions[i][1] + 1
+            name      = "_".join( self.contigs[i].split('_',2)[:2] ) # only kept NODE_XXXX from ID
+            l_attrs   = [ 'ID='+self.contigs[i], 'Name='+name ]
+            l_elts  = [ self.name, source, 'contig', obj_start, obj_end ]
+            l_elts += [ '.', sign, '.', ';'.join( l_attrs ) ]
+            print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
 
 def PrintOutput(F, Information, output_dest, param, pass_nr):
     import os
@@ -173,8 +203,8 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
     print >> Information, '(super)Contigs after scaffolding: ' + str(contigs_after) + '\n'
     gff_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.gff', 'w')
     AGP_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.agp', 'w')
-    print >> gff_file, '#gff-version 3'
-    print >> AGP_file, '#APG file\n#lw-scaffolder output'
+    print >> gff_file, '##gff-version 3'
+    print >> AGP_file, '##agp-version 2.0\n#lw-scaffolder output'
     fasta_file = open(param.output_directory + '/pass' + str(pass_nr) + '/Scaffolds-pass' + str(pass_nr) + '.fa', 'w')
     header_index = 0
 
@@ -187,6 +217,7 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
         s = Scaffold('scaffold_' + str(header_index), param, scaf)
         s.make_fasta_string(fasta_file)
         s.make_AGP_string(AGP_file)
+        s.make_GFF_string( gff_file )
 
     return()
 
