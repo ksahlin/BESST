@@ -284,7 +284,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     counter_low_support = 0
     for edge in G.edges():
         if G[edge[0]][edge[1]]['nr_links'] != None:
-            if G[edge[0]][edge[1]]['nr_links'] < 3:
+            if G[edge[0]][edge[1]]['nr_links'] < param.edgesupport:
                 G.remove_edge(edge[0], edge[1])
                 counter_low_support += 1
 
