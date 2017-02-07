@@ -134,7 +134,7 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, c
         print 'Keeping genome index files for future use in ' + work_dir ,
         for f in os.listdir(work_dir):
             if not re.search("genome", f):
-            os.remove(os.path.join(work_dir, f))
+                os.remove(os.path.join(work_dir, f))
     else:
         shutil.rmtree(work_dir)
     elapsed = datetime.now() - start
