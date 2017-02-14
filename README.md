@@ -1,7 +1,9 @@
 BESST
 ========
 
-BESST is a package for scaffolding genomic assemblies. It contains several modules for e.g. building a "contig graph" from available information, obtaining scaffolds from this graph, and accurate gap size information (based on GapEst [1]). BESST is first described in [2] and a paper describing later improvements is forthcoming.
+Supported on Linux / OSX with python 2.7 [![Build Status](https://travis-ci.org/ksahlin/BESST.svg?branch=master)](https://travis-ci.org/ksahlin/BESST)
+
+BESST is a package for scaffolding genomic assemblies. BESST v1.0.4 is first described in [2] with various improvements in v2.0 (e.g. [3]). BESST is based on GapEst [1].
 
 For installation, see docs/INSTALL.md. Manual is found in docs/MANUAL.md.
 
