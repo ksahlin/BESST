@@ -276,7 +276,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     infer_spurious_link_count_threshold(G_prime, param)
     if not param.edgesupport:
         # default value of 3
-        param.edgesupport = 3 
+        param.edgesupport = 5 
         print >> Information, 'Letting -e be {0} for this library.'.format(param.edgesupport)
     else:
         print >> Information, 'User has set -e to be {0} for this library.'.format(param.edgesupport)
@@ -339,8 +339,8 @@ def infer_spurious_link_count_threshold(G_prime, param):
         print >> param.information_file, 'Nodes: {0}.\t Total edges with over {1} links:{2}. \tAverage density: {3}'.format(nr_nodes, link_number, total_included_edges, total_included_edges/float(nr_nodes))
 
     # print "expected_links_over_mean_plus_stddev:", expected_links_over_mean_plus_stddev
-    if expected_links_over_mean_plus_stddev < 3:
-        param.expected_links_over_mean_plus_stddev = 3
+    if expected_links_over_mean_plus_stddev < 5:
+        param.expected_links_over_mean_plus_stddev = 5
     else:
         param.expected_links_over_mean_plus_stddev = int(expected_links_over_mean_plus_stddev)
     print >> param.information_file, 'Letting filtering threshold in high complexity regions be {0} for this library.'.format(param.expected_links_over_mean_plus_stddev)
@@ -591,7 +591,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             #diff = map(lambda x: abs(abs(x[1]) - abs(x[0])), zip(l1, l2))
             #sc = sum(diff) / len(diff)
 
-            if len(l1) < 3:
+            if len(l1) < 5:
                 span_score = 0
             else:
                 span_score = 1 - KS_statistic
