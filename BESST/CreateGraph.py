@@ -275,7 +275,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     #Remove all edges with link support less than inferred parameter of param.edgesupport (unless specified by user) to be able to compute statistics.
     infer_spurious_link_count_threshold(G_prime, param)
     if not param.edgesupport:
-        # default value of 3
+        # default value of 5
         param.edgesupport = 5 
         print >> Information, 'Letting -e be {0} for this library.'.format(param.edgesupport)
     else:
@@ -385,7 +385,7 @@ def remove_edges_below_threshold(graph, param):
     #     print >> param.information_file, 'Number of nbrs: {0}\t found in {1} edges.'.format(nbr_number, density_nbr_counter[nbr_number])
 
 
-    # remove edges below 3 links (independent of region complexity) to be able to compute statistics
+    # remove edges below edgesupport links (independent of region complexity) to be able to compute statistics
     counter_low_support = 0
     for edge in graph.edges():
         if graph[edge[0]][edge[1]]['nr_links'] != None:
