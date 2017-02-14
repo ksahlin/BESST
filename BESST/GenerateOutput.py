@@ -19,6 +19,9 @@
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
 
+import os
+import time
+
 rev_nuc = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'a':'t', 'c':'g', 'g':'c', 't':'a', 'N':'N', 'X':'X', 'n':'n', 'Y':'R', 'R':'Y', 'K':'M', 'M':'K', 'S':'S', 'W':'W', 'B':'V', 'V':'B', 'H':'D', 'D':'H', 'y':'r', 'r':'y', 'k':'m', 'm':'k', 's':'s', 'w':'w', 'b':'v', 'v':'b', 'h':'d', 'd':'h'}
 
 
@@ -192,7 +195,6 @@ class Scaffold(object):
             print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
 
 def PrintOutput(F, Information, output_dest, param, pass_nr):
-    import os
     try:
         os.mkdir(param.output_directory + '/pass' + str(pass_nr))
     except OSError:
@@ -208,13 +210,15 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
     fasta_file = open(param.output_directory + '/pass' + str(pass_nr) + '/Scaffolds-pass' + str(pass_nr) + '.fa', 'w')
     header_index = 0
 
+    unique_id = str(int(time.time()))
+
     for scaf_ in reversed(F):
         #sort contigs in scaf w.r.t position here
         scaf = sorted(scaf_, key=lambda tuple: tuple[2])
         header_index += 1
 
 
-        s = Scaffold('scaffold_' + str(header_index), param, scaf)
+        s = Scaffold('scaffold_' + str(header_index) + "_uid_" + unique_id , param, scaf)
         s.make_fasta_string(fasta_file)
         s.make_AGP_string(AGP_file)
         s.make_GFF_string( gff_file )
