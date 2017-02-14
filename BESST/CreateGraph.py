@@ -475,13 +475,15 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
     if param.lognormal:
         emp_distr = param.empirical_distribution
-        #print emp_distr
+        # print emp_distr
         isize_range = sorted(emp_distr.keys())
         max_isize = isize_range[-1]
         steps = range(0, int(max_isize*0.8), max_isize/50)  # isize_range[:int(0.8*len(isize_range)):len(isize_range)/50] # not the upper most values
-        #print steps
+        # print steps
         conditional_stddevs = get_conditional_stddevs(steps, emp_distr, max_isize)
-        # print conditional_stddevs
+        log_norm_max_gap = len(conditional_stddevs) - 1  # a gap estimate lager than this list will give an index error in conditional_stddevs. 
+
+        # print len(conditional_stddevs)
 
 
     for edge in G.edges():
@@ -513,6 +515,8 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 if 2 * param.std_dev_ins_size < len1 and 2 * param.std_dev_ins_size < len2:
                     samples = G[edge[0]][edge[1]]['observations']
                     gap = lnpe.GapEstimator(param.lognormal_mean, param.lognormal_sigma, param.read_len, samples, len1, c2_len=len2)
+                    if gap > log_norm_max_gap:
+                        gap = log_norm_max_gap # Std devs in this region of the distribution are very similar anyway
                     # print 'GAP', gap
                 else:
                     gap = data_observation
