@@ -23,7 +23,7 @@ Q&A
 BESST is designed to infer as much as possible from data. If this is your first time running BESST, it is highly reccomended to run BESST with as few parameters set as possible, i.e.,
 
 ```sh
-runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam ... -o /path/to/output --orientation {fr/rf}
+runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam ... -o /path/to/output -orientation {fr/rf}
 ```
 For more details, see section "INPUT" further down. BESST will then infer as much as possible from data and print inferred parameters and more to "/path/to/output/BESST_output/Statistics.txt". This file is useful for debugging.
 
@@ -111,11 +111,6 @@ Length of shortest contig in calc of coverage:  8270
 
 NOTE:
 ----
-#### Common pitfall: ####
-
-If `--orientation` is not specified, BESST assumes that all libraries was aligned in fr orientation.
-(In versions less than 1.2 BESST cannot parse rf orientations. Thus, BESST requires reads to be mapped in FR mode, i.e. `--->  <---`, matepairs thus need to be reverse complemented.)
-
 
 #### Time and memory requirements: ####
 Version 1.3 and later have implemented several major improvements in runtime and memory requirements. These fixes has the most effect on large fragmented assemblies with hundereds of thousands to millions of contigs.
@@ -136,22 +131,23 @@ Required arguments:
 
 * -f < path to BAM files >  (increasing order of insert size)
 
-* -o < path to location for the output >
+* -orientation < fr/rf one for each library >
 
-Highly recommended argument:
 
-* --orientation < fr/rf one for each library >
+
 
 EXAMPLE RUN:
 -----------
 For scaffolding with one PE and one MP library:
 ```sh
-runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -o /path/to/output --orientation fr rf
+runBESST -c /path/to/contigfile.fa -f /path/to/file1.bam /path/to/file2.bam -orientation fr rf -o /path/to/output
 ```
-If the mate pair library was reversed complemented before it was aligned, '--orientation fr fr' should be specified.
+If the mate pair library was reversed complemented before it was aligned, '-orientation fr fr' should be specified.
 
 Optional arguments:
 -------------------
+
+* -o < path to location for the output >
 
 The following arguments are computed internally / set by BESST. It is however good to specify mean and standard deviation if your assembly is very fragmented compared to the library insert size (not enough large contains to compute library statistics on).
 

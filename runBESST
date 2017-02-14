@@ -262,6 +262,9 @@ required.add_argument("-c", dest="contigfile", type=str, required=True,
 required.add_argument("-f", dest="bamfiles", type=str, nargs='+', required=True,
                       help="Path(s) to bamfile(s).")
 
+required.add_argument("-orientation", dest="orientation", type=str, nargs='+', required=True,
+                      help="Mapped orientation for each library given with -f option. Valid input is either fr (forward reverse orientation) or rf (reverse forward orientation).")
+
 
 ## libstats
 
@@ -334,8 +337,6 @@ haplotypes.add_argument("-g", dest="haplotype", action="store_true",
 
 ## other
 
-required.add_argument("--orientation", dest="orientation", type=str, nargs='+',
-                      help="Mapped orientation for each library given with -f option. Valid input is either fr (forward reverse orientation) or rf (reverse forward orientation).")
 
 other.add_argument("-o", dest="output", type=str, default='.',
                   help="Path to output directory. BESST will create a folder named 'BESST_output' in the directory given by the path.")

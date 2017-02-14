@@ -57,16 +57,11 @@ def parse_check(arg, parser):
     # Error handling when parsing arguments
 
 
-    if arg.orientation == None:
-        sys.stdout.write('Warning: Orientations of library mappings not specified. Treating all libraries as fr mapped.\
-         If this is not the case, please provide orientations with the --orientations parameter.\n')
-        sys.stderr.write('Warning: Orientations of library mappings not specified. Treating all libraries as fr mapped.\
-         If this is not the case, please provide orientations with the --orientation parameter.\n')
-    elif arg.orientation != None and not len(arg.orientation) == len(arg.bamfiles):
-        sys.exit("Number of arguments doesn't match between -f and --orientation. Give one orientation for each library.\n")
+    if arg.orientation != None and not len(arg.orientation) == len(arg.bamfiles):
+        sys.exit("Number of arguments doesn't match between -f and -orientation. Give one orientation for each library.\n")
 
     elif not all([x == 'fr' or x == 'rf' for x in arg.orientation]):
-        sys.exit("'rf' and 'fr' are the only valid strings to --orinentation.\n")
+        sys.exit("'rf' and 'fr' are the only valid strings to -orinentation.\n")
 
 
     if not all([x == None or len(x) == len(arg.bamfiles) for x in [arg.stddev , arg.mean , arg.readlen, arg.edgesupport, arg.threshold, arg.minsize]]):
