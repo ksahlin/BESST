@@ -385,7 +385,7 @@ other.add_argument("-max_contig_overlap", dest="max_contig_overlap", type=int, d
                   help="BESST checks for overlapping ends in contigs that are adjacent in a scaffold. This parameter sets the maximum identical overlap to search for, default is 200. ")
 
 
-other.add_argument('--version', action='version', version='%(prog)s 2.2.5')
+other.add_argument('--version', action='version', version='%(prog)s 2.2.6')
 
 
 
