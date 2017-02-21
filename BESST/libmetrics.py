@@ -67,13 +67,13 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
                 counter_total += 1
 
             # contamination reads (mapped in reverse complemented orientation)
-            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
+            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read, param.min_mapq):
                 frag_size = abs(read.tlen)+2*param.read_len
                 if param.read_len < frag_size:
                     contamination_reads.append(frag_size)
                     count_contamine += 2
 
-            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
+            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read, param.min_mapq):
                 frag_size = abs(read.tlen)
                 if param.read_len < frag_size:
                     contamination_reads.append(frag_size)
@@ -287,11 +287,11 @@ def get_metrics(bam_file, param, Information):
         #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
         #         sys.exit(0)
         for read in bam_file:
-            if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read):
+            if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read, param.min_mapq):
                 if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen))
                     counter += 1
-            if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read):
+            if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read, param.min_mapq):
                 if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen) + 2*param.read_len)
                     counter += 1
