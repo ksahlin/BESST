@@ -129,7 +129,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         else:
             continue
 
-        #TODO: this if-statement is an ad hoc implementation to deal with BWA's buggy SAM-flag reporting
+        #TODO: this if-statement is an ad hoc implementation to deal with BWA's SAM-flag reporting for the mate of a read
         #if BWA fixes this -> remove this statement. If the links in fishy edges is equal to or ore than
         #the links in the graph G or G'. The edge will be removed.
         if alignedread.is_unmapped and alignedread.is_read1: # and contig1 != contig2: 
@@ -157,8 +157,9 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 ctr += 1
 
         ## add to coverage computation if contig is still in the list of considered contigs
-        #print contig1, contig2, alignedread.is_read2
-        cont_aligned_len[contig1][0] += alignedread.qlen
+        if alignedread.mapq >= param.min_mapq or alignedread.mapq == 0: # if mapq =0 it has multiple maplocations if BWA, we want to include these.
+            cont_aligned_len[contig1][0] += alignedread.qlen
+
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
 
