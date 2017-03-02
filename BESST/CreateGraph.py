@@ -225,26 +225,26 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
 
 ##### Calc coverage for all contigs with current lib here #####
-    sum_x = 0
-    sum_x_sq = 0
-    n = 0
-    cov = []
-    leng = []
+    # sum_x = 0
+    # sum_x_sq = 0
+    # n = 0
+    # cov = []
+    # leng = []
     for contig in cont_aligned_len:
         cont_coverage = cont_aligned_len[contig][0] / float(cont_aligned_len[contig][1])
         try:
             Contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(Contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(Contigs[contig].length)
         except KeyError:
             small_contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(small_contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(small_contigs[contig].length)
 
 
-        sum_x += cont_coverage
-        sum_x_sq += cont_coverage ** 2
-        n += 1
+        # sum_x += cont_coverage
+        # sum_x_sq += cont_coverage ** 2
+        # n += 1
 
     del cont_aligned_len
 
@@ -892,8 +892,12 @@ def CalculateMeanCoverage(Contigs, Information, param):
     list_of_cont_tuples = sorted(list_of_cont_tuples, key=lambda tuple: tuple[0], reverse=True)
     #coverages of longest contigs
     longest_contigs = list_of_cont_tuples[:50000]
-    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs]
-    #Calculate mean coverage from the 1000 longest contigs
+
+    # only use contigs with coverage > 0, i.e., at least one mapped read. This is a simple fix not to let contigs with 0 in coverage
+    # push average coverage estimate to 0 in the filtering approach below.
+    # A more advanced method could and should be implemented to find the peak of the coverage histogram though. 
+    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs if Contigs[contig[1]].coverage > 0 ]
+    #Calculate mean coverage from the longest contigs
     n = max(float(len(cov_of_longest_contigs)),1)
     mean_cov = sum(cov_of_longest_contigs) / n
     # If there is only one contig above the size threshold, n can be 1
@@ -904,6 +908,7 @@ def CalculateMeanCoverage(Contigs, Information, param):
     extreme_obs_occur = True
     print >> Information, 'Mean coverage before filtering out extreme observations = ', mean_cov
     print >> Information, 'Std dev of coverage before filtering out extreme observations= ', std_dev
+    print >> Information, 'Number of contigs used in calc of coverage before filtering: ', n
 
     ## SMOOTH OUT THE MEAN HERE by removing extreme observations ## 
     while extreme_obs_occur:
@@ -918,10 +923,11 @@ def CalculateMeanCoverage(Contigs, Information, param):
         std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), filtered_list))) / (n - 1)) ** 0.5
         cov_of_longest_contigs = filtered_list
 
-    print >> Information, 'Mean coverage after filtering = ', mean_cov
-    print >> Information, 'Std coverage after filtering = ', std_dev
-    print >> Information, 'Length of longest contig in calc of coverage: ', longest_contigs[0][0]
-    print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
+    print >> Information, 'Mean coverage of contings with at least on good mapping after filtering = ', mean_cov
+    print >> Information, 'Stddev coverage of contings with at least on good mapping after filtering = ', std_dev
+    print >> Information, 'Number of contigs used in calc of coverage after filtering: ', n
+    # print >> Information, 'Length of longest contig in calc of coverage: ', longest_contigs[0][0]
+    # print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
 
 
     if param.plots:
