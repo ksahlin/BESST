@@ -249,14 +249,16 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     del cont_aligned_len
 
 
+    if param.first_lib:
+        if param.lower_cov_cutoff:
+            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
+
     if param.first_lib:
         Contigs, Scaffolds, G = RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
-        if param.lower_cov_cutoff:
-            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     print >> Information, 'Number of edges in G (after repeat removal): ', len(G.edges())
     print >> Information, 'Number of edges in G_prime (after repeat removal): ', len(G_prime.edges())
@@ -897,12 +899,13 @@ def CalculateMeanCoverage(Contigs, Information, param):
     # push average coverage estimate to 0 in the filtering approach below.
     # A more advanced method could and should be implemented to find the peak of the coverage histogram though. 
     cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs if Contigs[contig[1]].coverage > 0 ]
+
+    if len(cov_of_longest_contigs) <= 1:
+        sys.exit("Too few contigs to calculate coverage on. Got: {0} contigs. If you have specified  -z_min or --min_mapq, consider lower them. If not, check the BAM file for proper alignments. Exiting here before scaffolding...".format(len(cov_of_longest_contigs)))
+
     #Calculate mean coverage from the longest contigs
-    n = max(float(len(cov_of_longest_contigs)),1)
+    n = float(len(cov_of_longest_contigs))
     mean_cov = sum(cov_of_longest_contigs) / n
-    # If there is only one contig above the size threshold, n can be 1
-    if n==1:
-        n+=1
 
     std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), cov_of_longest_contigs))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
