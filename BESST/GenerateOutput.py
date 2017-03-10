@@ -1,20 +1,20 @@
 '''
     Created on Sep 29, 2011
-    
+
     @author: ksahlin
-    
+
     This file is part of BESST.
-    
+
     BESST is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-    
+
     BESST is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
@@ -91,7 +91,7 @@ def WriteToF(F, Contigs, list_of_contigs):
         info_list.append((cont_obj.name, cont_obj.direction, cont_obj.position, cont_obj.length, cont_obj.sequence)) #,cont_obj.links
         if cont_obj.position < 0:
             print 'Write to F: Position is negative!', cont_obj.position, cont_obj.name, cont_obj.direction
-        #del Contigs[cont_obj.name]        
+        #del Contigs[cont_obj.name]
     F.append(info_list)
     return(F)
 
@@ -194,7 +194,7 @@ class Scaffold(object):
             l_elts += [ '.', sign, '.', ';'.join( l_attrs ) ]
             print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
 
-def PrintOutput(F, Information, output_dest, param, pass_nr):
+def PrintOutput(F, param, pass_nr):
     try:
         os.mkdir(param.output_directory + '/pass' + str(pass_nr))
     except OSError:
@@ -202,7 +202,7 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
         pass
     #contigs_before=len(C_dict)
     contigs_after = len(F)
-    print >> Information, '(super)Contigs after scaffolding: ' + str(contigs_after) + '\n'
+    print >> param.information_file, '(super)Contigs after scaffolding: ' + str(contigs_after) + '\n'
     gff_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.gff', 'w')
     AGP_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.agp', 'w')
     print >> gff_file, '##gff-version 3'
@@ -219,8 +219,8 @@ def PrintOutput(F, Information, output_dest, param, pass_nr):
 
 
         s = Scaffold('scaffold_' + str(header_index) + "_uid_" + unique_id , param, scaf)
-        s.make_fasta_string(fasta_file)
-        s.make_AGP_string(AGP_file)
+        s.make_fasta_string( fasta_file )
+        s.make_AGP_string( AGP_file )
         s.make_GFF_string( gff_file )
 
     return()
