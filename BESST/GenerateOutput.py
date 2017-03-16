@@ -146,6 +146,7 @@ class Component(object):
     @scaff_start.setter
     def scaff_start( self, value ):
         self._scaff_start = value
+        #~ self._scaff_end  -= value
 
     @property
     def scaff_end( self ):
@@ -155,7 +156,8 @@ class Component(object):
         return [ self.scaff_start, self.scaff_end ]
 
     def __str__( self ):
-        s = "\t".join([ str(x) for x in [self._id, self._len] ])
+        s  = "\t".join([ str(x) for x in [self._id, self._len] ])
+        s += "\t".join([ str(x) for x in [ '\ncoords' ]+self.get_scaff_ctg_coords() ])
         s += "\n" + self._seq
         return s
 
@@ -216,7 +218,7 @@ class Scaffold(object):
         else:
             s_start = self.scaff_len + 1 # the base following the last one
 
-        s_end = s_start + o_compo.len - 1
+        s_end = s_start + o_compo.len - o_compo.scaff_start
         self.__scaff_len = s_end
         self.l_components.append([ o_compo, s_start, s_end ])
 
@@ -225,7 +227,7 @@ class Scaffold(object):
 
         self.__incorporateComponent( o_ctg, l_info_tuples[0][2] )
 
-        max_gap_size = 2*self.param.std_dev_ins_size
+        max_gap_size = 2*self.param.std_dev_ins_size # not good var name, max_small_gap_size ?
         max_overlap  = self.param.max_contig_overlap
 
         for i in range( 1, len( l_info_tuples ) ):
@@ -233,7 +235,8 @@ class Scaffold(object):
             next_pos = l_info_tuples[i][2] +1 # 1-based
 
             gap_estimate = next_pos - ( l_info_tuples[i-1][2]+1 + o_ctg.len )
-            if( max_gap_size < gap_estimate ): # big gap
+            if( max_gap_size < gap_estimate ):
+                #~ print "***Big Gap"
                 o_gap = Gap( 'N', gap_estimate )
             else:
                 # compute the real overlap
@@ -243,10 +246,12 @@ class Scaffold(object):
 
                 #~ print "Overlap = " + str( overlap )
                 if( 20 <= overlap ): # big overlap
+                    #~ print "***Big Overlap"
                     print >> self.param.information_file, 'merging {0} bp here'.format(overlap)
                     o_gap = Gap( 'n', 1 )
-                    o_next.scaff_start( overlap )
+                    o_next.scaff_start = overlap + 1 # +1 to turn 1-based
                 elif( gap_estimate <= 1 ): # supposed overlap, but not found
+                    #~ print "***Supposed overlap"
                     o_gap = Gap( 'n', 1 )
                 else:
                     o_gap = Gap( 'N', gap_estimate )
