@@ -132,6 +132,12 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         #TODO: this if-statement is an ad hoc implementation to deal with BWA's SAM-flag reporting for the mate of a read
         #if BWA fixes this -> remove this statement. If the links in fishy edges is equal to or ore than
         #the links in the graph G or G'. The edge will be removed.
+
+
+        ## add to coverage computation if contig is still in the list of considered contigs
+        if alignedread.mapq >= param.min_mapq or alignedread.mapq == 0: # if mapq =0 it has multiple maplocations if BWA, we want to include these.
+            cont_aligned_len[contig1][0] += alignedread.qlen
+
         if alignedread.is_unmapped and alignedread.is_read1: # and contig1 != contig2: 
             #Some BWA error in mappings can still slip through, these edges are caracterized by very few links                 
             try:
@@ -156,9 +162,6 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 fishy_edges[((s2, side2), (s1, side1))] += 1
                 ctr += 1
 
-        ## add to coverage computation if contig is still in the list of considered contigs
-        if alignedread.mapq >= param.min_mapq or alignedread.mapq == 0: # if mapq =0 it has multiple maplocations if BWA, we want to include these.
-            cont_aligned_len[contig1][0] += alignedread.qlen
 
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
@@ -209,9 +212,9 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     print >> Information, 'ELAPSED reading file:', time() - staart
     print >> Information, 'NR OF FISHY READ LINKS: ', ctr
 
-    print >> Information, 'Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count
     print >> Information, 'Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique
-    print >> Information, 'Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert
+    print >> Information, 'Reads mapping uniquely to different contigs but had too large insert size to be used: ', counter.reads_with_too_long_insert
+    print >> Information, 'Number of reads used to create links (uniquely mapping withing isize range): ', counter.count
     print >> Information, 'Initial number of edges in G (the graph with large contigs): ', len(G.edges())
     print >> Information, 'Initial number of edges in G_prime (the full graph of all contigs before removal of repats): ', len(G_prime.edges())
     
@@ -728,7 +731,8 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     cont_names = bam_file.references
 
     #Calculate NG50 and LG 50
-    param.tot_assembly_length = sum(cont_lengths)
+    contig_lengths = [len(c_seq) for c_seq in C_dict.values()]
+    param.tot_assembly_length = sum(contig_lengths)
     sorted_lengths = sorted(cont_lengths, reverse=True)
     N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
     param.current_L50 = L50
@@ -805,7 +809,7 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
 def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2, save_obs=True):
     if alignedread.mapq == 0:
         counter.non_unique_for_scaf += 1
-    counter.count += 1
+
     (read_dir, mate_dir) = (not alignedread.is_reverse, not alignedread.mate_is_reverse)
     #Calculate actual position on scaffold here
     #position1 cont/scaf1
@@ -831,6 +835,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             return(1)
 
     if obs1 + obs2 < param.ins_size_threshold and obs1 > 25 and obs2 > 25:
+        counter.count += 1
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
@@ -852,7 +857,6 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'].append(obs1+obs2)
-
 
     else:
         counter.reads_with_too_long_insert += 1
@@ -884,7 +888,7 @@ def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, In
                 N50 = contig_length
                 L50 = nr_conts
                 break
-    print >> Information, 'L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length
+    print >> Information, 'L50: ', L50, 'N50: ', N50, 'Initial assembly length: ', param.tot_assembly_length
     return(N50, L50)
 
 def CalculateMeanCoverage(Contigs, Information, param):

@@ -108,7 +108,10 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         print >> Information, 'Contamine mean converged:', mean_isize
         print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
-    contamination_ratio = 2*n_contamine / float(counter_total)
+    if counter_total > 0:
+        contamination_ratio = 2*n_contamine / float(counter_total)
+    else:
+        contamination_ratio = 0
 
     if mean_isize >= param.mean_ins_size or std_dev_isize >= param.std_dev_ins_size or contamination_ratio <= 0.05:
         # either contamine mean or stddev is higher than MP lb mean which means it's spurious alignments or
@@ -257,7 +260,7 @@ def get_metrics(bam_file, param, Information):
             else:
                 tot_read_len += read.alen
                 nr_reads += 1
-            if nr_reads >= 100:
+            if nr_reads >= 1000:
                 param.read_len = tot_read_len / float(nr_reads)
                 break        
         else:
