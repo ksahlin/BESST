@@ -733,7 +733,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     #Calculate NG50 and LG 50
     contig_lengths = [len(c_seq) for c_seq in C_dict.values()]
     param.tot_assembly_length = sum(contig_lengths)
-    sorted_lengths = sorted(cont_lengths, reverse=True)
+    sorted_lengths = sorted(contig_lengths, reverse=True)
     N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
     param.current_L50 = L50
     param.current_N50 = N50
