@@ -126,7 +126,7 @@ class Component(object):
         self._scaff_end   = len
 
     def __del__( self ):
-        Component.i -= 0
+        Component.i -= 1
 
     @property
     def seq( self ):
