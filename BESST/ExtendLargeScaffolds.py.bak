@@ -666,7 +666,7 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
     # here we should have a for loop looping over all start nodes. Start nodes already examined should be removed in a nice way to skip over counting
     already_visited = set()
     all_paths = []
-    print('Entering "find_all_paths_for_start_node" ')
+    print 'Entering "find_all_paths_for_start_node" '
     iter_count = 0
     cnter = 0
     if param.max_extensions:
@@ -675,15 +675,15 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         iter_threshold = len(end)
 
     param.hit_path_threshold = False
-    print('iterating until maximum of {0} extensions.'.format(iter_threshold)) 
-    print('Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges())))
-    print('iterating until maximum of {0} extensions.'.format(iter_threshold), file=param.information_file)
-    print('Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges())), file=param.information_file)
+    print 'iterating until maximum of {0} extensions.'.format(iter_threshold) 
+    print 'Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
+    print >> param.information_file,  'iterating until maximum of {0} extensions.'.format(iter_threshold)
+    print >> param.information_file, 'Number of nodes:{0}, Number of edges: {1}'.format(len(G_prime.nodes()), len(G_prime.edges()))
     while len(iter_nodes) > 0 and iter_count <= iter_threshold:
         iter_count += 1
         start_node = iter_nodes.pop()
         if cnter % 100 == 0:
-            print('enter Between scaf node:{0}, scaffold progression {1}%. '.format(cnter, round( cnter / float(iter_threshold)*100, 1 )))
+            print 'enter Between scaf node:{0}, scaffold progression {1}%. '.format(cnter, round( cnter / float(iter_threshold)*100, 1 ))
         end.difference_update(set([start_node]))
         if param.dfs_traversal:
             paths = find_all_paths_for_start_node_DFS_dynamic_programming_ish(G_prime, start_node, end, already_visited, 0, 2 ** 32, param)
@@ -704,11 +704,11 @@ def BetweenScaffolds(G_prime, end, iter_nodes, param):
         cnter += 1
     #all_paths = ExtendScaffolds(all_paths)
     #print all_paths
-    print('Total nr of paths found: {0} with score larger than: {1}'.format(len(all_paths), param.score_cutoff))
+    print 'Total nr of paths found: {0} with score larger than: {1}'.format(len(all_paths), param.score_cutoff)
     all_paths.sort(key=lambda list_: list_[0])
     if param.hit_path_threshold:
-        print('Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold))
-        print('Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold), file=param.information_file)
+        print 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
+        print >> param.information_file, 'Hit path_threshold of {0} iterations! consider increase --iter <int> parameter to over {0} if speed of BESST is not a problem. Standard increase is, e.g., 2-10x of current value'.format(param.path_threshold)
     #print all_paths
     return(all_paths)
 
@@ -736,7 +736,7 @@ def WithinScaffolds(G, G_prime, start, end_node, already_visited, max_path_lengt
     return []
 
 if __name__ == '__main__':
-    from . import Scaffold
+    import Scaffold
     small_scaffolds_test = {}
     for i in range(1, 7):
         S = Scaffold.scaffold(i, 0, 0, {}, {})
@@ -754,15 +754,15 @@ if __name__ == '__main__':
     G.add_nodes_from([(1, 'L'), (1, 'R'), (4, 'L'), (4, 'R'), (6, 'L'), (6, 'R')])
     contigs = [1, 2, 3, 4, 5, 6]
 
-    print('Between')
+    print 'Between'
     BetweenScaffolds(G, G_prime, small_scaffolds_test)
     start_node = (1, 'R')
     end_node = (4, 'L')
-    print('Within')
+    print 'Within'
     already_visited = set(G.nodes())
-    print(already_visited)
+    print already_visited
     WithinScaffolds(G, G_prime, small_scaffolds_test, start_node, end_node, already_visited, 0)
     elapsed = time() - start
-    print('time all paths: ', elapsed)
+    print 'time all paths: ', elapsed
 
 

@@ -44,7 +44,7 @@ def parse_check(arg, parser):
         try:
             open(file_ + '.bai')
         except IOError as e:
-            print("couldn't find index file: ", file_ + '.bai', " check that the path is correct and that the file exists")
+            print "couldn't find index file: ", file_ + '.bai', " check that the path is correct and that the file exists"
             sys.exit(0)
 
     try:
@@ -88,7 +88,7 @@ def parse_check(arg, parser):
         arg.haplotype = False
 
     if (arg.bfs_traversal == True and arg.dfs_traversal == True):
-        print("Do not specify both --dfs_traversal and --bfs_traversal")
+        print "Do not specify both --dfs_traversal and --bfs_traversal"
         sys.exit(0)
 
     return()

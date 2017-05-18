@@ -90,8 +90,8 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
     if n_contamine > 2:
         mean_isize = sum(contamination_reads) / n_contamine
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), contamination_reads))) / (n_contamine - 1)) ** 0.5
-        print('Contamine mean before filtering :', mean_isize, file=Information)
-        print('Contamine stddev before filtering: ', std_dev_isize, file=Information)
+        print >> Information, 'Contamine mean before filtering :', mean_isize
+        print >> Information, 'Contamine stddev before filtering: ', std_dev_isize
         # #new method to find distribution
         # dist1, dist2, mean_isize, std_dev_isize, outliers_mean, outliers_stddev = find_bimodality.split_distribution(contamination_reads)
         # n_contamine = len(dist1)
@@ -105,8 +105,8 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
                 contamination_reads = filtered_list
             else:
                 break
-        print('Contamine mean converged:', mean_isize, file=Information)
-        print('Contamine std_est converged: ', std_dev_isize, file=Information)
+        print >> Information, 'Contamine mean converged:', mean_isize
+        print >> Information, 'Contamine std_est converged: ', std_dev_isize
 
     contamination_ratio = 2*n_contamine / float(counter_total)
 
@@ -131,11 +131,11 @@ def argmax(iterable):
 
 def sum_chunks(l, n):
     """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
+    for i in xrange(0, len(l), n):
         yield sum(l[i:i+n])
 
 def getdistr(ins_size_reads, cont_lengths_list, param, Information):
-    largest_contigs = [int(x) for x in sorted(nlargest(1000, cont_lengths_list))]
+    largest_contigs = map(lambda x: int(x),sorted(nlargest(1000, cont_lengths_list)))
     #print largest_contigs
     #sorted_lengths = sorted(cont_lengths_list)
 
@@ -152,7 +152,7 @@ def getdistr(ins_size_reads, cont_lengths_list, param, Information):
     current_smallest_contig = largest_contigs[0]
     current_smallest_contig_index = 0
     upper_isize = min(max_isize+1, largest_contigs[-1])
-    for isize in range(upper_isize):
+    for isize in xrange(upper_isize):
         if isize <= current_smallest_contig:
             ctgs_larger_than.append( (current_nr_ctgs, current_sum_ctgs) )
         else:
@@ -194,7 +194,7 @@ def getdistr(ins_size_reads, cont_lengths_list, param, Information):
 
     if param.plots:
         plots.histogram(ins_size_reads, param, bins=100, x_label='fragment length', y_label='frequency', title='Frag_length_distribuion' + '.' + param.bamfile.split('/')[-1])
-        plots.dot_plot(list(range(len(adjusted_distribution))), adjusted_distribution, param, x_label='fragment length', y_label='frequency', title='Frag_length_distribuion_adjusted' + '.' + param.bamfile.split('/')[-1], set_marker= '.')
+        plots.dot_plot(range(len(adjusted_distribution)), adjusted_distribution, param, x_label='fragment length', y_label='frequency', title='Frag_length_distribuion_adjusted' + '.' + param.bamfile.split('/')[-1], set_marker= '.')
 
     ## find a stable mode of the fitted distribution since our distribution is a sample.
     ## It is not very stable just to chose the isize with the highest count
@@ -203,19 +203,19 @@ def getdistr(ins_size_reads, cont_lengths_list, param, Information):
         adj_distr_chunked = list(sum_chunks(adjusted_distribution, chunk_size))
         mode_adj = (argmax(adj_distr_chunked) + 0.5)*chunk_size
         mode_for_different_windows.append(int(mode_adj))
-        print("mode for chunk size ", chunk_size, " : ", mode_adj, file=Information)
+        print >> Information, "mode for chunk size ", chunk_size, " : ", mode_adj
     mode_adj = sorted(mode_for_different_windows)[int(len(mode_for_different_windows)/2)]
-    print("Choosing mode:", mode_adj)
+    print "Choosing mode:", mode_adj
 
     #mode_adj = argmax(adjusted_distribution)
-    mu_adj = sum([i_f_x1[0]*i_f_x1[1] for i_f_x1 in enumerate(adjusted_distribution)])/tot_density
-    sigma_adj = math.sqrt(sum([(i_f_x[0]-mu_adj)**2 * i_f_x[1] for i_f_x in enumerate(adjusted_distribution)]) / tot_density)
-    m_3 = sum([(i_f_x2[0]-mu_adj)**3 * i_f_x2[1] for i_f_x2 in enumerate(adjusted_distribution)]) / tot_density
+    mu_adj = sum(map(lambda (i, f_x): i*f_x, enumerate(adjusted_distribution)))/tot_density
+    sigma_adj = math.sqrt(sum(map(lambda (i, f_x): (i-mu_adj)**2 * f_x, enumerate(adjusted_distribution))) / tot_density)
+    m_3 = sum(map(lambda (i, f_x): (i-mu_adj)**3 * f_x, enumerate(adjusted_distribution))) / tot_density
 
     # m_3 = sum(map(lambda x: (x - mean_isize) ** 3, ins_size_reads))/n
     skew_adj = m_3 / sigma_adj**3
 
-    print('mu_adjusted:{0}, sigma_adjusted:{1}, skewness_adjusted:{2}'.format(mu_adj, sigma_adj, skew_adj))
+    print 'mu_adjusted:{0}, sigma_adjusted:{1}, skewness_adjusted:{2}'.format(mu_adj, sigma_adj, skew_adj)
     return adjusted_distribution, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj
 #with pysam.Samfile(param.bamfile, 'rb') as bam_file:
 
@@ -274,7 +274,7 @@ def get_metrics(bam_file, param, Information):
             param.contig_threshold = param.mean_ins_size + 4 * param.std_dev_ins_size
         else:
             param.contig_threshold = param.mean_ins_size + (param.std_dev_ins_size / float(param.mean_ins_size)) * param.std_dev_ins_size
-        print('-T', param.ins_size_threshold, '-t', param.contig_threshold, file=Information)
+        print >> Information, '-T', param.ins_size_threshold, '-t', param.contig_threshold
 
     if not param.mean_ins_size: # user has not specified mean and std dev. (and no thresholds)
         #total_reads_iterated_through = 0
@@ -312,8 +312,8 @@ def get_metrics(bam_file, param, Information):
         n = float(len(ins_size_reads))
         mean_isize = sum(ins_size_reads) / n
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
-        print('Mean before filtering :', mean_isize, file=Information)
-        print('Std_est  before filtering: ', std_dev_isize, file=Information)
+        print >> Information, 'Mean before filtering :', mean_isize
+        print >> Information, 'Std_est  before filtering: ', std_dev_isize
         extreme_obs_occur = True
         while extreme_obs_occur:
             extreme_obs_occur, filtered_list = AdjustInsertsizeDist(param, mean_isize, std_dev_isize, ins_size_reads)
@@ -326,27 +326,27 @@ def get_metrics(bam_file, param, Information):
         mean_isize = sum(ins_size_reads) / n
         std_dev_isize = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_isize + mean_isize ** 2), ins_size_reads))) / (n - 1)) ** 0.5
 
-        print('Mean converged:', mean_isize, file=Information)
-        print('Std_est converged: ', std_dev_isize, file=Information)
+        print >> Information, 'Mean converged:', mean_isize
+        print >> Information, 'Std_est converged: ', std_dev_isize
 
         param.mean_ins_size = mean_isize
         param.std_dev_ins_size = std_dev_isize
 
-        m_3 = sum([(x - mean_isize) ** 3 for x in ins_size_reads])/n
+        m_3 = sum(map(lambda x: (x - mean_isize) ** 3, ins_size_reads))/n
         skewness = m_3 / std_dev_isize**3
         param.skewness = skewness
-        print('Skewness of distribution: ', param.skewness, file=Information)
+        print >> Information, 'Skewness of distribution: ', param.skewness
 
         # weight each observation with how likely it is to see it
         adj_distr, mu_adj, sigma_adj, skew_adj, median_adj, mode_adj = getdistr(ins_size_reads, cont_lengths_list, param, Information)
         param.skew_adj = skew_adj
-        param.empirical_distribution = dict(list(zip(list(range(len(adj_distr))), adj_distr))) #Counter(ins_size_reads)
-        print('Mean of getdistr adjusted distribution: ', mu_adj, file=Information)
-        print('Sigma of getdistr adjusted distribution: ', sigma_adj, file=Information)
-        print('Skewness of getdistr adjusted distribution: ', skew_adj, file=Information)
-        print('Median of getdistr adjusted distribution: ', median_adj, file=Information)
-        print('Mode of getdistr adjusted distribution: ', mode_adj, file=Information)
-        print('Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj, file=Information)
+        param.empirical_distribution = dict(zip(range(len(adj_distr)), adj_distr)) #Counter(ins_size_reads)
+        print >> Information, 'Mean of getdistr adjusted distribution: ', mu_adj
+        print >> Information, 'Sigma of getdistr adjusted distribution: ', sigma_adj
+        print >> Information, 'Skewness of getdistr adjusted distribution: ', skew_adj
+        print >> Information, 'Median of getdistr adjusted distribution: ', median_adj
+        print >> Information, 'Mode of getdistr adjusted distribution: ', mode_adj
+        print >> Information, 'Using mean and stddev of getdistr adjusted distribution from here: ', mu_adj, sigma_adj
         param.mean_ins_size = mu_adj
         param.std_dev_ins_size = sigma_adj
 
@@ -373,14 +373,14 @@ def get_metrics(bam_file, param, Information):
 
             ## the statistics for the getdistr adjusted distribution
             #mode_adj = mu_adj - 3*(mu_adj - median_adj)
-            print('Mode on getdistr adjusted: ', mode_adj, file=Information)
-            print("Median on getdistr adjusted:", median_adj, file=Information)
-            print("mode adj:", mode_adj)
-            print("median adj", median_adj)
+            print >> Information, 'Mode on getdistr adjusted: ', mode_adj
+            print >> Information, "Median on getdistr adjusted:", median_adj
+            print "mode adj:", mode_adj
+            print "median adj", median_adj
             param.lognormal_mean = math.log(median_adj)
             param.lognormal_sigma = math.sqrt(param.lognormal_mean - math.log(mode_adj))
-            print('Lognormal mean getdistr adjusted: ', param.lognormal_mean, file=Information)
-            print("Lognormal stddev getdistr adjusted", param.lognormal_sigma, file=Information)
+            print >> Information, 'Lognormal mean getdistr adjusted: ', param.lognormal_mean
+            print >> Information, "Lognormal stddev getdistr adjusted", param.lognormal_sigma
 
             param.lognormal = True
             #sys.exit()
@@ -407,23 +407,23 @@ def get_metrics(bam_file, param, Information):
     n_contamine = get_contamination_metrics(largest_contigs_indexes,bam_file, cont_names, param, Information)
 
 
-    print('', file=Information)
-    print('LIBRARY STATISTICS', file=Information)
-    print('Mean of library set to:', param.mean_ins_size, file=Information)
-    print('Standard deviation of library set to: ', param.std_dev_ins_size, file=Information)
-    print('MP library PE contamination:', file=Information)
-    print('Contamine rate (rev comp oriented) estimated to: ',  param.contamination_ratio, file=Information)
-    print('lib contamine mean (avg fragmentation size): ', param.contamination_mean, file=Information)
-    print('lib contamine stddev: ', param.contamination_stddev, file=Information) 
-    print('Number of contamined reads used for this calculation: ', n_contamine, file=Information)
+    print >> Information, ''
+    print >> Information, 'LIBRARY STATISTICS'
+    print >> Information, 'Mean of library set to:', param.mean_ins_size
+    print >> Information, 'Standard deviation of library set to: ', param.std_dev_ins_size
+    print >> Information, 'MP library PE contamination:'
+    print >> Information, 'Contamine rate (rev comp oriented) estimated to: ',  param.contamination_ratio
+    print >> Information, 'lib contamine mean (avg fragmentation size): ', param.contamination_mean
+    print >> Information, 'lib contamine stddev: ', param.contamination_stddev 
+    print >> Information, 'Number of contamined reads used for this calculation: ', n_contamine
 
 
-    print('-T (library insert size threshold) set to: ', param.ins_size_threshold, file=Information)
-    print('-k set to (Scaffolding with contigs larger than): ', param.contig_threshold, file=Information)
-    print('Number of links required to create an edge: ', param.edgesupport, file=Information)
-    print('Maximum identical contig-end overlap-length to merge of contigs that are adjacent in a scaffold: ', param.max_contig_overlap, file=Information)
-    print('Read length set to: ', param.read_len, file=Information)
-    print('', file=Information)
+    print >> Information, '-T (library insert size threshold) set to: ', param.ins_size_threshold
+    print >> Information, '-k set to (Scaffolding with contigs larger than): ', param.contig_threshold
+    print >> Information, 'Number of links required to create an edge: ', param.edgesupport
+    print >> Information, 'Maximum identical contig-end overlap-length to merge of contigs that are adjacent in a scaffold: ', param.max_contig_overlap
+    print >> Information, 'Read length set to: ', param.read_len
+    print >> Information, ''
     return()
 
 

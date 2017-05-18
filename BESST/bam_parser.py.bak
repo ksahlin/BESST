@@ -89,7 +89,7 @@ class BamParser(object):
         self.bam_file = open_bam_file(bam_file)
         if bam_path2:
             self.bam_file2 = open_bam_file(bam_path2) 
-        self.contig_lengths = dict(list(zip(self.bam_file.references,self.bam_file.lengths)))
+        self.contig_lengths = dict(zip(self.bam_file.references,self.bam_file.lengths))
 
     def proper_aligned_unique_pairs(self,aligner, samples=2**32):
         nr_samples = 0
@@ -197,7 +197,7 @@ def main(path):
     for read in BamParser(path).reads_for_coverage():
         if read.qlen != 100:
         #print read.tags
-            print(read.qlen)
+            print read.qlen
         #print read.opt('XT')
 
 

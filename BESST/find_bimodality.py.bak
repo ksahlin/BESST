@@ -28,7 +28,7 @@ import math
 def params(x):
     n = float(len(x)) 
     mu = sum(x)/ float(len(x))
-    x_sq = sum([x ** 2 for x in x])
+    x_sq = sum(map(lambda x: x ** 2, x))
     var = (x_sq - n * mu ** 2) / (n - 1)
     return mu, var
 
@@ -150,7 +150,7 @@ def split_distribution(all_isizes):
     # base case varaince to variances when splitting the distribution.
 
     observations = [item for sublist in joined_bins for item in sublist]
-    filter_observations = [x for x in observations if x>100]
+    filter_observations = filter(lambda x: x>100, observations)
     if len(filter_observations) < 2:
         return [],[],0,0,0,0
     base_mu, base_var = params(filter_observations)

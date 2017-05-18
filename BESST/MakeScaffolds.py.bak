@@ -28,15 +28,15 @@ import networkx as nx
 from networkx import algorithms
 import multiprocessing
 
-from . import Contig, Scaffold, Parameter
-from . import GenerateOutput as GO
+import Contig, Scaffold, Parameter
+import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est as GC
 import mathstats.log_normal_param_est as lnpe
 from mathstats.normaldist import normal
-from . import ExtendLargeScaffolds as ELS
-from . import haplotypes as HR
-from . import plots
-from . import order_contigs
+import ExtendLargeScaffolds as ELS
+import haplotypes as HR
+import plots
+import order_contigs
 
 
 # def constant_large():
@@ -53,8 +53,8 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
         if G[edge[0]][edge[1]]['nr_links']:
             nr_edges += 1
 
-    print(str(nr_edges) + ' link edges created.', file=Information)
-    print('Perform inference on scaffold graph...', file=Information)
+    print >> Information, str(nr_edges) + ' link edges created.'
+    print >> Information, 'Perform inference on scaffold graph...'
 
     #VizualizeGraph(G,param,Information)
 
@@ -88,10 +88,10 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
         ##Here PathExtension algorithm between created scaffolds is called if PRO is activated
 
     if param.extend_paths:
-        print('\n\n\n Searching for paths BETWEEN scaffolds\n\n\n', file=Information)
+        print >> Information, '\n\n\n Searching for paths BETWEEN scaffolds\n\n\n'
         PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, param, dValuesTable, Information)
-        print('Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0, file=Information)
-        print('Number of gaps estimated by GapEst-LP module order_contigs in this step is: {0}'.format(param.path_gaps_estimated), file=Information)
+        print >> Information, 'Nr of contigs left: ', len(G_prime.nodes()) / 2.0, 'Nr of linking edges left:', len(G_prime.edges()) - len(G_prime.nodes()) / 2.0
+        print >> Information, 'Number of gaps estimated by GapEst-LP module order_contigs in this step is: {0}'.format(param.path_gaps_estimated)
 
     if param.plots:
         if len(param.gap_estimations) > 0:
@@ -132,7 +132,7 @@ def Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, In
 
 
 def RemoveIsolatedContigs(G, Information):
-    print('Remove isolated nodes.', file=Information)
+    print >> Information, 'Remove isolated nodes.'
     counter = 0
     for node in G.nodes():
         if node in G:
@@ -140,7 +140,7 @@ def RemoveIsolatedContigs(G, Information):
             if len(G.neighbors(node)) == 1 and len(G.neighbors(nbr)) == 1:
                 counter += 1
                 G.remove_nodes_from([node, nbr])
-    print(str(counter) + ' isolated contigs removed from graph.', file=Information)
+    print >> Information, str(counter) + ' isolated contigs removed from graph.'
     return(G)
 
 
@@ -159,13 +159,13 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
 
 
     #Remove ambiguous edges
-    filter_nbrs = [nbr for nbr in nbrs if 0 < G[node][nbr]['nr_links']] # remove other side of contig (has no "links")
-    score_list_temp = sorted([(G[node][nbr]['score'], nbr) for nbr in filter_nbrs]) # sort list of scores for neighbors
+    filter_nbrs = filter(lambda nbr: 0 < G[node][nbr]['nr_links'] , nbrs) # remove other side of contig (has no "links")
+    score_list_temp = sorted(map(lambda nbr: (G[node][nbr]['score'], nbr), filter_nbrs)) # sort list of scores for neighbors
     non_zero_score_edges, zero_score_edges = partition(lambda nbr: 0 < G[node][nbr[1]]['score'], score_list_temp) # Split list into 0-scoring and non-0-scoring edges
 
 
     #remove all zero score edges
-    remove_zero_score_edges = [(node, item[1]) for item in zero_score_edges]
+    remove_zero_score_edges = map(lambda item: (node, item[1]) , zero_score_edges)
     G.remove_edges_from(remove_zero_score_edges)
     if param.plots:
         for item in zero_score_edges:
@@ -180,10 +180,10 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
     # Remove lower non zero score edges
     if len(non_zero_score_edges) > 1:
         if non_zero_score_edges[-2][0] / non_zero_score_edges[-1][0] > 0.8: # lowered threshold due to the unceartinaty in scores
-            print('SCORES AMBVIVALENT', non_zero_score_edges[-1][0], non_zero_score_edges[-2][0], file=Information)
-            remove_non_zero_edges = [(node, item[1]) for item in non_zero_score_edges] # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
+            print >> Information, 'SCORES AMBVIVALENT', non_zero_score_edges[-1][0], non_zero_score_edges[-2][0]
+            remove_non_zero_edges = map(lambda item: (node, item[1]) , non_zero_score_edges) # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
         else:
-            remove_non_zero_edges = [(node, item[1]) for item in non_zero_score_edges[:-1]] # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
+            remove_non_zero_edges = map(lambda item: (node, item[1]) , non_zero_score_edges[:-1]) # Edges that does not have a score of 0 but are not the highest scoring one in an ambigous region
 
         G.remove_edges_from(remove_non_zero_edges) # remove the lower scoring edges
         if param.extend_paths:
@@ -208,10 +208,10 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
     edge_score_to_zero = []
 
     nr_edges_before = len(G.edges())
-    print('Remove edges from node if more than two edges', file=Information)
+    print >> Information, 'Remove edges from node if more than two edges'
     #counter1 = 0
 
-    link_edges = [x for x in G.edges(data=True) if 'score' in x[2]]
+    link_edges = filter(lambda x: 'score' in x[2], G.edges(data=True))
     edge_scores_sorted = sorted(link_edges, key=lambda x: x[2]['score'], reverse=True)
 
     for edge in edge_scores_sorted:
@@ -220,15 +220,15 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
 
     nr_edges_after = len(G.edges())
     #print >> Information, str(counter1) + ' ambiguous regions in graph ( a contig with more than 2 neighbors).'
-    print(' Number of edges in G before:', nr_edges_before, file=Information)
-    print(' Number of edges in G after:', nr_edges_after, file=Information)
+    print >> Information, ' Number of edges in G before:', nr_edges_before
+    print >> Information, ' Number of edges in G after:', nr_edges_after
     try:
-        print(' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before))), file=Information)
+        print >> Information, ' %-age removed edges:', 100 * (1 - (nr_edges_after / float(nr_edges_before)))
     except ZeroDivisionError:
         pass
 
     if param.plots:
-        print(len(score_chosen_obs))
+        print len(score_chosen_obs)
         list_of_datasets = [edge_score_to_zero, score_chosen_obs , non_zero_score_removed_obs]
         plots.multiple_histogram(list_of_datasets, param, 'score', 'frequency', title='Besst_decision_scores' + plot + '.' + param.bamfile.split('/')[-1])
 
@@ -241,16 +241,16 @@ def RemoveAmbiguousRegionsUsingScore(G, G_prime, Information, param, plot):
 
 def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 #### After the proceure above, we hope that the graph is almost perfectly linear but we can still be encountering cycles (because of repeats or haplotypic contigs that has slipped through our conditions). Thus we finally search for loops
-    print('Contigs/scaffolds left:', len(G.nodes()) / 2, file=Information)
-    print('Remove remaining cycles...', file=Information)
+    print >> Information, 'Contigs/scaffolds left:', len(G.nodes()) / 2
+    print >> Information, 'Remove remaining cycles...'
     #graphs = nx.connected_component_subgraphs(G)
     #print 'Nr connected components',len(graphs)
     counter = 0
     #for graph in graphs:
     list_of_cycles = algorithms.cycles.cycle_basis(G)
     for cycle in list_of_cycles:
-        print('A cycle in the scaffold graph: ' + str(cycle) + '\n', file=Information)
-        print('A cycle in the scaffold graph: ' + str(cycle), file=Information)
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle) + '\n'
+        print >> Information, 'A cycle in the scaffold graph: ' + str(cycle)
         counter += 1
         for node in cycle:
             if node in G:
@@ -263,7 +263,7 @@ def RemoveLoops(G, G_prime, Scaffolds, Contigs, Information, param):
 #                    list_of_contigs=S_obj.contigs   #list of contig objects contained in scaffold object
 #                    Contigs, F = GO.WriteToF(F,Contigs,list_of_contigs)
 #                    del Scaffolds[scaffold_]
-    print(str(counter) + ' cycles removed from graph.', file=Information)
+    print >> Information, str(counter) + ' cycles removed from graph.'
     return(G, Contigs, Scaffolds)
 
 
@@ -271,7 +271,7 @@ def NewContigsScaffolds(G, G_prime, Contigs, small_contigs, Scaffolds, small_sca
 ### Remaining scaffolds are true sensible scaffolds, we must now update both the library of scaffold objects and the library of contig objects
     new_scaffolds_ = [ G.subgraph(c) for c in nx.connected_components(G)]
     #print 'INITIAL SCAFFOLD INDEX:',param.scaffold_indexer
-    print('Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_)), file=Information)
+    print >> Information, 'Nr of new scaffolds created in this step: ' + str(len(new_scaffolds_))
     for new_scaffold_ in new_scaffolds_:
         param.scaffold_indexer += 1
         #scaf_size=len(new_scaffold_)
@@ -488,7 +488,7 @@ def get_total_length(Scaffolds, small_scaffolds, path):
             try:
                 total_within_path_length += small_scaffolds[node[0]].s_length
             except KeyError:
-                print('Contig/Scaffold {0} is not in small_scaffolds'.format(node[0]))
+                print 'Contig/Scaffold {0} is not in small_scaffolds'.format(node[0])
                 return -1
     return total_within_path_length
 
@@ -568,7 +568,7 @@ def PROWithinScaf(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds
                     G_prime.add_edge(path[-1],(path[-1][0],'L'),nr_links=None)
 
                 # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
-                small_scafs = [path[i] for i in [i for i in range(len(path) - 1) if i % 2 == 1]]
+                small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
                 for item in small_scafs:
                     scaf_obj = small_scaffolds[item[0]]
                     Scaffolds[item[0]] = scaf_obj
@@ -618,7 +618,7 @@ def other_end(node):
     elif node[1] == 'R':
         return (node[0],'L')
     else:
-        print('Node is not properly declared (has not right or left end)')
+        print 'Node is not properly declared (has not right or left end)'
         sys.exit()
 
 
@@ -627,7 +627,7 @@ def permute_path(path, ctg_to_move, contig_after):
     pos_ctg_to_move_left = path.index((ctg_to_move,'L'))
     pos_ctg_to_move_right = path.index((ctg_to_move,'R'))
 
-    path = [x for x in path if x[0] != ctg_to_move]
+    path = filter(lambda x: x[0] != ctg_to_move, path)
     pos_of_ctg_after = map(lambda x: x[0],path).index(contig_after)
     if pos_ctg_to_move_right < pos_ctg_to_move_left:
         path.insert(pos_of_ctg_after, (ctg_to_move,'L') )
@@ -706,7 +706,7 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
     #contig_lengths2 = map(lambda x: (contigs_to_indexes[x], Scaffolds[x].s_length), contigs_to_indexes) 
 
     #print contig_lengths
-    ctg_lengths_index_ordered = [x[1] for x in sorted(contig_lengths, key=lambda x: x[0])]
+    ctg_lengths_index_ordered = map(lambda x: x[1], sorted(contig_lengths, key=lambda x: x[0]))
     #print ctg_lengths_index_ordered
     tot_links = 0
     mp_links = 0
@@ -751,7 +751,7 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
         if mean_PE_obs > param.contamination_mean + 6 * param.contamination_stddev:
             #print 'permuted link invalid. Continuing..'
             if all(length in ctg_lengths_index_ordered for length in [670, 2093]) or all(length in ctg_lengths_index_ordered for length in [900, 3810]) or all(length in ctg_lengths_index_ordered for length in [2528, 591]) or all(length in ctg_lengths_index_ordered for length in [734, 257, 1548]):
-                print('permuted link invalid. Continuing..', 'moved forward:', index_moved_forward, 'shifted:', index_shifted, file=param.information_file)
+                print >> param.information_file, 'permuted link invalid. Continuing..', 'moved forward:', index_moved_forward, 'shifted:', index_shifted
             return None, None, None, None
 
 
@@ -766,7 +766,7 @@ def calculate_path_LP(current_path, Scaffolds, small_scaffolds, observations, pa
     ## 2 Get optimal LP solution for given path order
     result_path = order_contigs.main(ctg_lengths_index_ordered, index_observations, param)
     if not result_path:
-        print('We should never end up here!')
+        print 'We should never end up here!'
         return None,None,None,None
 
     return result_path, contigs_to_indexes, indexes_to_contigs, index_observations
@@ -844,7 +844,7 @@ def path_permutations_with_overlap_constraints(original_path, constraint_dict):
 
     # order original path with the constraint pairs
     path = copy.deepcopy(original_path)
-    print("before constraints", path)
+    print "before constraints", path
 
     long_end = path[0]
     long_beginning = path[-1]
@@ -910,7 +910,7 @@ def path_permutations_with_overlap_constraints(original_path, constraint_dict):
             path.insert(i_c1_y, path.pop(i_c2_x))
             # print '5', path
 
-    print("after constraints", path)
+    print "after constraints", path
 
     return path
 
@@ -983,7 +983,7 @@ def kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs):
             label_dict_ends[label] = ctg_seq
 
         else:
-            print('BUG!')
+            print 'BUG!'
 
         #label_dict[label] = ctg_seq
 
@@ -996,7 +996,7 @@ def kmer_overlaps(path, Scaffolds, small_scaffolds, Contigs, small_contigs):
             if label1[0] != label2[0]:
                 overlap = check_kmer_overlap(label_dict_ends[label1], label_dict_beginnings[label2])
                 if overlap > 20:
-                    print(overlap)
+                    print overlap
                     # print overlap, label1, label2
                     # print label_dict[label1], label_dict[label2]
                     # print
@@ -1124,10 +1124,10 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
 
     #print G_prime.subgraph(path).edges(data=True)
-    sub_graph_reduced = [x for x in sub_graph.edges() if sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] in sub_graph[x[0]][x[1]]]
+    sub_graph_reduced = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] in sub_graph[x[0]][x[1]] , sub_graph.edges())
 
-    observations = dict([(x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]) for x in sub_graph_reduced])
-    sub_graph_small_to_large_ctgs = [x for x in sub_graph.edges() if sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]]]
+    observations = dict(map(lambda x: (x, [i+j for i,j in zip(sub_graph[x[0]][x[1]][x[0][0]], sub_graph[x[0]][x[1]][x[1][0]] )]), sub_graph_reduced))
+    sub_graph_small_to_large_ctgs = filter(lambda x: sub_graph[x[0]][x[1]]['nr_links'] != None and x[0][0] not in sub_graph[x[0]][x[1]] , sub_graph.edges())
     for c1,c2 in sub_graph_small_to_large_ctgs:
         #observations[(c1,c2)] = (sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links'], sub_graph[c1][c2]['nr_links']) #[sub_graph[c1][c2]['obs']/ sub_graph[c1][c2]['nr_links']]*sub_graph[c1][c2]['nr_links']
         n = sub_graph[c1][c2]['nr_links']
@@ -1258,8 +1258,8 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
             ## 3 Check of current path is better than previous
                 #print 'Current objective: {0}, best objective: {1}'.format(current_path_instance.objective, final_path_instance.objective)
                 if  -1 < current_path_instance.objective - final_path_instance.objective < 1:
-                    print('Very close:', current_path_instance.objective, final_path_instance.objective)
-                    print(current_path_instance.objective < final_path_instance.objective)
+                    print 'Very close:', current_path_instance.objective, final_path_instance.objective
+                    print current_path_instance.objective < final_path_instance.objective
 
                 if current_path_instance.objective < final_path_instance.objective - 1:
                     final_path = copy.deepcopy(current_path)
@@ -1274,7 +1274,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
         ### O(n*(n-1)/2) solution idea ######
 
         else:
-            max_nr_rounds = len(list(range(3, len(path) - 1, 2)))
+            max_nr_rounds = len(range(3, len(path) - 1, 2))
             current_min_path = copy.deepcopy(path)
 
             # calculate initial round with all edges
@@ -1335,7 +1335,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
 
     #print final_path_instance
     #print path_dict_index
-    path_dict = [(final_indexes_to_contigs[x[0].index],final_indexes_to_contigs[x[1].index], path_dict_index[x]) for x in path_dict_index]
+    path_dict = map(lambda x: (final_indexes_to_contigs[x[0].index],final_indexes_to_contigs[x[1].index], path_dict_index[x]), path_dict_index)
     #print path_dict
     # for ctg in final_path_instance.ctgs:
     #     contig = indexes_to_contigs[ctg.index]
@@ -1345,7 +1345,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
     G_ = nx.Graph()
     final_path.insert(0, (final_path[0][0], 'R')) if final_path[0][1] == 'L' else final_path.insert(0, (final_path[0][0], 'L'))
     final_path.insert(len(final_path), (final_path[-1][0], 'R'))  if final_path[-1][1] == 'L' else final_path.insert(len(final_path), (final_path[-1][0], 'L'))
-    G_.add_edges_from(list(zip(final_path[::1], final_path[1::])))
+    G_.add_edges_from(zip(final_path[::1], final_path[1::]))
 
     for c1,c2,gap in path_dict:
         if (c2,'L') in G_[(c1,'L')]:
@@ -1357,7 +1357,7 @@ def estimate_path_gaps(Contigs, small_contigs, path,Scaffolds,small_scaffolds, G
         elif (c2,'R') in G_[(c1,'R')]:
             G_[(c1,'R')][(c2,'R')]['avg_gap'] = gap
         else:
-            print('Could not find edge!')
+            print 'Could not find edge!'
             sys.exit()
     #print G_.edges(data=True)
 
@@ -1385,7 +1385,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         # Too few short contigs compared to long (ratio set to 0.1) or lib ins size + 2*std_dev - 2*read_len < 200 ) and too many large contigs (> 10 000) do not enter path extension algm since to low payoff:
 
         if len(small_scaffolds) / float(len(Scaffolds)) < 0.1 and not param.no_score:
-            print("Did not enter path seartching algorithm between scaffolds due to too small fraction of small scaffolds, fraction were: ", len(small_scaffolds) / float(len(Scaffolds)), file=Information)
+            print >> Information, "Did not enter path seartching algorithm between scaffolds due to too small fraction of small scaffolds, fraction were: ", len(small_scaffolds) / float(len(Scaffolds))
             return(start_scaf_index)
 
     ########### Find paths between scaffolds here ###############
@@ -1394,9 +1394,9 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
     num_cores = multiprocessing.cpu_count()
     #TODO: If we get too many paths back and run into memory issues we could change so that only paths with score over 0 are stored in ELS module
     if param.multiprocess and num_cores > 1:
-        from . import workerprocess
+        import workerprocess
         import heapq
-        print('Entering ELS.BetweenScaffolds parallelized with ', num_cores, ' cores.', file=Information)
+        print >> Information, 'Entering ELS.BetweenScaffolds parallelized with ', num_cores, ' cores.'
         start = time.time()
         # load up work queue
         work_queue = multiprocessing.Queue()
@@ -1412,7 +1412,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         while counter < nr_jobs:
             work_queue.put((set(nodes[counter:counter + chunk]), G_prime, end, param))
             nr_processes += 1
-            print('node nr', counter, 'to', counter + chunk - 1, 'added', file=Information)
+            print >> Information, 'node nr', counter, 'to', counter + chunk - 1, 'added'
             #print work_queue.get()
             counter += chunk
 
@@ -1435,7 +1435,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         all_paths_sorted_wrt_score_itr = wrapper(heapq.merge, results) #tot_result
         all_paths_sorted_wrt_score = [i for i in all_paths_sorted_wrt_score_itr]
         elapsed = time.time() - start
-        print("Elapsed time multiprocessing: ", elapsed, file=Information)
+        print >> Information, "Elapsed time multiprocessing: ", elapsed
 
     else:
         start = time.time()
@@ -1443,24 +1443,24 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         for node in G:
             end.add(node)
         iter_nodes = end.copy()
-        print('Entering ELS.BetweenScaffolds single core', file=Information)
+        print >> Information, 'Entering ELS.BetweenScaffolds single core'
         all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, iter_nodes, param)
         elapsed = time.time() - start
-        print("Elapsed time single core pathfinder: ", elapsed, file=Information)
-        print("Elapsed time single core pathfinder: ", elapsed)
+        print >> Information, "Elapsed time single core pathfinder: ", elapsed
+        print "Elapsed time single core pathfinder: ", elapsed
 
     ################################################################
 
     nr_paths = len(all_paths_sorted_wrt_score)
     start_end_node_update_storage = {}
-    print('{0} paths detected are with score greater or equal to {1} '.format(nr_paths, param.score_cutoff), file=Information)
+    print >> Information, '{0} paths detected are with score greater or equal to {1} '.format(nr_paths, param.score_cutoff)
     for sublist in reversed(all_paths_sorted_wrt_score):
         path = sublist[2]
         bad_links = sublist[1]
         score = sublist[0]
         path_len = sublist[3]
         if nr_paths <= 100000:
-            print('Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score), file=Information)
+            print >> Information, 'Path: path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         ## Need something here that keeps track on which contigs that are added to Scaffolds so that a
         ## contig is only present once in each path
@@ -1482,7 +1482,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
                 strt = start_end_node_update_storage[path[0]][0]
                 nd = start_end_node_update_storage[path[-1]][0]
                 if strt[0] == nd[0]:
-                    print('Rare case (circular paths) detected and treated. ', file=Information)
+                    print >> Information, 'Rare case (circular paths) detected and treated. '
                     continue
             except KeyError:
                 pass
@@ -1494,14 +1494,14 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
             if path[0] in start_end_node_update_storage:
                 case1 = 1
             else:
-                print('Beginning is already in path', file=Information)
+                print >> Information, 'Beginning is already in path'
                 continue
 
         if path[-1][0] not in Scaffolds:
             if path[-1] in start_end_node_update_storage:
                 case2 = 1
             else:
-                print('End is already in path', file=Information)
+                print >> Information, 'End is already in path'
                 continue
 
 
@@ -1551,7 +1551,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
 
         # move all contig and scaffold objects from "small" structure to large structure to fit with UpdateInfo structure
 
-        small_scafs = [path[i] for i in [i for i in range(len(path) - 1) if i % 2 == 1]]
+        small_scafs = map(lambda i: path[i], filter(lambda i: i % 2 == 1, range(len(path) - 1)))
         for item in small_scafs:
             scaf_obj = small_scaffolds[item[0]]
             Scaffolds[item[0]] = scaf_obj
@@ -1596,7 +1596,7 @@ def PROBetweenScaf(G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, 
         S = Scaffold.scaffold(param.scaffold_indexer, contig_list, scaffold_length)  #Create the new scaffold object 
 
         if nr_paths <= 100000:
-            print('Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score), file=Information)
+            print >> Information, 'Path taken! path length: {0}, nr bad links: {1}, score: {2} '.format((path_len - 2) / 2.0, bad_links, score)
 
         Scaffolds[S.name] = S        #include in scaffold library
         #add the new scaffold object to G_prime
@@ -1648,7 +1648,7 @@ def GiveLinkConnection(Contigs, contig_objects1, contig_objects2, side1, side2, 
             if contig.position >= max_pos:
                 linking_contig1 = contig
                 max_pos = contig.position
-        min_pos = sys.maxsize
+        min_pos = sys.maxint
         for contig in contig_objects2:
             if contig.position <= min_pos:
                 linking_contig2 = contig
@@ -1665,7 +1665,7 @@ def GiveLinkConnection(Contigs, contig_objects1, contig_objects2, side1, side2, 
                 linking_contig2 = contig
                 max_pos = contig.position
 
-        min_pos = sys.maxsize
+        min_pos = sys.maxint
         for contig in contig_objects1:
             if contig.position <= min_pos:
                 linking_contig1 = contig
@@ -1691,12 +1691,12 @@ def GiveLinkConnection(Contigs, contig_objects1, contig_objects2, side1, side2, 
 
 
     elif side1 == 'L' and side2 == 'L':
-        min_pos = sys.maxsize
+        min_pos = sys.maxint
         for contig in contig_objects1:
             if contig.position <= min_pos:
                 linking_contig1 = contig
                 min_pos = contig.position
-        min_pos = sys.maxsize
+        min_pos = sys.maxint
         for contig in contig_objects2:
             if contig.position <= min_pos:
                 linking_contig2 = contig

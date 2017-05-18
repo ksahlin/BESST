@@ -102,6 +102,6 @@ if __name__ == '__main__':
     seq2 = 'TTTGCTGGAG' * 20
     score, row, column, traceback_matrix = SW(seq1, seq2, -1, -3)
     b = traceback_parser(score, row, column, traceback_matrix, seq1, seq2)
-    print(b)
+    print b
     #print score_matrix
 #print traceback_matrix
