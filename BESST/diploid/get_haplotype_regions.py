@@ -19,9 +19,9 @@ import gc
 
 import networkx as nx
 
-import smith_waterman
-import wrapper_sw
-import output_contigs
+from . import smith_waterman
+from . import wrapper_sw
+from . import output_contigs
 
 
 
@@ -62,11 +62,11 @@ def create_kmers(k, m, sequence, acc, k_mer_hash):
 def get_kmer_index(contigs, k, m):
     k_mer_hash = defaultdict(list)
     cntr = 0
-    for accession, sequence in contigs.iteritems():
+    for accession, sequence in contigs.items():
         cntr += 1
         create_kmers(k, m, sequence, accession, k_mer_hash)
         if cntr % 100000 == 0:
-            print 'Creating k-mers of ', cntr, ' contigs.'
+            print('Creating k-mers of ', cntr, ' contigs.')
     return(k_mer_hash)
 
 # given an iterable of pairs return the key corresponding to the greatest value
@@ -88,7 +88,7 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
     # Check if no contig on this side, this could be the case if e.g. low coverage on one s
     # side. We want to merge the other side anyway if it is similar. We therefore return True
     if len(haplotypes) == 0:
-        print 'No contig on one side!'
+        print('No contig on one side!')
         return(1)
     seqs = itertools.combinations(haplotypes, 2)
     score = 0
@@ -116,7 +116,7 @@ def is_haplotype_region(contigs, haplotypes, similarity_threshold):
         # Wrong in formula!! need too make sure that we start aligning from the similar k-mer 
         # and then take min(max_i, max_j) or max(....)?? Figure out
         procent_similarity = score / float(max(min(max_i, max_j), min(len_ctg1, len_ctg2)))  #float(min(max_i, max_j, len_ctg1, len_ctg2))
-        print 'Score', procent_similarity, 'length alignment:', float(min(max_i, max_j, len_ctg1, len_ctg2)), 'length ctgs:', len_ctg1, len_ctg2
+        print('Score', procent_similarity, 'length alignment:', float(min(max_i, max_j, len_ctg1, len_ctg2)), 'length ctgs:', len_ctg1, len_ctg2)
         if procent_similarity > similarity_threshold:
             nr_matching += 1
 
@@ -133,10 +133,10 @@ def graph_updater(connectedness_graph, contigs, nodes, remove_nodes):
 
     # Remove all reverse complement nodes (they are redundant) after we
     # have classified the region (they are removed after the loop in search_regions)
-    nodes_rev_comp = map(lambda x: (x[0], x[1], 1 - x[2]) , nodes)
+    nodes_rev_comp = [(x[0], x[1], 1 - x[2]) for x in nodes]
     remove_nodes.update(nodes_rev_comp)
     longest_contig_index = argmax_index([len(contigs[ctg[0]]) for ctg in nodes])
-    hapl_lengths = map(lambda x: len(contigs[x[0]]), nodes)
+    hapl_lengths = [len(contigs[x[0]]) for x in nodes]
 
     # Need to pick the longest haplotype. This is a corner case where
     # there are at least two longest contigs. We then need to stick to one consistently
@@ -191,13 +191,13 @@ def haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, 
     #    return(0)
 
     ctg_left, ctg_right = None, None
-    before_kmer = filter(lambda x: (x[1] + x[2]) % 2 == 1, nodes)
+    before_kmer = [x for x in nodes if (x[1] + x[2]) % 2 == 1]
     if is_haplotype_region(contigs, before_kmer, similarity_threshold):
         ctg_left = graph_updater(connectedness_graph, contigs, before_kmer, remove_nodes)
 
 
 
-    after_kmer = filter(lambda x: (x[1] + x[2]) % 2 == 0, nodes)
+    after_kmer = [x for x in nodes if (x[1] + x[2]) % 2 == 0]
     if is_haplotype_region(contigs, after_kmer, similarity_threshold):
         ctg_right = graph_updater(connectedness_graph, contigs, after_kmer, remove_nodes)
 
@@ -234,10 +234,10 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
     cntr2 = 0
     #cntr3 = 0
     connectedness_graph = nx.Graph()
-    print 'Number of m-mers in m-mer hash table: ', len(k_mer_hash)
+    print('Number of m-mers in m-mer hash table: ', len(k_mer_hash))
 
     # We will not look at nodes with more than 10 triangles = clique < 6 nodes = 
-    filtered_list = filter(lambda x: 1 < len(x) < 6, k_mer_hash.values())
+    filtered_list = [x for x in list(k_mer_hash.values()) if 1 < len(x) < 6]
     #print filtered_list
     for ctgs in filtered_list:
         cntr2 += 1
@@ -245,7 +245,7 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
         #if cntr3 >= 7000000:
         #    break
         if cntr2 % 100000 == 0:
-            print cntr2, ' items have been treated.'
+            print(cntr2, ' items have been treated.')
         #print k_mer
         if len(ctgs) > 1:
             cntr += 1
@@ -254,7 +254,7 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
             connectedness_graph.add_edges_from(connections)
 
             if cntr % 10000 == 0:
-                print 'Constructed graph from ', cntr, ' k-mers.', 'nr ctgs for k-mer: ', len(ctgs)
+                print('Constructed graph from ', cntr, ' k-mers.', 'nr ctgs for k-mer: ', len(ctgs))
                 #print 'Total nr of nodes: ', len(connectedness_graph.nodes())
                 #print 'Total nr of edges: ', len(connectedness_graph.edges())
 
@@ -263,7 +263,7 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
     visited_nodes = set()
     remove_nodes = set()
     cntr = 0
-    print 'len', len(contigs)
+    print('len', len(contigs))
     for node in connectedness_graph:
         # We modify (remove nodes) as we go so we need to check if the node is still there
         if node not in visited_nodes:
@@ -271,20 +271,20 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
             if nx.algorithms.triangles(connectedness_graph, node) in interesting_regions:
                 nodes = connectedness_graph.neighbors(node) + [node]
                 # add speed up here, mark visited nodes / triangles and there reverse complements
-                nodes_rev_comp = map(lambda x: (x[0], x[1], 1 - x[2]) , nodes)
+                nodes_rev_comp = [(x[0], x[1], 1 - x[2]) for x in nodes]
                 #print nodes , nodes_rev_comp
                 visited_nodes.update(nodes)
                 visited_nodes.update(nodes_rev_comp)
                 cntr += 1
                 if cntr % 10 == 0:
-                    print cntr
+                    print(cntr)
                 #if cntr > 20:
                 #    break
                 haplotype_detect(connectedness_graph, contigs, nodes, similarity_threshold, remove_nodes)
 
 
 
-    print 'REMOVED:', len(remove_nodes)
+    print('REMOVED:', len(remove_nodes))
 
     # Remove all reverse complement nodes to regions that have been classified as haplotypic regions
     connectedness_graph.remove_nodes_from(remove_nodes)
@@ -311,8 +311,8 @@ def search_regions(k_mer_hash, contigs, similarity_threshold):
             connectedness_graph.node[node]['r'] = 0
 
 
-    print 'nr nodes left:', len(connectedness_graph.nodes())
-    print 'nr edges left:', len(connectedness_graph.edges())
+    print('nr nodes left:', len(connectedness_graph.nodes()))
+    print('nr edges left:', len(connectedness_graph.edges()))
 
     return(connectedness_graph)
 
@@ -321,13 +321,13 @@ def main(output_dir, contigs, k, m, similarity_threshold):
     # start timing
     start_time = time.time()
     k_mer_hash = get_kmer_index(contigs, k, m)
-    print 'Done with m-mer graph.'
+    print('Done with m-mer graph.')
     connectedness_graph = search_regions(k_mer_hash, contigs, similarity_threshold)
     output_contigs.generate_fasta(connectedness_graph, contigs, output_dir, k)
     # stop timing
     end_time = time.time()
     # print timing
-    print "time:", end_time - start_time
+    print("time:", end_time - start_time)
     return()
 
 if __name__ == '__main__':
@@ -352,5 +352,5 @@ if __name__ == '__main__':
 
 
     # print timing
-    print "time:", end_time - start_time
+    print("time:", end_time - start_time)
 

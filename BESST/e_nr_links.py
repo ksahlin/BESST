@@ -109,4 +109,4 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     param = Param(args.mean, args.stddev, args.cov, args.readlen, args.soft)
-    print ExpectedLinks(args.len1, args.len2, args.d, param)
+    print(ExpectedLinks(args.len1, args.len2, args.d, param))

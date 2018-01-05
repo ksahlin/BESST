@@ -4,7 +4,7 @@ Created on Jun 17, 2013
 @author: ksahlin
 '''
 
-import diploid
+from . import diploid
 
 def main(contigs):
     kmer_dict, contig_dict = diploid.get_kmers(contigs)

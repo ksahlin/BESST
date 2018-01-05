@@ -67,10 +67,10 @@ class Result(dict):
     __delattr__ = dict.__delitem__
 
     def __repr__(self):
-        if self.keys():
-            m = max(map(len, self.keys())) + 1
+        if list(self.keys()):
+            m = max(list(map(len, list(self.keys())))) + 1
             return '\n'.join([k.rjust(m) + ': ' + repr(v)
-                              for k, v in self.iteritems()])
+                              for k, v in self.items()])
         else:
             return self.__class__.__name__ + "()"
 
@@ -140,7 +140,7 @@ def lp_solve(c, A, b, tol=1e-10):
     b = asarray(b)
 
     m,n = A.shape   # m: number of constraints; n: number of variables
-    for i in xrange(m):
+    for i in range(m):
         if b[i] < 0.0:
             A[i,:] = -A[i,:]
             b[i] = -b[i]
@@ -150,7 +150,7 @@ def lp_solve(c, A, b, tol=1e-10):
          hstack([A, array([b]).T]), # first m rows
          hstack([c, 0.]),   # last-but-one
          hstack([d, -w0])]) # last
-    indx = range(n)
+    indx = list(range(n))
     basis = arange(n, n+m) # m elements from n to n+m-1
     is_bounded = _simplex(H, basis, indx, 1)
     if H[m+1,n] < -tol:   # last row, last column
@@ -161,19 +161,20 @@ def lp_solve(c, A, b, tol=1e-10):
     else:
         sol = True
         j = -1
-        for i in xrange(n):
+        for i in range(n):
             j = j+1
             if H[m+1,j] > tol:
                 H = delete(H, j, 1)     # H[:,j] = [] # delete column j from H
                 del indx[j]
                 j = j-1
         H = delete(H, m+1, 0)
-        if indx > 0:
+        # print(indx)
+        if len(indx) > 0:
             # Phase two
             is_bounded = _simplex(H,basis,indx,2)
             if is_bounded:
                 optx = zeros(n+m)
-                for i in xrange(m):
+                for i in range(m):
                     optx[basis[i]] = H[i,-1]
                 optx = optx[0:n]
                 zmin = -H[-1,-1]    #  last row, last column
@@ -223,7 +224,7 @@ def _simplex(H,basis,indx,s):
                 sol = True
             else:
                 h1 = zeros(n1-s0)
-                for i in xrange(n1-s0):
+                for i in range(n1-s0):
                     if H[i,jp] > 0:
                         h1[i] = H[i,-1]/H[i,jp]
                     else:
@@ -244,7 +245,7 @@ def _pivot(H,ip,jp):
         return False
     else:
         H[ip,:] /= piv
-        for i in xrange(n):
+        for i in range(n):
             if i != ip:
                 H[i,:] -= H[i,jp]*H[ip,:]
     return True
