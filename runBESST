@@ -286,9 +286,17 @@ libstats.add_argument("-z", dest="covcutoff", type=int, default=None,
                   help="User specified coverage cutoff. (Manually filter \
                   out contigs with coverage over this value)")
 
-libstats.add_argument("-z_min", dest="lower_covcutoff", type=int, default=0,
+libstats.add_argument("-z_min", dest="lower_covcutoff", type=float, default=0.001,
                   help="User specified coverage cutoff. (Manually filter \
                   out contigs with coverage under this value)")
+
+# potentially add these options but we need one value for each library, otherwise implement this in a better way..
+# libstats.add_argument("--mean_coverage", dest="mean_coverage", type=float, default=None,
+#                   help="Specifies mean coverage. Better to set if coverage histogram is tricky to get the peak from (check coverage histogram with -plots)")
+
+# libstats.add_argument("--stddev_coverage", dest="stddev_coverage", type=float, default=None,
+#                   help="Specifies stddev coverage. Better to set if coverage histogram is tricky to get the peak from (check coverage histogram with -plots)")
+
 
 ## parameters
 
@@ -390,7 +398,9 @@ other.add_argument("-max_contig_overlap", dest="max_contig_overlap", type=int, d
                   help="BESST checks for overlapping ends in contigs that are adjacent in a scaffold. This parameter sets the maximum identical overlap to search for, default is 200. ")
 
 
+
 other.add_argument('--version', action='version', version='%(prog)s 2.2.8')
+
 
 
 

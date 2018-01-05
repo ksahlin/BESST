@@ -68,13 +68,13 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
                 counter_total += 1
 
             # contamination reads (mapped in reverse complemented orientation)
-            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read):
+            if  param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_outie(read, param.min_mapq):
                 frag_size = abs(read.tlen)+2*param.read_len
                 if param.read_len < frag_size:
                     contamination_reads.append(frag_size)
                     count_contamine += 2
 
-            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read):
+            if  param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_innie(read, param.min_mapq):
                 frag_size = abs(read.tlen)
                 if param.read_len < frag_size:
                     contamination_reads.append(frag_size)
@@ -109,7 +109,10 @@ def get_contamination_metrics(largest_contigs_indexes, bam_file, cont_names, par
         print('Contamine mean converged:', mean_isize, file=Information)
         print('Contamine std_est converged: ', std_dev_isize, file=Information)
 
-    contamination_ratio = 2*n_contamine / float(counter_total)
+    if counter_total > 0:
+        contamination_ratio = 2*n_contamine / float(counter_total)
+    else:
+        contamination_ratio = 0
 
     if mean_isize >= param.mean_ins_size or std_dev_isize >= param.std_dev_ins_size or contamination_ratio <= 0.05:
         # either contamine mean or stddev is higher than MP lb mean which means it's spurious alignments or
@@ -258,7 +261,7 @@ def get_metrics(bam_file, param, Information):
             else:
                 tot_read_len += read.alen
                 nr_reads += 1
-            if nr_reads >= 100:
+            if nr_reads >= 1000:
                 param.read_len = tot_read_len / float(nr_reads)
                 break        
         else:
@@ -288,11 +291,11 @@ def get_metrics(bam_file, param, Information):
         #         sys.stderr.write('Need indexed bamfiles, index file should be located in the same directory as the BAM file\nterminating..\n')
         #         sys.exit(0)
         for read in bam_file:
-            if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read):
+            if param.orientation == 'fr' and bam_parser.is_proper_aligned_unique_innie(read, param.min_mapq):
                 if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen))
                     counter += 1
-            if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read):
+            if param.orientation == 'rf' and bam_parser.is_proper_aligned_unique_outie(read, param.min_mapq):
                 if read.rname in largest_contigs_indexes:
                     ins_size_reads.append(abs(read.tlen) + 2*param.read_len)
                     counter += 1
@@ -301,7 +304,8 @@ def get_metrics(bam_file, param, Information):
         bam_file.reset()
         # if counter > 1000000:
         #     break
-
+        print("Estimating insert size from {0} mappings with quality over --min_mapq {1}.".format(counter, param.min_mapq))
+        print >> Information, "Estimating insert size from {0} mappings with quality over --min_mapq {1}.".format(counter, param.min_mapq)
         #get mean and std dev here. 
         #Assure that there were enough reads  for computation of mean and variance
         if len(ins_size_reads) <= 1000:

@@ -129,9 +129,15 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         else:
             continue
 
-        #TODO: this if-statement is an ad hoc implementation to deal with BWA's buggy SAM-flag reporting
+        #TODO: this if-statement is an ad hoc implementation to deal with BWA's SAM-flag reporting for the mate of a read
         #if BWA fixes this -> remove this statement. If the links in fishy edges is equal to or ore than
         #the links in the graph G or G'. The edge will be removed.
+
+
+        ## add to coverage computation if contig is still in the list of considered contigs
+        if alignedread.mapq >= param.min_mapq or alignedread.mapq == 0: # if mapq =0 it has multiple maplocations if BWA, we want to include these.
+            cont_aligned_len[contig1][0] += alignedread.qlen
+
         if alignedread.is_unmapped and alignedread.is_read1: # and contig1 != contig2: 
             #Some BWA error in mappings can still slip through, these edges are caracterized by very few links                 
             try:
@@ -156,9 +162,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 fishy_edges[((s2, side2), (s1, side1))] += 1
                 ctr += 1
 
-        ## add to coverage computation if contig is still in the list of considered contigs
-        #print contig1, contig2, alignedread.is_read2
-        cont_aligned_len[contig1][0] += alignedread.qlen
+
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
 
@@ -205,6 +209,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
             elif contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
 ########################Use to validate scaffold in previous step here ############
                 pass
+
     print('ELAPSED reading file:', time() - staart, file=Information)
     print('NR OF FISHY READ LINKS: ', ctr, file=Information)
 
@@ -224,38 +229,40 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
 
 ##### Calc coverage for all contigs with current lib here #####
-    sum_x = 0
-    sum_x_sq = 0
-    n = 0
-    cov = []
-    leng = []
+    # sum_x = 0
+    # sum_x_sq = 0
+    # n = 0
+    # cov = []
+    # leng = []
     for contig in cont_aligned_len:
         cont_coverage = cont_aligned_len[contig][0] / float(cont_aligned_len[contig][1])
         try:
             Contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(Contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(Contigs[contig].length)
         except KeyError:
             small_contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(small_contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(small_contigs[contig].length)
 
 
-        sum_x += cont_coverage
-        sum_x_sq += cont_coverage ** 2
-        n += 1
+        # sum_x += cont_coverage
+        # sum_x_sq += cont_coverage ** 2
+        # n += 1
 
     del cont_aligned_len
 
 
+    if param.first_lib:
+        if param.lower_cov_cutoff:
+            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
+
     if param.first_lib:
         Contigs, Scaffolds, G = RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
-        if param.lower_cov_cutoff:
-            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     print('Number of edges in G (after repeat removal): ', len(G.edges()), file=Information)
     print('Number of edges in G_prime (after repeat removal): ', len(G_prime.edges()), file=Information)
@@ -727,8 +734,9 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     cont_names = bam_file.references
 
     #Calculate NG50 and LG 50
-    param.tot_assembly_length = sum(cont_lengths)
-    sorted_lengths = sorted(cont_lengths, reverse=True)
+    contig_lengths = [len(c_seq) for c_seq in C_dict.values()]
+    param.tot_assembly_length = sum(contig_lengths)
+    sorted_lengths = sorted(contig_lengths, reverse=True)
     N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
     param.current_L50 = L50
     param.current_N50 = N50
@@ -804,7 +812,7 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
 def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2, save_obs=True):
     if alignedread.mapq == 0:
         counter.non_unique_for_scaf += 1
-    counter.count += 1
+
     (read_dir, mate_dir) = (not alignedread.is_reverse, not alignedread.mate_is_reverse)
     #Calculate actual position on scaffold here
     #position1 cont/scaf1
@@ -830,6 +838,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             return(1)
 
     if obs1 + obs2 < param.ins_size_threshold and obs1 > 25 and obs2 > 25:
+        counter.count += 1
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
@@ -851,7 +860,6 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'].append(obs1+obs2)
-
 
     else:
         counter.reads_with_too_long_insert += 1
@@ -883,6 +891,7 @@ def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, In
                 N50 = contig_length
                 L50 = nr_conts
                 break
+
     print('L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length, file=Information)
     return(N50, L50)
 
@@ -893,18 +902,25 @@ def CalculateMeanCoverage(Contigs, Information, param):
     list_of_cont_tuples = sorted(list_of_cont_tuples, key=lambda tuple: tuple[0], reverse=True)
     #coverages of longest contigs
     longest_contigs = list_of_cont_tuples[:50000]
-    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs]
-    #Calculate mean coverage from the 1000 longest contigs
-    n = max(float(len(cov_of_longest_contigs)),1)
+
+    # only use contigs with coverage > 0, i.e., at least one mapped read. This is a simple fix not to let contigs with 0 in coverage
+    # push average coverage estimate to 0 in the filtering approach below.
+    # A more advanced method could and should be implemented to find the peak of the coverage histogram though. 
+    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs if Contigs[contig[1]].coverage > 0 ]
+
+    if len(cov_of_longest_contigs) <= 1:
+        sys.exit("Too few contigs to calculate coverage on. Got: {0} contigs. If you have specified  -z_min or --min_mapq, consider lower them. If not, check the BAM file for proper alignments. Exiting here before scaffolding...".format(len(cov_of_longest_contigs)))
+
+    #Calculate mean coverage from the longest contigs
+    n = float(len(cov_of_longest_contigs))
     mean_cov = sum(cov_of_longest_contigs) / n
-    # If there is only one contig above the size threshold, n can be 1
-    if n==1:
-        n+=1
 
     std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), cov_of_longest_contigs))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
+
     print('Mean coverage before filtering out extreme observations = ', mean_cov, file=Information)
     print('Std dev of coverage before filtering out extreme observations= ', std_dev, file=Information)
+    print('Number of contigs used in calc of coverage before filtering: ', n, file=Information)
 
     ## SMOOTH OUT THE MEAN HERE by removing extreme observations ## 
     while extreme_obs_occur:
@@ -919,8 +935,10 @@ def CalculateMeanCoverage(Contigs, Information, param):
         std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), filtered_list))) / (n - 1)) ** 0.5
         cov_of_longest_contigs = filtered_list
 
+
     print('Mean coverage after filtering = ', mean_cov, file=Information)
     print('Std coverage after filtering = ', std_dev, file=Information)
+    print('Number of contigs used in calc of coverage after filtering: ', n, file=Information)
     print('Length of longest contig in calc of coverage: ', longest_contigs[0][0], file=Information)
     print('Length of shortest contig in calc of coverage: ', longest_contigs[-1][0], file=Information)
 
