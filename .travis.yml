@@ -1,6 +1,16 @@
 language: python
 python:
   - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.5-dev"  # 3.5 development branch
+  - "3.6"
+  - "3.6-dev"  # 3.6 development branch
 # command to install dependencies
 install: "pip install -r requirements.txt"
-script: echo foo
+branches:
+  only:
+  - py3support
+script: 
+  - python runBESST -c testdata/testset1/contigs.fa -f testdata/testset1/mapped.bam -o .  
+  - python runBESST -c testdata/testset1/contigs.fa -f testdata/testset1/mapped.bam -o . --no_score

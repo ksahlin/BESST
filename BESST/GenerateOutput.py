@@ -18,7 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import os
 import time
 
@@ -159,12 +159,12 @@ class Scaffold(object):
             sign = '+' if self.directions[i] else '-'
             if i > 0 and self.gaps[i-1] > 0:
                 component_count += 1
-            	obj_start = self.positions[i-1][1] + 2
-            	obj_end   = self.positions[i][0]
-            	compo_len = self.gaps[i-1]
-            	l_elts = [ self.name, obj_start, obj_end, component_count ]
-            	l_elts +=[ 'N', compo_len, 'scaffold', 'yes', 'paired-ends' ]
-            	print('\t'.join([ str(x) for x in l_elts ]), file=AGP_file)
+                obj_start = self.positions[i-1][1] + 2
+                obj_end   = self.positions[i][0]
+                compo_len = self.gaps[i-1]
+                l_elts = [ self.name, obj_start, obj_end, component_count ]
+                l_elts +=[ 'N', compo_len, 'scaffold', 'yes', 'paired-ends' ]
+                print('\t'.join([ str(x) for x in l_elts ]), file=AGP_file)
 
             component_count += 1
             obj_start = self.positions[i][0] + 1

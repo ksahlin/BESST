@@ -168,7 +168,8 @@ def lp_solve(c, A, b, tol=1e-10):
                 del indx[j]
                 j = j-1
         H = delete(H, m+1, 0)
-        if indx > 0:
+        # print(indx)
+        if len(indx) > 0:
             # Phase two
             is_bounded = _simplex(H,basis,indx,2)
             if is_bounded:

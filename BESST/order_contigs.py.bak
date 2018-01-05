@@ -469,7 +469,7 @@ class Path(object):
         #### to further precisely adjust the gaps in the LP solution if there is 
         #### any pe links
         if self.contamination_ratio:
-            for g_i in xrange(g):
+            for g_i in range(g):
                 if (g_i, g_i +1, True) in self.observations: # if it is a PE-link
                     mean_obs = self.observations[(g_i, g_i+1, True)][0]
                     gap_contamination = exp_means_gapest[(g_i, g_i+1, True)] - mean_obs

@@ -18,7 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import sys
 from collections import defaultdict
 import time
@@ -159,7 +159,7 @@ def remove_edges(G, G_prime, Information, param, node, score_chosen_obs, non_zer
 
 
     #Remove ambiguous edges
-    filter_nbrs = [nbr for nbr in nbrs if 0 < G[node][nbr]['nr_links']] # remove other side of contig (has no "links")
+    filter_nbrs = [nbr for nbr in nbrs if G[node][nbr]['nr_links'] != None and G[node][nbr]['nr_links'] > 0] # remove other side of contig (has no "links")
     score_list_temp = sorted([(G[node][nbr]['score'], nbr) for nbr in filter_nbrs]) # sort list of scores for neighbors
     non_zero_score_edges, zero_score_edges = partition(lambda nbr: 0 < G[node][nbr[1]]['score'], score_list_temp) # Split list into 0-scoring and non-0-scoring edges
 

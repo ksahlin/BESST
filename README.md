@@ -1,7 +1,7 @@
 BESST
 ========
 
-Supported on Linux / OSX with python 2.7 [![Build Status](https://travis-ci.org/ksahlin/BESST.svg?branch=master)](https://travis-ci.org/ksahlin/BESST)
+Supported on Linux / OSX with python 2.7 and 3.X (X>=4) [![Build Status](https://travis-ci.org/ksahlin/BESST.svg?branch=master)](https://travis-ci.org/ksahlin/BESST)
 
 BESST is a package for scaffolding genomic assemblies. BESST v1.0.4 is first described in [2] with various improvements in v2.0 (e.g. [3]). BESST is based on GapEst [1].
 

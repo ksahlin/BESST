@@ -4,6 +4,7 @@ Created on Mar 11, 2013
 @author: ksahlin
 '''
 
+from __future__ import print_function
 
 import networkx as nx
 

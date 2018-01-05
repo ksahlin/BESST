@@ -18,7 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import sys
 import os
 from collections import defaultdict, Counter
@@ -352,19 +352,21 @@ def remove_edges_below_threshold(graph, param):
     counter = 0
     nr_nbrs_counter = []
     # print "NR EDGES", len(graph.edges())
-    for node1, node2 in sorted(graph.edges(), key=lambda x: graph[x[0]][x[1]]["nr_links"]):
-        if  graph[node1][node2]["nr_links"] == None:
-            continue
-        elif graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev:
-            # print graph[node1][node2]["nr_links"]
-            nbrs1 = graph.neighbors(node1)
-            nbrs2 = graph.neighbors(node2)
-            if len(nbrs1) > 4 and len(nbrs2) > 4:
-                graph.remove_edge(node1, node2)
-                # nr_nbrs_counter.append(len(nbrs))
-                counter += 1
-        else:
-            break
+    # print(graph.edges())
+    edges_sorted_by_links = [(node1, node2) for node1, node2 in graph.edges() if graph[node1][node2]["nr_links"] != None and graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev ]
+    for node1, node2 in edges_sorted_by_links: #sorted(graph.edges(), key=lambda x: graph[x[0]][x[1]]["nr_links"]):
+        assert graph[node1][node2]["nr_links"] != None and graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev
+        # if  graph[node1][node2]["nr_links"] == None:
+        #     continue
+        # elif graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev:
+        nbrs1 = graph.neighbors(node1)
+        nbrs2 = graph.neighbors(node2)
+        if len(nbrs1) > 4 and len(nbrs2) > 4:
+            graph.remove_edge(node1, node2)
+            # nr_nbrs_counter.append(len(nbrs))
+            counter += 1
+        # else:
+        #     break
 
 
 
