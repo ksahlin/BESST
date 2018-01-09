@@ -10,7 +10,7 @@ python:
 install: "pip install -r requirements.txt"
 branches:
   only:
-  - py3support
+  - master
 script: 
   - python runBESST -c testdata/testset1/contigs.fa -f testdata/testset1/mapped.bam -o . -orientation fr -m 4000 -s 500 -k 3000 -T 6000
   - python runBESST -c testdata/testset1/contigs.fa -f testdata/testset1/mapped.bam -o . -orientation fr -m 4000 -s 500 -k 3000 -T 6000 --no_score

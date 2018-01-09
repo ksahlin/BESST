@@ -29,7 +29,7 @@ setup(
     license='GPLv3',
     long_description=long_description,
     install_requires=['pysam==0.8.4',
-                      'networkx==1.9',
+                      'networkx<=1.9',
                       'mathstats>=0.2.6.5',
                       'scipy==1.0.0'],
 )
