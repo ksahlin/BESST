@@ -6,6 +6,7 @@ Modified on Oct 30, 2015
 @author: ksahlin
 @author: sidorov-si
 '''
+from __future__ import print_function
 import argparse
 import os
 import shutil
