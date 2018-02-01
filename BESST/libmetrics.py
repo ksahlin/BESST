@@ -305,7 +305,7 @@ def get_metrics(bam_file, param, Information):
         # if counter > 1000000:
         #     break
         print("Estimating insert size from {0} mappings with quality over --min_mapq {1}.".format(counter, param.min_mapq))
-        print("Estimating insert size from {0} mappings with quality over --min_mapq {1}.".format(counter, param.min_mapq))
+        print("Estimating insert size from {0} mappings with quality over --min_mapq {1}.".format(counter, param.min_mapq), file=Information)
         #get mean and std dev here. 
         #Assure that there were enough reads  for computation of mean and variance
         if len(ins_size_reads) <= 1000:
