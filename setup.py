@@ -1,10 +1,16 @@
-
-import os
 from setuptools import setup, find_packages
+from codecs import open
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='BESST',
-    version='2.2.6',
+    version='2.2.8',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -21,9 +27,9 @@ setup(
     author_email='kristoffer.sahlin@scilifelab.se',
     url='https://github.com/ksahlin/BESST',
     license='GPLv3',
-    long_description=open(os.path.join(os.getcwdu(), 'README.md')).read(),
-    install_requires=['pysam>=0.7',
-                      'networkx>=1.9',
-                      'mathstats>=0.2.5',
-                      'scipy>=0.9'],
+    long_description=long_description,
+    install_requires=['pysam==0.8.4',
+                      'networkx<=1.9',
+                      'mathstats>=0.2.6.5',
+                      'scipy==1.0.0'],
 )

@@ -18,7 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import sys
 import os
 from collections import defaultdict, Counter
@@ -28,16 +28,16 @@ from time import time
 from scipy.stats import ks_2samp
 import networkx as nx
 
-import Contig
-import Scaffold
-from Parameter import counters
+from . import Contig
+from . import Scaffold
+from .Parameter import counters
 from mathstats.normaldist import normal
-import GenerateOutput as GO
+from . import GenerateOutput as GO
 from mathstats.normaldist.truncatedskewed import param_est
 import mathstats.log_normal_param_est as lnpe
-import errorhandle
-import plots
-import e_nr_links
+from . import errorhandle
+from . import plots
+from . import e_nr_links
 
 
 
@@ -45,7 +45,7 @@ import e_nr_links
 def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file):
     G = nx.Graph()
     G_prime = nx.Graph()  # If we want to do path extension with small contigs
-    print >> Information, 'Parsing BAM file...'
+    print('Parsing BAM file...', file=Information)
 
     ##### Initialize contig and scaffold objects ######
 
@@ -53,13 +53,13 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         start_init = time()
         InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime, small_contigs, small_scaffolds, C_dict)
 
-        print >> Information, 'Time initializing BESST objects: ', time() - start_init
+        print('Time initializing BESST objects: ', time() - start_init, file=Information)
 
     else:
         #Clean contig_library/scaffold_library
         start_clean = time()
         CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_scaffolds)
-        print >> Information, 'Time cleaning BESST objects for next library: ', time() - start_clean
+        print('Time cleaning BESST objects for next library: ', time() - start_clean, file=Information)
 
     if len(Scaffolds) == 0:
         if not os.path.isfile(param.output_directory + '/repeats.fa'):
@@ -83,7 +83,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     else:
         # only do scoring
         InitializeGraph(Scaffolds, G, Information)
-    print >> Information, 'Total time elapsed for initializing Graph: ', time() - tot_start
+    print('Total time elapsed for initializing Graph: ', time() - tot_start, file=Information)
 
     #for coverage computation
     cont_aligned_len = {}
@@ -99,14 +99,14 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     fishy_edges = defaultdict(int)
     ctr = 0
     # Create the link edges in the graph by fetching info from bam file  
-    print >> Information, 'Reading bam file and creating scaffold graph...'
+    print('Reading bam file and creating scaffold graph...', file=Information)
     staart = time()
 
     if param.development:
         import guppy
         h = guppy.hpy()
         before_ctg_graph = h.heap()
-        print 'Just before creating contig graph:\n{0}\n'.format(before_ctg_graph)
+        print('Just before creating contig graph:\n{0}\n'.format(before_ctg_graph))
 
     for alignedread in bam_file:
         # try: #check that read is aligned OBS: not with is_unmapped since this flag is fishy for e.g. BWA
@@ -129,9 +129,15 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
         else:
             continue
 
-        #TODO: this if-statement is an ad hoc implementation to deal with BWA's buggy SAM-flag reporting
+        #TODO: this if-statement is an ad hoc implementation to deal with BWA's SAM-flag reporting for the mate of a read
         #if BWA fixes this -> remove this statement. If the links in fishy edges is equal to or ore than
         #the links in the graph G or G'. The edge will be removed.
+
+
+        ## add to coverage computation if contig is still in the list of considered contigs
+        if alignedread.mapq >= param.min_mapq or alignedread.mapq == 0: # if mapq =0 it has multiple maplocations if BWA, we want to include these.
+            cont_aligned_len[contig1][0] += alignedread.qlen
+
         if alignedread.is_unmapped and alignedread.is_read1: # and contig1 != contig2: 
             #Some BWA error in mappings can still slip through, these edges are caracterized by very few links                 
             try:
@@ -156,9 +162,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
                 fishy_edges[((s2, side2), (s1, side1))] += 1
                 ctr += 1
 
-        ## add to coverage computation if contig is still in the list of considered contigs
-        #print contig1, contig2, alignedread.is_read2
-        cont_aligned_len[contig1][0] += alignedread.qlen
+
         if contig1 != contig2 and alignedread.mapq == 0:
             counter.non_unique += 1  # check how many non unique reads out of the useful ones (mapping to two different contigs)
 
@@ -205,71 +209,74 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
             elif contig1 in Contigs and contig2 in Contigs and Contigs[contig2].scaffold != Contigs[contig1].scaffold:
 ########################Use to validate scaffold in previous step here ############
                 pass
-    print >> Information, 'ELAPSED reading file:', time() - staart
-    print >> Information, 'NR OF FISHY READ LINKS: ', ctr
 
-    print >> Information, 'Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count
-    print >> Information, 'Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique
-    print >> Information, 'Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert
-    print >> Information, 'Initial number of edges in G (the graph with large contigs): ', len(G.edges())
-    print >> Information, 'Initial number of edges in G_prime (the full graph of all contigs before removal of repats): ', len(G_prime.edges())
+    print('ELAPSED reading file:', time() - staart, file=Information)
+    print('NR OF FISHY READ LINKS: ', ctr, file=Information)
+
+    print('Number of USEFUL READS (reads mapping to different contigs uniquly): ', counter.count, file=Information)
+    print('Number of non unique reads (at least one read non-unique in read pair) that maps to different contigs (filtered out from scaffolding): ', counter.non_unique, file=Information)
+    print('Reads with too large insert size from "USEFUL READS" (filtered out): ', counter.reads_with_too_long_insert, file=Information)
+    print('Initial number of edges in G (the graph with large contigs): ', len(G.edges()), file=Information)
+    print('Initial number of edges in G_prime (the full graph of all contigs before removal of repats): ', len(G_prime.edges()), file=Information)
     
     if param.detect_duplicate:
-        print >> Information, 'Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates
+        print('Number of duplicated reads indicated and removed: ', counter.nr_of_duplicates, file=Information)
 
     if param.development:
         h = guppy.hpy()
         after_ctg_graph = h.heap()
-        print 'Just after creating contig graph:\n{0}\n'.format(after_ctg_graph)
+        print('Just after creating contig graph:\n{0}\n'.format(after_ctg_graph))
 
 
 ##### Calc coverage for all contigs with current lib here #####
-    sum_x = 0
-    sum_x_sq = 0
-    n = 0
-    cov = []
-    leng = []
+    # sum_x = 0
+    # sum_x_sq = 0
+    # n = 0
+    # cov = []
+    # leng = []
     for contig in cont_aligned_len:
         cont_coverage = cont_aligned_len[contig][0] / float(cont_aligned_len[contig][1])
         try:
             Contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(Contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(Contigs[contig].length)
         except KeyError:
             small_contigs[contig].coverage = cont_coverage
-            cov.append(cont_coverage)
-            leng.append(small_contigs[contig].length)
+            # cov.append(cont_coverage)
+            # leng.append(small_contigs[contig].length)
 
 
-        sum_x += cont_coverage
-        sum_x_sq += cont_coverage ** 2
-        n += 1
+        # sum_x += cont_coverage
+        # sum_x_sq += cont_coverage ** 2
+        # n += 1
 
     del cont_aligned_len
 
 
+    if param.first_lib:
+        if param.lower_cov_cutoff:
+            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
     mean_cov, std_dev_cov = CalculateMeanCoverage(Contigs, Information, param)
     param.mean_coverage = mean_cov
     param.std_dev_coverage = std_dev_cov
+
     if param.first_lib:
         Contigs, Scaffolds, G = RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
-        if param.lower_cov_cutoff:
-            filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information)
 
-    print >> Information, 'Number of edges in G (after repeat removal): ', len(G.edges())
-    print >> Information, 'Number of edges in G_prime (after repeat removal): ', len(G_prime.edges())
+    print('Number of edges in G (after repeat removal): ', len(G.edges()), file=Information)
+    print('Number of edges in G_prime (after repeat removal): ', len(G_prime.edges()), file=Information)
 
     ### Remove edges created by false reporting of BWA ###
     RemoveBugEdges(G, G_prime, fishy_edges, param, Information)
 
-    print >> Information, 'Number of edges in G (after filtering for buggy flag stats reporting): ', len(G.edges())
-    print >> Information, 'Number of edges in G_prime  (after filtering for buggy flag stats reporting): ', len(G_prime.edges())
+    print('Number of edges in G (after filtering for buggy flag stats reporting): ', len(G.edges()), file=Information)
+    print('Number of edges in G_prime  (after filtering for buggy flag stats reporting): ', len(G_prime.edges()), file=Information)
 
     if param.development:
         h = guppy.hpy()
         after_coverage = h.heap()
-        print 'Just after calc coverage:\n{0}\n'.format(after_coverage)
+        print('Just after calc coverage:\n{0}\n'.format(after_coverage))
 
 
     #Remove all edges with link support less than inferred parameter of param.edgesupport (unless specified by user) to be able to compute statistics.
@@ -277,9 +284,9 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     if not param.edgesupport:
         # default value of 5
         param.edgesupport = 5 
-        print >> Information, 'Letting -e be {0} for this library.'.format(param.edgesupport)
+        print('Letting -e be {0} for this library.'.format(param.edgesupport), file=Information)
     else:
-        print >> Information, 'User has set -e to be {0} for this library.'.format(param.edgesupport)
+        print('User has set -e to be {0} for this library.'.format(param.edgesupport), file=Information)
 
     counter_low_support = 0
     for edge in G.edges():
@@ -290,7 +297,7 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
 
     # counter_low_support = remove_edges_below_threshold(G, param)
 
-    print >> Information, 'Removed {0} edges from graph G of border contigs.'.format(counter_low_support)
+    print('Removed {0} edges from graph G of border contigs.'.format(counter_low_support), file=Information)
     remove_edges_below_threshold(G_prime, param)
 
 
@@ -301,16 +308,16 @@ def PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaf
     #plot = 'G_prime'
     #GiveScoreOnEdges(G_prime, Scaffolds, small_scaffolds, Contigs, param, Information, plot)
 
-    print >> Information, 'Number of edges in G_prime  (after removing edges under -e threshold (if not specified, default is -e 3): ', len(G_prime.edges())
+    print('Number of edges in G_prime  (after removing edges under -e threshold (if not specified, default is -e 3): ', len(G_prime.edges()), file=Information)
 
     if param.development:
         h = guppy.hpy()
         after_scoring = h.heap()
-        print 'After scoring:\n{0}\n'.format(after_scoring)
+        print('After scoring:\n{0}\n'.format(after_scoring))
 
-    print >> Information, "\n -------------------------------------------------------------\n"
-    print >> Information, 'Nr of contigs/scaffolds included in this pass: ' + str(len(Scaffolds) + len(small_scaffolds))
-    print >> Information, 'Out of which {0} acts as border contigs.'.format(len(Scaffolds))
+    print("\n -------------------------------------------------------------\n", file=Information)
+    print('Nr of contigs/scaffolds included in this pass: ' + str(len(Scaffolds) + len(small_scaffolds)), file=Information)
+    print('Out of which {0} acts as border contigs.'.format(len(Scaffolds)), file=Information)
     return(G, G_prime)
 
 def infer_spurious_link_count_threshold(G_prime, param):
@@ -333,38 +340,40 @@ def infer_spurious_link_count_threshold(G_prime, param):
             link_stats.append(link_count)
     link_counter = Counter(link_stats)
     total_included_edges = 0
-    for link_number in sorted(link_counter.keys(), reverse=True):
+    for link_number in sorted(list(link_counter.keys()), reverse=True):
         # print >> param.information_file, 'Number of links: {0}\tFound in {1} edges.'.format(link_number, link_counter[link_number])
         total_included_edges += link_counter[link_number]
-        print >> param.information_file, 'Nodes: {0}.\t Total edges with over {1} links:{2}. \tAverage density: {3}'.format(nr_nodes, link_number, total_included_edges, total_included_edges/float(nr_nodes))
+        print('Nodes: {0}.\t Total edges with over {1} links:{2}. \tAverage density: {3}'.format(nr_nodes, link_number, total_included_edges, total_included_edges/float(nr_nodes)), file=param.information_file)
 
     # print "expected_links_over_mean_plus_stddev:", expected_links_over_mean_plus_stddev
     if expected_links_over_mean_plus_stddev < 5:
         param.expected_links_over_mean_plus_stddev = 5
     else:
         param.expected_links_over_mean_plus_stddev = int(expected_links_over_mean_plus_stddev)
-    print >> param.information_file, 'Letting filtering threshold in high complexity regions be {0} for this library.'.format(param.expected_links_over_mean_plus_stddev)
+    print('Letting filtering threshold in high complexity regions be {0} for this library.'.format(param.expected_links_over_mean_plus_stddev), file=param.information_file)
 
 def remove_edges_below_threshold(graph, param):
     #Remove all edges with link support less than param.edgesupport in high complexity areas
 
-    print >> param.information_file, 'Remove edges in high complexity areas.'
+    print('Remove edges in high complexity areas.', file=param.information_file)
     counter = 0
     nr_nbrs_counter = []
     # print "NR EDGES", len(graph.edges())
-    for node1, node2 in sorted(graph.edges(), key=lambda x: graph[x[0]][x[1]]["nr_links"]):
-        if  graph[node1][node2]["nr_links"] == None:
-            continue
-        elif graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev:
-            # print graph[node1][node2]["nr_links"]
-            nbrs1 = graph.neighbors(node1)
-            nbrs2 = graph.neighbors(node2)
-            if len(nbrs1) > 4 and len(nbrs2) > 4:
-                graph.remove_edge(node1, node2)
-                # nr_nbrs_counter.append(len(nbrs))
-                counter += 1
-        else:
-            break
+    # print(graph.edges())
+    edges_sorted_by_links = [(node1, node2) for node1, node2 in graph.edges() if graph[node1][node2]["nr_links"] != None and graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev ]
+    for node1, node2 in edges_sorted_by_links: #sorted(graph.edges(), key=lambda x: graph[x[0]][x[1]]["nr_links"]):
+        assert graph[node1][node2]["nr_links"] != None and graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev
+        # if  graph[node1][node2]["nr_links"] == None:
+        #     continue
+        # elif graph[node1][node2]["nr_links"] < param.expected_links_over_mean_plus_stddev:
+        nbrs1 = graph.neighbors(node1)
+        nbrs2 = graph.neighbors(node2)
+        if len(nbrs1) > 4 and len(nbrs2) > 4:
+            graph.remove_edge(node1, node2)
+            # nr_nbrs_counter.append(len(nbrs))
+            counter += 1
+        # else:
+        #     break
 
 
 
@@ -379,7 +388,7 @@ def remove_edges_below_threshold(graph, param):
     #                 counter += 1
 
     # density_nbr_counter = Counter(nr_nbrs_counter)
-    print >> param.information_file, 'Removed total of {0} edges in high density areas.'.format(counter)
+    print('Removed total of {0} edges in high density areas.'.format(counter), file=param.information_file)
     # print >> param.information_file, "DENSITY PROFILE:"
     # for nbr_number in sorted(density_nbr_counter.keys(), reverse=True):
     #     print >> param.information_file, 'Number of nbrs: {0}\t found in {1} edges.'.format(nbr_number, density_nbr_counter[nbr_number])
@@ -392,13 +401,13 @@ def remove_edges_below_threshold(graph, param):
             if graph[edge[0]][edge[1]]['nr_links'] < param.edgesupport:
                 graph.remove_edge(edge[0], edge[1])
                 counter_low_support += 1
-    print >> param.information_file, 'Removed an additional of {0} edges with low support from full graph G_prime of all contigs.'.format(counter_low_support)
+    print('Removed an additional of {0} edges with low support from full graph G_prime of all contigs.'.format(counter_low_support), file=param.information_file)
 
 
 def filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_scaffolds, Information):
     low_coverage_contigs = []
     count_low_coverage_contigs = 0
-    print >> Information, 'Removing low coverage contigs if -z_min specified..'
+    print('Removing low coverage contigs if -z_min specified..', file=Information)
     for contig in Contigs:
         if Contigs[contig].coverage < param.lower_cov_cutoff:
             count_low_coverage_contigs += 1
@@ -421,7 +430,7 @@ def filter_low_coverage_contigs(Contigs, Scaffolds, G, param, G_prime, small_con
 
 
     GO.PrintOut_low_cowerage_contigs(low_coverage_contigs, Contigs, param.output_directory, small_contigs)
-    print >> Information, 'Removed a total of: ', count_low_coverage_contigs, ' low coverage contigs. With coverage lower than ', param.lower_cov_cutoff
+    print('Removed a total of: ', count_low_coverage_contigs, ' low coverage contigs. With coverage lower than ', param.lower_cov_cutoff, file=Information)
 
 
 
@@ -435,7 +444,7 @@ def get_conditional_stddevs(steps, empirical_isize_distr, max_isize):
         # calculate conditional distribution given a gap
         conditional_density = [0]*(max_isize+1)
 
-        for x in empirical_isize_distr.keys():
+        for x in list(empirical_isize_distr.keys()):
             w_x = max(0, x-gap+1)
             f_x = empirical_isize_distr[x]
             if w_x > 0:
@@ -443,8 +452,8 @@ def get_conditional_stddevs(steps, empirical_isize_distr, max_isize):
 
         # get conditional stddev from distribution
         tot_density = float(sum(conditional_density))
-        conditional_mu = sum(map(lambda (i, f_x): i*f_x, enumerate(conditional_density)))/tot_density
-        conditional_sigma = sqrt(sum(map(lambda (i, f_x): (i-conditional_mu)**2 * f_x, enumerate(conditional_density))) / tot_density)
+        conditional_mu = sum([i_f_x1[0]*i_f_x1[1] for i_f_x1 in enumerate(conditional_density)])/tot_density
+        conditional_sigma = sqrt(sum([(i_f_x[0]-conditional_mu)**2 * i_f_x[1] for i_f_x in enumerate(conditional_density)]) / tot_density)
         
 
         # add to our conditional stddev vector
@@ -471,14 +480,14 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
 
     if param.print_scores:
         score_file = open(os.path.join(param.output_directory,"score_file_pass_{0}.tsv".format(param.pass_number)), "w")
-        print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format("scf1/ctg1", "o1", "scf2/ctg2", "o2", "gap", "link_variation_score", "link_dispersity_score", "number_of_links")
+        print("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format("scf1/ctg1", "o1", "scf2/ctg2", "o2", "gap", "link_variation_score", "link_dispersity_score", "number_of_links"), file=score_file)
 
     if param.lognormal:
         emp_distr = param.empirical_distribution
         # print emp_distr
         isize_range = sorted(emp_distr.keys())
         max_isize = isize_range[-1]
-        steps = range(0, int(max_isize*0.8), max_isize/50)  # isize_range[:int(0.8*len(isize_range)):len(isize_range)/50] # not the upper most values
+        steps = list(range(0, int(max_isize*0.8), max_isize/50))  # isize_range[:int(0.8*len(isize_range)):len(isize_range)/50] # not the upper most values
         # print steps
         conditional_stddevs = get_conditional_stddevs(steps, emp_distr, max_isize)
         log_norm_max_gap = len(conditional_stddevs) - 1  # a gap estimate lager than this list will give an index error in conditional_stddevs. 
@@ -574,14 +583,14 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             n_obs = len(l1)
             l1_mean = sum(l1) / float(n_obs)
             #l1_median = l1[len(l1) / 2]
-            l1 = map(lambda x: x - l1_mean, l1)
+            l1 = [x - l1_mean for x in l1]
             #l1 = map(lambda x: x - l1_median, l1)
             max_obs2 = max(l2)
             l2.sort(reverse=True)
-            l2 = map(lambda x: abs(x - max_obs2), l2)
+            l2 = [abs(x - max_obs2) for x in l2]
             l2_mean = sum(l2) / float(n_obs)
             #l2_median = l2[len(l2) / 2]
-            l2 = map(lambda x: x - l2_mean, l2)
+            l2 = [x - l2_mean for x in l2]
             #l2 = map(lambda x: x - l2_median, l2)
             KS_statistic, p_value = ks_2samp(l1, l2)
 
@@ -613,33 +622,33 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
             if param.print_scores:
                 if edge[0][1] == 'R':
                     contig_objects = Scaffolds[edge[0][0]].contigs
-                    contig_names = map(lambda x: x.name, contig_objects)
+                    contig_names = [x.name for x in contig_objects]
                     scf1 = ";".join(contig_names)
-                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
-                    contig_directions1 = ";".join(map(lambda x: '+' if True else '-', contig_directions_bool))
+                    contig_directions_bool = [x.direction for x in contig_objects]
+                    contig_directions1 = ";".join(['+' if True else '-' for x in contig_directions_bool])
 
                 else:
                     contig_objects = Scaffolds[edge[0][0]].contigs[::-1]
-                    contig_names = map(lambda x: x.name, contig_objects)
+                    contig_names = [x.name for x in contig_objects]
                     scf1 =";".join(contig_names)
-                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
-                    contig_directions1 = ";".join(map(lambda x: '+' if False else '-', contig_directions_bool))
+                    contig_directions_bool = [x.direction for x in contig_objects]
+                    contig_directions1 = ";".join(['+' if False else '-' for x in contig_directions_bool])
 
                 if edge[1][1] == 'L':
                     contig_objects = Scaffolds[edge[1][0]].contigs
-                    contig_names = map(lambda x: x.name, contig_objects)
+                    contig_names = [x.name for x in contig_objects]
                     scf2 =";".join(contig_names)
-                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
-                    contig_directions2 = ";".join(map(lambda x: '+' if True else '-', contig_directions_bool))
+                    contig_directions_bool = [x.direction for x in contig_objects]
+                    contig_directions2 = ";".join(['+' if True else '-' for x in contig_directions_bool])
 
                 else:
                     contig_objects = Scaffolds[edge[1][0]].contigs[::-1]
-                    contig_names = map(lambda x: x.name, contig_objects)
+                    contig_names = [x.name for x in contig_objects]
                     scf2 =";".join(contig_names)
-                    contig_directions_bool = map(lambda x: x.direction, contig_objects)
-                    contig_directions2 = ";".join(map(lambda x: '+' if False else '-', contig_directions_bool))
+                    contig_directions_bool = [x.direction for x in contig_objects]
+                    contig_directions2 = ";".join(['+' if False else '-' for x in contig_directions_bool])
 
-                print >>score_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format(scf1, contig_directions1, scf2, contig_directions2, gap, std_dev_score, span_score, n_obs)
+                print("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}".format(scf1, contig_directions1, scf2, contig_directions2, gap, std_dev_score, span_score, n_obs), file=score_file)
 
     if param.print_scores:
         score_file.close()
@@ -658,7 +667,7 @@ def GiveScoreOnEdges(G, Scaffolds, small_scaffolds, Contigs, param, Information,
                 G[edge[0]][edge[1]]['score']
             except KeyError:
                 sys.stderr.write(str(G[edge[0]][edge[1]]) + ' ' + str(Scaffolds[edge[0][0]].s_length) + ' ' + str(Scaffolds[edge[1][0]].s_length))
-    print >> Information, 'Number of significantly spurious edges:', cnt_sign
+    print('Number of significantly spurious edges:', cnt_sign, file=Information)
 
     return()
 
@@ -680,7 +689,7 @@ def CheckDir(cont_obj1, cont_obj2, alignedread, param):
 
 def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
     edges_removed = 0
-    for edge_tuple, nr_links in fishy_edges.items():
+    for edge_tuple, nr_links in list(fishy_edges.items()):
         if param.extend_paths:
             if edge_tuple[1] in G_prime and edge_tuple[0] in G_prime[edge_tuple[1]]:
                 if nr_links >= G_prime[edge_tuple[0]][edge_tuple[1]]['nr_links']:
@@ -694,7 +703,7 @@ def RemoveBugEdges(G, G_prime, fishy_edges, param, Information):
                 if nr_links >= G[edge_tuple[0]][edge_tuple[1]]['nr_links']:
                     G.remove_edge(edge_tuple[0], edge_tuple[1])
                     edges_removed += 1
-    print >> Information, 'Number of BWA buggy edges removed: ', edges_removed
+    print('Number of BWA buggy edges removed: ', edges_removed, file=Information)
     del fishy_edges
     return()
 
@@ -707,7 +716,7 @@ def InitializeGraph(dict_with_scaffolds, graph, Information):
         graph.node[(scaffold_, 'R')]['length'] = dict_with_scaffolds[scaffold_].s_length
         if cnt % 100000 == 0 and cnt > 0:
             elapsed = time() - start1
-            print >> Information, 'Total nr of keys added: ', cnt, 'Time for adding last 100 000 keys: ', elapsed
+            print('Total nr of keys added: ', cnt, 'Time for adding last 100 000 keys: ', elapsed, file=Information)
             start1 = time()
         cnt += 1
     return()
@@ -725,8 +734,9 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     cont_names = bam_file.references
 
     #Calculate NG50 and LG 50
-    param.tot_assembly_length = sum(cont_lengths)
-    sorted_lengths = sorted(cont_lengths, reverse=True)
+    contig_lengths = [len(c_seq) for c_seq in C_dict.values()]
+    param.tot_assembly_length = sum(contig_lengths)
+    sorted_lengths = sorted(contig_lengths, reverse=True)
     N50, L50 = CalculateStats(sorted_lengths, [], param, Information)
     param.current_L50 = L50
     param.current_N50 = N50
@@ -736,7 +746,7 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
     for i in range(0, len(cont_names)):
         counter += 1
         if counter % 100000 == 0:
-            print >> Information, 'Time adding 100k keys', time() - start
+            print('Time adding 100k keys', time() - start, file=Information)
             start = time()
         if cont_names[i] not in  C_dict:
             #errorhandle.unknown_contig(cont_names[i])
@@ -777,14 +787,14 @@ def InitializeObjects(bam_file, Contigs, Scaffolds, param, Information, G_prime,
 
 def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_scaffolds):
     singeled_out = 0
-    scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in Scaffolds.keys()]
+    scaf_lengths = [Scaffolds[scaffold_].s_length for scaffold_ in list(Scaffolds.keys())]
     sorted_lengths = sorted(scaf_lengths, reverse=True)
-    scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in small_scaffolds.keys()]
+    scaf_lengths_small = [small_scaffolds[scaffold_].s_length for scaffold_ in list(small_scaffolds.keys())]
     sorted_lengths_small = sorted(scaf_lengths_small, reverse=True)
     N50, L50 = CalculateStats(sorted_lengths, sorted_lengths_small, param, Information)
     param.current_L50 = L50
     param.current_N50 = N50
-    for scaffold_ in Scaffolds.keys(): #iterate over keys in hash, so that we can remove keys while iterating over it
+    for scaffold_ in list(Scaffolds.keys()): #iterate over keys in hash, so that we can remove keys while iterating over it
         if Scaffolds[scaffold_].s_length < param.contig_threshold:
             ###  Switch from Scaffolds to small_scaffolds (they can still be used in the path extension)
             ### Remove Scaf_obj from Scaffolds and Contig_obj from contigs
@@ -796,13 +806,13 @@ def CleanObjects(Contigs, Scaffolds, param, Information, small_contigs, small_sc
             del Scaffolds[scaffold_]
             singeled_out += 1
 
-    print >> Information, 'Nr of contigs/scaffolds that was singeled out due to length constraints ' + str(singeled_out)
+    print('Nr of contigs/scaffolds that was singeled out due to length constraints ' + str(singeled_out), file=Information)
     return()
 
 def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread, counter, contig1, contig2, save_obs=True):
     if alignedread.mapq == 0:
         counter.non_unique_for_scaf += 1
-    counter.count += 1
+
     (read_dir, mate_dir) = (not alignedread.is_reverse, not alignedread.mate_is_reverse)
     #Calculate actual position on scaffold here
     #position1 cont/scaf1
@@ -828,6 +838,7 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             return(1)
 
     if obs1 + obs2 < param.ins_size_threshold and obs1 > 25 and obs2 > 25:
+        counter.count += 1
         if (scaf_obj2.name, scaf_side2) not in G[(scaf_obj1.name, scaf_side1)]:
             G.add_edge((scaf_obj2.name, scaf_side2), (scaf_obj1.name, scaf_side1), nr_links=1, obs=obs1 + obs2)
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] = (obs1 + obs2) ** 2
@@ -849,7 +860,6 @@ def CreateEdge(cont_obj1, cont_obj2, scaf_obj1, scaf_obj2, G, param, alignedread
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs'] += obs1 + obs2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['obs_sq'] += (obs1 + obs2) ** 2
             G.edge[(scaf_obj1.name, scaf_side1)][(scaf_obj2.name, scaf_side2)]['observations'].append(obs1+obs2)
-
 
     else:
         counter.reads_with_too_long_insert += 1
@@ -881,7 +891,8 @@ def CalculateStats(sorted_contig_lengths, sorted_contig_lengths_small, param, In
                 N50 = contig_length
                 L50 = nr_conts
                 break
-    print >> Information, 'L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length
+
+    print('L50: ', L50, 'N50: ', N50, 'Initial contig assembly length: ', param.tot_assembly_length, file=Information)
     return(N50, L50)
 
 def CalculateMeanCoverage(Contigs, Information, param):
@@ -891,18 +902,25 @@ def CalculateMeanCoverage(Contigs, Information, param):
     list_of_cont_tuples = sorted(list_of_cont_tuples, key=lambda tuple: tuple[0], reverse=True)
     #coverages of longest contigs
     longest_contigs = list_of_cont_tuples[:50000]
-    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs]
-    #Calculate mean coverage from the 1000 longest contigs
-    n = max(float(len(cov_of_longest_contigs)),1)
+
+    # only use contigs with coverage > 0, i.e., at least one mapped read. This is a simple fix not to let contigs with 0 in coverage
+    # push average coverage estimate to 0 in the filtering approach below.
+    # A more advanced method could and should be implemented to find the peak of the coverage histogram though. 
+    cov_of_longest_contigs = [Contigs[contig[1]].coverage for contig in longest_contigs if Contigs[contig[1]].coverage > 0 ]
+
+    if len(cov_of_longest_contigs) <= 1:
+        sys.exit("Too few contigs to calculate coverage on. Got: {0} contigs. If you have specified  -z_min or --min_mapq, consider lower them. If not, check the BAM file for proper alignments. Exiting here before scaffolding...".format(len(cov_of_longest_contigs)))
+
+    #Calculate mean coverage from the longest contigs
+    n = float(len(cov_of_longest_contigs))
     mean_cov = sum(cov_of_longest_contigs) / n
-    # If there is only one contig above the size threshold, n can be 1
-    if n==1:
-        n+=1
 
     std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), cov_of_longest_contigs))) / (n - 1)) ** 0.5
     extreme_obs_occur = True
-    print >> Information, 'Mean coverage before filtering out extreme observations = ', mean_cov
-    print >> Information, 'Std dev of coverage before filtering out extreme observations= ', std_dev
+
+    print('Mean coverage before filtering out extreme observations = ', mean_cov, file=Information)
+    print('Std dev of coverage before filtering out extreme observations= ', std_dev, file=Information)
+    print('Number of contigs used in calc of coverage before filtering: ', n, file=Information)
 
     ## SMOOTH OUT THE MEAN HERE by removing extreme observations ## 
     while extreme_obs_occur:
@@ -917,10 +935,12 @@ def CalculateMeanCoverage(Contigs, Information, param):
         std_dev = (sum(list(map((lambda x: x ** 2 - 2 * x * mean_cov + mean_cov ** 2), filtered_list))) / (n - 1)) ** 0.5
         cov_of_longest_contigs = filtered_list
 
-    print >> Information, 'Mean coverage after filtering = ', mean_cov
-    print >> Information, 'Std coverage after filtering = ', std_dev
-    print >> Information, 'Length of longest contig in calc of coverage: ', longest_contigs[0][0]
-    print >> Information, 'Length of shortest contig in calc of coverage: ', longest_contigs[-1][0]
+
+    print('Mean coverage after filtering = ', mean_cov, file=Information)
+    print('Std coverage after filtering = ', std_dev, file=Information)
+    print('Number of contigs used in calc of coverage after filtering: ', n, file=Information)
+    print('Length of longest contig in calc of coverage: ', longest_contigs[0][0], file=Information)
+    print('Length of shortest contig in calc of coverage: ', longest_contigs[-1][0], file=Information)
 
 
     if param.plots:
@@ -948,7 +968,7 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
         repeat_thresh = param.cov_cutoff
     else:
         repeat_thresh = max(mean_cov + k * std_dev, 2 * mean_cov - 3*std_dev)
-    print >> Information, 'Detecting repeats..'
+    print('Detecting repeats..', file=Information)
     plot_cov_list = []
     for contig in Contigs:
         plot_cov_list.append(Contigs[contig].coverage)
@@ -986,15 +1006,15 @@ def RepeatDetector(Contigs, Scaffolds, G, param, G_prime, small_contigs, small_s
 
 
     if param.plots:
-        plotting_ = filter(lambda x: x < 1000, plot_cov_list)
+        plotting_ = [x for x in plot_cov_list if x < 1000]
         plots.histogram(plotting_, param, bins=100, x_label='coverage' , y_label='frequency' , title='contigs_coverage' + param.bamfile.split('/')[-1])
 
     GO.repeat_contigs_logger(Repeats, Contigs, param.output_directory, small_contigs, param)
     GO.PrintOutRepeats(Repeats, Contigs, param.output_directory, small_contigs)
-    print >> Information, 'Removed a total of: ', count_repeats, ' repeats. With coverage larger than ', repeat_thresh
+    print('Removed a total of: ', count_repeats, ' repeats. With coverage larger than ', repeat_thresh, file=Information)
     #sys.exit()
     if param.detect_haplotype:
-        print >> Information, 'Marked a total of: ', count_hapl, ' potential haplotypes.'
+        print('Marked a total of: ', count_hapl, ' potential haplotypes.', file=Information)
     return(Contigs, Scaffolds, G)
 
 

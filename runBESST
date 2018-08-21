@@ -17,14 +17,19 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
-
+from __future__ import print_function
 import sys
 import os
 import errno
 from time import time
 import argparse
 import shutil
-from itertools import izip
+try:
+    # Python 2
+    from itertools import izip
+except ImportError:
+    # Python 3
+    izip = zip
 
 from BESST import errorhandle
 from BESST import decide_approach
@@ -57,7 +62,7 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
 
     # for contig in cont_dict.keys():
     #     print 'Initial length:', len(cont_dict[contig])
-    print >> Information, 'Initial number of contigs: {}. '.format(len(cont_dict.keys()))
+    print('Initial number of contigs: {}. '.format(len(cont_dict.keys())), file=Information)
 
     if contig_filter_length:
         singled_out = 0
@@ -65,7 +70,7 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
             if len(cont_dict[contig]) < contig_filter_length:
                 del cont_dict[contig]
                 singled_out += 1
-        print >> Information, 'Number of contigs discarded from further analysis (with -filter_contigs set to {0}): {1}'.format(contig_filter_length,singled_out)
+        print('Number of contigs discarded from further analysis (with -filter_contigs set to {0}): {1}'.format(contig_filter_length,singled_out), file=Information)
     return(cont_dict)
 
 def main(options):
@@ -102,7 +107,7 @@ def main(options):
     if args.devel:
         h = guppy.hpy()
         initial = h.heap()
-        print 'Initial:\n{0}'.format(initial)
+        print('Initial:\n{0}'.format(initial))
 
 
     param.development = options.devel
@@ -121,13 +126,13 @@ def main(options):
     C_dict = ReadInContigseqs(open(options.contigfile, 'r'), options.contig_filter_length, Information)
 
     elapsed = time() - start
-    print >> Information, 'Time elapsed for reading in contig sequences:' + str(elapsed) + '\n'
+    print('Time elapsed for reading in contig sequences:' + str(elapsed) + '\n', file=Information)
 
-    print 'Number of initial contigs:', len(C_dict)
+    print('Number of initial contigs:', len(C_dict))
     if options.devel:
         h = guppy.hpy()
         after_ctgs = h.heap()
-        print 'After ctg seqs:\n{0}'.format(after_ctgs)
+        print('After ctg seqs:\n{0}'.format(after_ctgs))
 
     if options.haplotype:
         get_haplotype_regions.main(options.output, C_dict, options.kmer, options.mmer, 0.8)
@@ -135,7 +140,7 @@ def main(options):
     #iterate over libraries
     param.first_lib = True
     param.path_threshold = options.path_threshold
-    for i in xrange(len(options.bamfiles)):
+    for i in range(len(options.bamfiles)):
         param.pass_number = i+1
         param.bamfile = options.bamfiles[i]
         param.orientation = options.orientation[i] if options.orientation != None else 'fr'
@@ -151,7 +156,7 @@ def main(options):
         param.detect_haplotype = options.haplotype
         param.detect_duplicate = options.duplicate
         param.extend_paths = options.extendpaths
-        print >> Information, '\nPASS ' + str(i + 1) + '\n\n'
+        print('\nPASS ' + str(i + 1) + '\n\n', file=Information)
 
         #get library statistics
         with pysam.Samfile(param.bamfile, 'rb') as bam_file:
@@ -159,43 +164,43 @@ def main(options):
             #print bam_file.references
             #print map(bam_file.gettid, bam_file.references)
             start = time()
-            param.contig_index = dict(izip(xrange(len(bam_file.references)), bam_file.references))  
+            param.contig_index = dict(izip(range(len(bam_file.references)), bam_file.references))  
             libmetrics.get_metrics(bam_file, param, Information)
             
             elapsed = time() - start
-            print >> Information, 'Time elapsed for getting libmetrics, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+            print('Time elapsed for getting libmetrics, iteration ' + str(i) + ': ' + str(elapsed) + '\n', file=Information)
 
 
             if args.devel:
                 h = guppy.hpy()
                 after_libmetrics = h.heap()
-                print 'After libmetrics\n{0}\n'.format(after_libmetrics)
+                print('After libmetrics\n{0}\n'.format(after_libmetrics))
 
             #create graph
-            print 'Creating contig graph with library: ', param.bamfile
+            print('Creating contig graph with library: ', param.bamfile)
             start = time()
             (G, G_prime) = CG.PE(Contigs, Scaffolds, Information, C_dict, param, small_contigs, small_scaffolds, bam_file)      #Create graph, single out too short contigs/scaffolds and store them in F
             elapsed = time() - start
-            print >> Information, 'Total time for CreateGraph-module, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+            print('Total time for CreateGraph-module, iteration ' + str(i) + ': ' + str(elapsed) + '\n', file=Information)
             decide_approach.decide_scaffolding_procedure(Scaffolds,small_scaffolds, param)
 
             if args.devel:
                 h = guppy.hpy()
                 after_ctg_graph = h.heap()
-                print 'After contig graph\n{0}\n'.format(after_ctg_graph)
+                print('After contig graph\n{0}\n'.format(after_ctg_graph))
 
         #print G, not G == None, not None, None == False
         if not G and not param.no_score:
-            print '0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. '
+            print('0 contigs/super-contigs passed the length criteria of this step. Exiting and printing results.. ')
             
 
-        print 'Constructed contig graph. Start BESST algorithm for creating scaffolds. '
+        print('Constructed contig graph. Start BESST algorithm for creating scaffolds. ')
         start = time()
         MS.Algorithm(G, G_prime, Contigs, small_contigs, Scaffolds, small_scaffolds, Information, param)   # Make scaffolds, store the complex areas (consisting of contig/scaffold) in F, store the created scaffolds in Scaffolds, update Contigs
         elapsed = time() - start
-        print >> Information, 'Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n'
+        print('Time elapsed for making scaffolds, iteration ' + str(i) + ': ' + str(elapsed) + '\n', file=Information)
 
-        print 'Writing out scaffolding results for step', i + 1, ' ...'
+        print('Writing out scaffolding results for step', i + 1, ' ...')
 
         F = [] #list of (ordered) lists of tuples containing (contig_name, direction, position, length, sequence). The tuple is a contig within a scaffold and the list of tuples is the scaffold.
         for scaffold_ in small_scaffolds:
@@ -221,7 +226,7 @@ def main(options):
             os.remove( "{0}/pass{1}/Scaffolds-pass{1}.fa".format(param.output_directory, str(i+1)) )
 
         all_parameter_settings = param.get_params()  
-        print >> Information, all_parameter_settings
+        print(Information, all_parameter_settings, file=Information)
 
         param.first_lib = False   #not the first lib any more    
 
@@ -238,9 +243,9 @@ def main(options):
     param.current_N50 = N50
 
     elapsed = time() - tot_start
-    print >> Information, 'Total time for scaffolding: ' + str(elapsed) + '\n'
+    print('Total time for scaffolding: ' + str(elapsed) + '\n', file=Information)
 
-    print 'Finished\n\n '
+    print('Finished\n\n ')
 
     return()
 
@@ -281,9 +286,17 @@ libstats.add_argument("-z", dest="covcutoff", type=int, default=None,
                   help="User specified coverage cutoff. (Manually filter \
                   out contigs with coverage over this value)")
 
-libstats.add_argument("-z_min", dest="lower_covcutoff", type=int, default=0,
+libstats.add_argument("-z_min", dest="lower_covcutoff", type=float, default=0.001,
                   help="User specified coverage cutoff. (Manually filter \
                   out contigs with coverage under this value)")
+
+# potentially add these options but we need one value for each library, otherwise implement this in a better way..
+# libstats.add_argument("--mean_coverage", dest="mean_coverage", type=float, default=None,
+#                   help="Specifies mean coverage. Better to set if coverage histogram is tricky to get the peak from (check coverage histogram with -plots)")
+
+# libstats.add_argument("--stddev_coverage", dest="stddev_coverage", type=float, default=None,
+#                   help="Specifies stddev coverage. Better to set if coverage histogram is tricky to get the peak from (check coverage histogram with -plots)")
+
 
 ## parameters
 
@@ -385,7 +398,9 @@ other.add_argument("-max_contig_overlap", dest="max_contig_overlap", type=int, d
                   help="BESST checks for overlapping ends in contigs that are adjacent in a scaffold. This parameter sets the maximum identical overlap to search for, default is 200. ")
 
 
-other.add_argument('--version', action='version', version='%(prog)s 2.2.6')
+
+other.add_argument('--version', action='version', version='%(prog)s 2.2.8')
+
 
 
 
@@ -419,7 +434,7 @@ if args.devel:
     h = guppy.hpy()
     at_end= h.heap()
 
-    print 'At end:\n{0}\n'.format(at_end)
+    print('At end:\n{0}\n'.format(at_end))
 
 
 

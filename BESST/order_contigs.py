@@ -18,12 +18,12 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import copy
 import math
 import random
 from collections import Counter
-import cPickle
+import pickle
 import os
 import subprocess
 import mathstats.log_normal_param_est as lnpe
@@ -136,15 +136,15 @@ class Path(object):
 
 
         if all(length in self.ctg_lengths for length in [670, 2093]) or all(length in self.ctg_lengths for length in [900, 3810]) or all(length in self.ctg_lengths for length in [2528, 591]) or all(length in self.ctg_lengths for length in [734, 257, 1548]):
-            print >> param.information_file, ''
-            print >> param.information_file, '' 
-            print >> param.information_file, 'Setting up path', ctg_lengths
+            print('', file=param.information_file)
+            print('', file=param.information_file) 
+            print('Setting up path', ctg_lengths, file=param.information_file)
             for c1,c2,is_PE_link in observations:
                 mean_obs, nr_obs, stddev_obs, list_of_obs = observations[(c1,c2,is_PE_link)]
                 if is_PE_link:
                     mean_PE_obs = self.ctgs[c1].length + self.ctgs[c2].length - observations[(c1,c2,is_PE_link)][0] + 2*param.read_len
                     list_of_obs = [ self.ctgs[c1].length + self.ctgs[c2].length - obs + 2*param.read_len for obs in list_of_obs]
-                    print >> param.information_file, 'PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+                    print('PE LINK, mean obs:', mean_PE_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length, file=param.information_file)
                     obs_dict[(c1, c2, is_PE_link)] = (mean_PE_obs, nr_obs, stddev_obs, list_of_obs)
                     self.pe_links += nr_obs
                     # if mean_PE_obs > self.contamination_mean + 6 * self.contamination_stddev:
@@ -152,12 +152,12 @@ class Path(object):
                     #     return None
                 else:
                     #mean_obs = sum(observations[(c1,c2,is_PE_link)])/nr_obs
-                    print >> param.information_file, 'MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length
+                    print('MP LINK, mean obs:', mean_obs, 'stddev obs:', stddev_obs, 'nr obs:', nr_obs, 'c1 length', self.ctgs[c1].length, 'c2 length', self.ctgs[c2].length, file=param.information_file)
 
                     obs_dict[(c1, c2, is_PE_link)] = (mean_obs, nr_obs, stddev_obs, list_of_obs)
                     self.mp_links += nr_obs
-            print >> param.information_file, ''
-            print >> param.information_file, ''
+            print('', file=param.information_file)
+            print('', file=param.information_file)
 
 
         for c1,c2,is_PE_link in observations:
@@ -189,7 +189,7 @@ class Path(object):
 
 
     def get_distance(self,start_index,stop_index):
-        total_contig_length = sum(map(lambda x: x.length ,filter(lambda x: start_index <= x.index < stop_index, self.ctgs) ))
+        total_contig_length = sum([x.length for x in [x for x in self.ctgs if start_index <= x.index < stop_index]])
         total_gap_length = sum(self.gaps[start_index:stop_index])
         index_adjusting = len(self.gaps[start_index:stop_index]) # one extra bp shifted each time
         return (total_contig_length, total_gap_length, index_adjusting)
@@ -315,11 +315,11 @@ class Path(object):
                 mean_obs = self.observations[(i,j,is_PE_link)][0]
                 if is_PE_link:
                     #exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
-                    print >> param.information_file, 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                    print('GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.contamination_mean, self.contamination_stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length), file=param.information_file)
 
                 else:
                     #exp_means_gapest[(i,j,is_PE_link)] = self.observations[(i,j,is_PE_link)][0] + GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
-                    print >> param.information_file, 'GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length)
+                    print('GAPEST:',mean_obs, self.ctgs[i].length, self.ctgs[j].length, 'gap:' ,  GC.GapEstimator(self.mean, self.stddev, self.read_len, mean_obs, self.ctgs[i].length, self.ctgs[j].length), file=param.information_file)
 
 
         ####################
@@ -369,7 +369,7 @@ class Path(object):
             row[ 2*g + h_index] = -1
 
             # sum of "inbetween" contig lengths + observation
-            constant =   sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
+            constant =   sum([x.length for x in self.ctgs[i+1:j]]) + self.observations[(i,j,is_PE_link)][0]
             predicted_distance = exp_means_gapest[(i,j,is_PE_link)]
 
             t.add_constraint(row, constant - predicted_distance)
@@ -388,7 +388,7 @@ class Path(object):
             row[ 2*g + h_index] = -1
 
             # sum of "inbetween" contig lengths + observation
-            constant = sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j,is_PE_link)][0]
+            constant = sum([x.length for x in self.ctgs[i+1:j]]) + self.observations[(i,j,is_PE_link)][0]
             predicted_distance = exp_means_gapest[(i,j,is_PE_link)]
 
             t.add_constraint(row, predicted_distance - constant )
@@ -469,7 +469,7 @@ class Path(object):
         #### to further precisely adjust the gaps in the LP solution if there is 
         #### any pe links
         if self.contamination_ratio:
-            for g_i in xrange(g):
+            for g_i in range(g):
                 if (g_i, g_i +1, True) in self.observations: # if it is a PE-link
                     mean_obs = self.observations[(g_i, g_i+1, True)][0]
                     gap_contamination = exp_means_gapest[(g_i, g_i+1, True)] - mean_obs
@@ -533,14 +533,14 @@ def main(contig_lenghts, observations, param):
 
     optimal_LP_gaps = path.LP_solve_gaps(param)
     path.gaps = optimal_LP_gaps
-    ctg_lengths = map(lambda x: x.length, path.ctgs)
+    ctg_lengths = [x.length for x in path.ctgs]
     if all(length in ctg_lengths for length in [670, 2093]) or all(length in ctg_lengths for length in [900, 3810]) or all(length in ctg_lengths for length in [2528, 591]) or all(length in ctg_lengths for length in [734, 257, 1548]):  #len(path.gaps) >= 4:
-        print >> param.information_file, 'Solution:', path.gaps
-        print >> param.information_file, "objective:",path.objective
-        print >> param.information_file, 'ctg lengths:', map(lambda x: x.length, path.ctgs)
-        print >> param.information_file, 'mp links:', path.mp_links
-        print >> param.information_file, 'pe links:', path.pe_links
-        print >> param.information_file, 'PE relative freq', path.pe_links / (path.pe_links + path.mp_links)
+        print('Solution:', path.gaps, file=param.information_file)
+        print("objective:",path.objective, file=param.information_file)
+        print('ctg lengths:', [x.length for x in path.ctgs], file=param.information_file)
+        print('mp links:', path.mp_links, file=param.information_file)
+        print('pe links:', path.pe_links, file=param.information_file)
+        print('PE relative freq', path.pe_links / (path.pe_links + path.mp_links), file=param.information_file)
 
     path.update_positions()
 

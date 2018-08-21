@@ -10,7 +10,7 @@ try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-except ImportError, RuntimeError:
+except ImportError as RuntimeError:
     pass
 
 
@@ -45,7 +45,7 @@ def multiple_histogram(list_of_datasets_, param, x_label='x', y_label='y', title
     list_of_datasets = [list[:10000] for list in list_of_datasets_]
     dest = os.path.join(param.output_directory, 'plots', title + '.png')
     # filter out if any of the lists contains 0 elemnets
-    list_of_datasets = filter(lambda x: len(x) > 0, list_of_datasets)
+    list_of_datasets = [x for x in list_of_datasets if len(x) > 0]
     for dataset in list_of_datasets:
         plt.hist(dataset, alpha=0.5)
     plt.xlabel(x_label)

@@ -82,7 +82,7 @@ class Path(object):
 
 
     def get_distance(self,start_index,stop_index):
-        total_contig_length = sum(map(lambda x: x.length ,filter(lambda x: start_index <= x.index < stop_index, self.ctgs) ))
+        total_contig_length = sum([x.length for x in [x for x in self.ctgs if start_index <= x.index < stop_index]])
         total_gap_length = sum(self.gaps[start_index:stop_index])
         index_adjusting = len(self.gaps[start_index:stop_index]) # one extra bp shifted each time
         return (total_contig_length, total_gap_length, index_adjusting)
@@ -125,7 +125,7 @@ class Path(object):
         """
         path_proposed = copy.deepcopy(self) # create a new state
         #(index,gap) = random.choice([(i,gap) for i,gap in enumerate(self.gaps)]) # choose a gap to change
-        (c1,c2) = random.choice(self.observations.keys())
+        (c1,c2) = random.choice(list(self.observations.keys()))
         mean_obs = self.observations[(c1,c2)][0] # take out observations and
 
         #obs = self.observations[(index,index+1)] # take out observations and
@@ -236,19 +236,19 @@ class Path(object):
 
         # adding constraints induced by the absolute value of objective function
         for (i,j) in self.observations:
-            problem += exp_means_gapest[(i,j)] - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
+            problem += exp_means_gapest[(i,j)] - sum([x.length for x in self.ctgs[i+1:j]]) - self.observations[(i,j)][0] - lpSum( gap_vars[i:j] )  <= help_variables[(i,j)] ,  "helpcontraint_"+str(i)+'_'+ str(j)
 
         for (i,j) in self.observations:
-            problem += - exp_means_gapest[(i,j)] + lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
+            problem += - exp_means_gapest[(i,j)] + lpSum( gap_vars[i:j] ) + sum([x.length for x in self.ctgs[i+1:j]]) + self.observations[(i,j)][0]  <= help_variables[(i,j)] ,  "helpcontraint_negative_"+str(i)+'_'+ str(j)
 
 
         # adding distance constraints
 
         for (i,j) in self.observations:
-            problem += lpSum( gap_vars[i:j] ) + sum(map(lambda x: x.length, self.ctgs[i+1:j])) + self.observations[(i,j)][0]  <= self.mean +4*self.stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
+            problem += lpSum( gap_vars[i:j] ) + sum([x.length for x in self.ctgs[i+1:j]]) + self.observations[(i,j)][0]  <= self.mean +4*self.stddev ,  "dist_constraint_"+str(i)+'_'+ str(j)
 
         for (i,j) in self.observations:
-            problem += - lpSum( gap_vars[i:j] ) - sum(map(lambda x: x.length, self.ctgs[i+1:j])) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
+            problem += - lpSum( gap_vars[i:j] ) - sum([x.length for x in self.ctgs[i+1:j]]) - self.observations[(i,j)][0]  <= - self.mean +4*self.stddev ,  "dist_constraint_negative_"+str(i)+'_'+ str(j)
 
         # # Adding constraints induced from introducing a negative gap penalizer
         # for i in range(len(self.gaps)):
@@ -258,13 +258,13 @@ class Path(object):
         try:
             problem.solve()
         except : #PulpSolverError:
-            print 'Could not solve LP, printing instance:'
-            print 'Objective:'
-            print problem.objective
-            print 'Constraints:'
-            print problem.constraints
+            print('Could not solve LP, printing instance:')
+            print('Objective:')
+            print(problem.objective)
+            print('Constraints:')
+            print(problem.constraints)
 
-            print 'Solving with ordered_search instead'
+            print('Solving with ordered_search instead')
             path = ordered_search(self)
             return path.gaps
 

@@ -11,8 +11,8 @@ def NX(x,lengths):
 			return length
 
 def decide_scaffolding_procedure(Scaffolds,small_scaffolds, param):
-	lengths_long = map(lambda x: Scaffolds[x].s_length, Scaffolds)
-	lengths_short = map(lambda x: small_scaffolds[x].s_length, small_scaffolds)
+	lengths_long = [Scaffolds[x].s_length for x in Scaffolds]
+	lengths_short = [small_scaffolds[x].s_length for x in small_scaffolds]
 	lengths = lengths_long + lengths_short
 	N60 = NX(60,lengths)
 	if N60 < param.ins_size_threshold and param.extend_paths:

@@ -3,6 +3,7 @@
     @author: ksahlin
 
     Updates on march, 2017
+    Updates on august, 2018
     @contributor: sletort
 
     This file is part of BESST.
@@ -20,7 +21,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
-
+from __future__ import print_function
 import os
 import time
 
@@ -38,10 +39,10 @@ def longest_kmer_overlap(s1, s2):
 def PrintOutHaplotypes(Haplotypes, Contigs, output_dest):
     haplotype_file = open(output_dest + '/haplotypes.fa', 'a')
     for cont_hapl in Haplotypes:
-        print >> haplotype_file, '>' + Haplotypes[cont_hapl][0] + ' (variant of ' + cont_hapl + ')'
+        print('>' + Haplotypes[cont_hapl][0] + ' (variant of ' + cont_hapl + ')', file=haplotype_file)
         hapl_contig = Contigs[Haplotypes[cont_hapl][0]].sequence
         for i in range(0, len(hapl_contig), 60):
-            print >> haplotype_file, hapl_contig[i:i + 60]
+            print(hapl_contig[i:i + 60], file=haplotype_file)
         #remove the output haplotype, the other one is left in graph
         del Contigs[Haplotypes[cont_hapl][0]]
     return(Contigs)
@@ -49,10 +50,10 @@ def PrintOutHaplotypes(Haplotypes, Contigs, output_dest):
 def PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs):
     repeat_file = open(output_dest + '/repeats.fa', 'w')
     for cont_obj in Repeats:
-        print >> repeat_file, '>' + cont_obj.name
+        print('>' + cont_obj.name, file=repeat_file)
         repeat_contig = cont_obj.sequence
         for i in range(0, len(repeat_contig), 60):
-            print >> repeat_file, repeat_contig[i:i + 60]
+            print(repeat_contig[i:i + 60], file=repeat_file)
         try:
             del Contigs[cont_obj.name]
         except KeyError:
@@ -61,19 +62,19 @@ def PrintOutRepeats(Repeats, Contigs, output_dest, small_contigs):
 
 def repeat_contigs_logger(Repeats, Contigs, output_dest, small_contigs, param):
     repeat_logger_file = open(output_dest + '/repeats_log.tsv', 'w')
-    print >> repeat_logger_file, "contig_accession\tlength\tcoverage\tcov/mean_cov(exp number of placements)\tlib_mean\tplacable"
+    print("contig_accession\tlength\tcoverage\tcov/mean_cov(exp number of placements)\tlib_mean\tplacable", file=repeat_logger_file)
     repeats_sorted = sorted(Repeats, key=lambda x: x.coverage, reverse=True)
     for cont_obj in repeats_sorted:
         placable = "Yes" if param.mean_ins_size > cont_obj.length else 'No'
-        print >> repeat_logger_file, "{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, round(cont_obj.coverage,1), round(cont_obj.coverage/param.mean_coverage,0), round(param.mean_ins_size,0), placable)
+        print("{0}\t{1}\t{2}\t{3}\t{4}\t{5}".format(cont_obj.name, cont_obj.length, round(cont_obj.coverage,1), round(cont_obj.coverage/param.mean_coverage,0), round(param.mean_ins_size,0), placable), file=repeat_logger_file)
 
 def PrintOut_low_cowerage_contigs(low_coverage_contigs, Contigs, output_dest, small_contigs):
     low_coverage_contigs_file = open(output_dest + '/low_coverage_contigs.fa', 'w')
     for cont_obj in low_coverage_contigs:
-        print >> low_coverage_contigs_file, '>' + cont_obj.name
+        print('>' + cont_obj.name, file=low_coverage_contigs_file)
         low_coverage_contig = cont_obj.sequence
         for i in range(0, len(low_coverage_contig), 60):
-            print >> low_coverage_contigs_file, low_coverage_contig[i:i + 60]
+            print(low_coverage_contig[i:i + 60], file=low_coverage_contigs_file)
         try:
             del Contigs[cont_obj.name]
         except KeyError:
@@ -99,6 +100,7 @@ def WriteToF(F, Contigs, list_of_contigs):
 
 # ==================================
 def compute_kmer_overlap( end1,end2 ):
+	# should be a class method of Scaffold ?
     i = len(end1)
     while i > 0:
         if end1[-i:] == end2[:i]:
@@ -197,7 +199,7 @@ class Scaffold(object):
     """docstring for Scaffold"""
     def __init__(self, name, param, info_tuple):
         super( Scaffold, self ).__init__()
-        self.name = name
+        self.name  = name
         self.param = param
 
         self.l_components = []
@@ -247,7 +249,7 @@ class Scaffold(object):
                 #~ print "Overlap = " + str( overlap )
                 if( 20 <= overlap ): # big overlap
                     #~ print "***Big Overlap"
-                    print >> self.param.information_file, 'merging {0} bp here'.format(overlap)
+                    print( 'merging {0} bp here'.format(overlap), file=self.param.information_file )
                     o_gap = Gap( 'n', 1 )
                     o_next.scaff_start = overlap + 1 # +1 to turn 1-based
                 elif( gap_estimate <= 1 ): # supposed overlap, but not found
@@ -271,7 +273,7 @@ class Scaffold(object):
                 offset = o_compo.scaff_start - 1 # scaff_start is 1-based
                 l_fasta.append( o_compo.seq[offset:] )
 
-        print >> fasta_file, ''.join([ x for x in l_fasta])
+        print( ''.join( l_fasta ), file=fasta_file )
 
     def make_AGP_string( self, AGP_file ):
         '''write AGP rows from the object.
@@ -297,7 +299,7 @@ class Scaffold(object):
                 l_component += o_compo.get_scaff_ctg_coords()
                 l_component.append( strand )
 
-            print >> AGP_file, '\t'.join([ str(x) for x in l_elts + l_component ])
+            print( '\t'.join([ str(x) for x in l_elts + l_component ]), file=AGP_file )
 
     def make_GFF_string( self, gff_file ):
         '''write GFF rows from the object.
@@ -324,7 +326,7 @@ class Scaffold(object):
             l_elts  = [ self.name, source, type_, l_compo[1], l_compo[2] ]
             l_elts += [ score, strand, phase, ';'.join( l_attrs ) ]
 
-            print >> gff_file, '\t'.join([ str(x) for x in l_elts ])
+            print( '\t'.join([ str(x) for x in l_elts ]), file=gff_file )
 
 
 def PrintOutput(F, param, pass_nr):
@@ -335,11 +337,11 @@ def PrintOutput(F, param, pass_nr):
         pass
     #contigs_before=len(C_dict)
     contigs_after = len(F)
-    print >> param.information_file, '(super)Contigs after scaffolding: ' + str(contigs_after) + '\n'
+    print('(super)Contigs after scaffolding: ' + str(contigs_after) + '\n', file=param.information_file)
     gff_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.gff', 'w')
     AGP_file = open(param.output_directory + '/pass' + str(pass_nr) + '/info-pass' + str(pass_nr) + '.agp', 'w')
-    print >> gff_file, '##gff-version 3'
-    print >> AGP_file, '##agp-version 2.0\n#lw-scaffolder output'
+    print('##gff-version 3', file=gff_file)
+    print('##agp-version 2.0\n#lw-scaffolder output', file=AGP_file)
     fasta_file = open(param.output_directory + '/pass' + str(pass_nr) + '/Scaffolds-pass' + str(pass_nr) + '.fa', 'w')
     header_index = 0
 
@@ -363,5 +365,3 @@ def RevComp(string, rev_nuc):
     #rev_nuc={'A':'T','C':'G','G':'C','T':'A','N':'N','X':'X'}
     rev_comp = ''.join([rev_nuc[nucl] for nucl in reversed(string)])
     return(rev_comp)
-
-

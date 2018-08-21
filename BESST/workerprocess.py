@@ -23,9 +23,9 @@
 import networkx as nx
 from itertools import combinations
 import random
-import multiprocessing , Queue
+import multiprocessing , queue
 import time
-import ExtendLargeScaffolds as ELS
+from . import ExtendLargeScaffolds as ELS
 
 
 class Worker(multiprocessing.Process):
@@ -57,14 +57,14 @@ class Worker(multiprocessing.Process):
             #    print 'Noeee! empty!!', multiprocessing.current_process().name
             #    break
 
-        print 'Enter ', multiprocessing.current_process().name
+        print('Enter ', multiprocessing.current_process().name)
             # the actual processing
         all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G_prime, end, start_nodes, param)
         #all_paths_sorted_wrt_score = [(1,[]),(2,[])]
             #nr_paths = find_all_paths(graph, start_node, end_node)
             # store the result
         self.result_queue.put(all_paths_sorted_wrt_score)
-        print 'Exit', multiprocessing.current_process().name
+        print('Exit', multiprocessing.current_process().name)
 
 
 

@@ -20,8 +20,8 @@
     '''
 
 
-import multiprocessing, Queue
-import ExtendLargeScaffolds as ELS
+import multiprocessing, queue
+from . import ExtendLargeScaffolds as ELS
 class Worker(multiprocessing.Process):
 
     def __init__(self, work_queue, result_queue):
@@ -41,13 +41,13 @@ class Worker(multiprocessing.Process):
             worker_name = multiprocessing.current_process().name
             try:
                 jobs, G, G_prime, small_scaffolds, end = self.work_queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 break
 
             # the actual processing
             all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G, G_prime, small_scaffolds, end, jobs)
             self.result_queue.put(all_paths_sorted_wrt_score)
-            print 'Exited from ', worker_name
+            print('Exited from ', worker_name)
 
         #return()
 
@@ -68,17 +68,17 @@ result_list = []
 def log_result(result):
     # This is called whenever foo_pool(i) returns a result.
     # result_list is modified only by the main process, not the pool workers.
-    print 'Going in here'
+    print('Going in here')
     result_list.append(result)
 def worker(jobs, G, G_prime, small_scaffolds, end):
     worker_name = multiprocessing.current_process().name
     # the actual processing
     all_paths_sorted_wrt_score = ELS.BetweenScaffolds(G, G_prime, small_scaffolds, end, jobs)
-    print 'Exited from ', worker_name
+    print('Exited from ', worker_name)
     return(all_paths_sorted_wrt_score)
 
 def BetweenScaffoldsParallellized(G, G_prime, small_scaffolds, num_processes, end):
-    import multiprocessing , Queue
+    import multiprocessing , queue
     #import worker #(multi processing)
     import heapq
 
@@ -99,7 +99,7 @@ def BetweenScaffoldsParallellized(G, G_prime, small_scaffolds, num_processes, en
     # partition equally many nodes in G to each core
     while counter < nr_jobs:
         work_queue.put((set(nodes[counter:counter + chunk]), G, G_prime, small_scaffolds, end))
-        print 'node nr', counter, 'to', counter + chunk - 1, 'added'
+        print('node nr', counter, 'to', counter + chunk - 1, 'added')
         counter += chunk
 
     # create a queue to pass to workers to store the results

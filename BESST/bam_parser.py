@@ -19,21 +19,21 @@ def open_bam_file(bam_file_path):
     else:
         return IOError("open_bam_file: File must be either .bam or .sam.")
 
-def is_proper_aligned_unique_innie(read):
-    return (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm) or \
-                (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm ) \
-                and not read.mate_is_unmapped and read.mapq > 10 and not read.is_secondary
-def is_proper_aligned_unique_outie(read):
-    return (read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm) or \
-                (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm ) \
-                and not read.mate_is_unmapped and read.mapq > 10 and not read.is_secondary
+def is_proper_aligned_unique_innie(read, mapq_threshold):
+    return ((read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm) or \
+                (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm ) ) \
+                and not read.mate_is_unmapped and (read.mapq > mapq_threshold) and not read.is_secondary
+def is_proper_aligned_unique_outie(read, mapq_threshold):
+    return ((read.is_reverse and not read.mate_is_reverse and read.is_read2 and read.tlen > 0 and read.rname == read.mrnm) or \
+                (not read.is_reverse and read.mate_is_reverse and read.is_read2 and read.tlen < 0 and read.rname == read.mrnm ) ) \
+                and not read.mate_is_unmapped and (read.mapq > mapq_threshold) and not read.is_secondary
 
-def is_unique_read_link(read):
+def is_unique_read_link(read, mapq_threshold):
     # if  not read.is_unmapped and not read.mate_is_unmapped and read.rname != read.mrnm \
     # and read.opt('XT')=='U' and not read.is_secondary and read.rlen != read.alen:
     #     print read
     return not read.is_unmapped and not read.mate_is_unmapped and read.rname != read.mrnm \
-    and read.mapq > 10 and not read.is_secondary
+    and (read.mapq > mapq_threshold) and not read.is_secondary
 
 
 ### BOWTIE ####
@@ -89,7 +89,7 @@ class BamParser(object):
         self.bam_file = open_bam_file(bam_file)
         if bam_path2:
             self.bam_file2 = open_bam_file(bam_path2) 
-        self.contig_lengths = dict(zip(self.bam_file.references,self.bam_file.lengths))
+        self.contig_lengths = dict(list(zip(self.bam_file.references,self.bam_file.lengths)))
 
     def proper_aligned_unique_pairs(self,aligner, samples=2**32):
         nr_samples = 0
@@ -197,7 +197,7 @@ def main(path):
     for read in BamParser(path).reads_for_coverage():
         if read.qlen != 100:
         #print read.tags
-            print read.qlen
+            print(read.qlen)
         #print read.opt('XT')
 
 
