@@ -18,6 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with BESST.  If not, see <http://www.gnu.org/licenses/>.
     '''
+import collections
 
 
 class parameter(object):
@@ -105,7 +106,7 @@ class parameter(object):
 
     def get_params(self):
         output = "param\tvalue\n"
-        values = "".join([ "{0}\t{1}\n".format(attr, value) if value == None or type(value) in [bool, int,float, file] or len(value) < 5 else "" for attr, value in self.__dict__.items() if not callable(value)])
+        values = "".join([ "{0}\t{1}\n".format(attr, value) if value == None or type(value) in [bool, int, float] or (hasattr(value, '__len__') and len(value) < 5) else "" for attr, value in list(self.__dict__.items()) if not isinstance(value, collections.Callable)])
         output += values
         return output
 

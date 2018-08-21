@@ -4,6 +4,7 @@ Created on Mar 11, 2013
 @author: ksahlin
 '''
 
+from __future__ import print_function
 
 import networkx as nx
 
@@ -24,8 +25,8 @@ def HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param, Information):
 
 ####### Very temporary implementation of dealing with haplotypes!!! #########            
         if len(cycle) >= 6:
-            for i in contigs: d[i] = d.has_key(i)
-            singles = [k for k in d.keys() if not d[k]]
+            for i in contigs: d[i] = i in d
+            singles = [k for k in list(d.keys()) if not d[k]]
             if len(singles) == 2:
                 cb_else_true += 1
                 #find length of the two paths between the source and sink
@@ -117,8 +118,8 @@ def HaplotypicRegions(G, G_prime, Contigs, Scaffolds, param, Information):
                 except ZeroDivisionError:
                     pass
 
-    print >> Information, 'NR of other interesting cycles: ', cb_else_true
-    print >> Information, 'Potential hapl regions treated: ', potentially_merged
-    print >> Information, 'Potential hapl contigs "removed": ', tot_nr_contigs_merged
-    print >> Information, 'Nr of strange cases (contigs occurring in multiple regions): ', strange_cases
+    print('NR of other interesting cycles: ', cb_else_true, file=Information)
+    print('Potential hapl regions treated: ', potentially_merged, file=Information)
+    print('Potential hapl contigs "removed": ', tot_nr_contigs_merged, file=Information)
+    print('Nr of strange cases (contigs occurring in multiple regions): ', strange_cases, file=Information)
     return()

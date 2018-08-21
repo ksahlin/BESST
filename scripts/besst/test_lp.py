@@ -42,7 +42,7 @@ def test_lp(prt=False):
         },
         {   # with degeneracy
             'A': array([[cos(2*pi*i/(m1+1))-1., sin(2*pi*i/(m1+1))]
-                        for i in xrange(1,m1+1)]).T,
+                        for i in range(1,m1+1)]).T,
             'b': zeros(2).T,
             'c': -ones(m1).T,
             'result': [
@@ -57,7 +57,7 @@ def test_lp(prt=False):
         {   # with unboundedness (0 is a member of the convex hull
             # of these vectors)
             'A': array([[cos(2*pi*i/(m2+1))-1., sin(2*pi*i/(m2+1))]
-                        for i in xrange(0,m2)]).T,
+                        for i in range(0,m2)]).T,
             'b': zeros(2).T,
             'c': -ones(m2).T,
             'result': [
@@ -71,7 +71,7 @@ def test_lp(prt=False):
         }, 
         {   # Unsolvable
             'A': array([[cos(2*pi*i/(m2+1))-1., sin(2*pi*i/(m2+1))]
-                        for i in xrange(0,m2)]).T,
+                        for i in range(0,m2)]).T,
             'b': ones(2).T,
             'c': -ones(m2).T,
             'result': [
@@ -94,16 +94,16 @@ def test_lp(prt=False):
         solvable = lpsol.is_solvable
         basis = lpsol.basis
         if prt:
-            print "A:\n",prob['A']
-            print "b:",prob['b']
-            print "c:",prob['c']
-            print " ---->"
-            print "optx:",optx
-            print "zmin:",zmin
-            print "bounded:",bounded
-            print "solvable:",solvable
-            print "basis:",basis
-            print "-------------------------------------------"
+            print("A:\n",prob['A'])
+            print("b:",prob['b'])
+            print("c:",prob['c'])
+            print(" ---->")
+            print("optx:",optx)
+            print("zmin:",zmin)
+            print("bounded:",bounded)
+            print("solvable:",solvable)
+            print("basis:",basis)
+            print("-------------------------------------------")
         else:
             expected_res = prob['result']
             assert_equal(solvable, expected_res[3], err_msg=repr(prob))

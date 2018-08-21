@@ -6,6 +6,7 @@ Modified on Oct 30, 2015
 @author: ksahlin
 @author: sidorov-si
 '''
+from __future__ import print_function
 import argparse
 import os
 import shutil
@@ -43,8 +44,8 @@ def sam_to_bam(sam_path, bam_path):
 # @param output_path Path of the output file without extension ".bam".
 #
 def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, clear_tmp, bNoRebuildIndex, threads):
-    print
-    print 'Aligning with bwa aln/sampe.'
+    print()
+    print('Aligning with bwa aln/sampe.')
     stdout.flush()
     start = datetime.now()
     work_dir = tempfile.mkdtemp() if tmp_dir == None else tmp_dir
@@ -53,99 +54,99 @@ def bwa_sampe(pe1_path, pe2_path, genome_path, output_path, tmp_dir, bwa_path, c
     pe2_output = os.path.join(work_dir, "pe2.sai")
     bwa_output = os.path.join(work_dir, "output.sam")
     stderr_file = open(output_path + '.bwa.1', 'w')
-    print 'Temp directory:', work_dir
-    print 'Output path:   ', output_path
-    print 'Stderr file:   ', output_path + '.bwa.1' 
+    print('Temp directory:', work_dir)
+    print('Output path:   ', output_path)
+    print('Stderr file:   ', output_path + '.bwa.1') 
     stdout.flush()
 
     if ( bNoRebuildIndex and os.path.isfile(genome_db + ".sa")) :
-        print 'bwa index exists, no need to remake (--norebuildbwaindex specified)',
+        print('bwa index exists, no need to remake (--norebuildbwaindex specified)', end=' ')
     else:
-        print 'Make bwa index...',
+        print('Make bwa index...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "index", "-p", genome_db, genome_path ], stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
     stdout.flush()
     with open(pe1_output, "w") as pe1_file:
-        print 'Align forward reads with bwa aln...',
+        print('Align forward reads with bwa aln...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "aln", "-t", threads, genome_db, pe1_path ], 
                               stdout=pe1_file, stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     with open(pe2_output, "w") as pe2_file:
-        print 'Align reverse reads with bwa aln...',
+        print('Align reverse reads with bwa aln...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "aln", "-t", threads, genome_db, pe2_path ], 
                               stdout=pe2_file, stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     with open(bwa_output, "w") as bwa_file:
-        print 'Start bwa sampe...',
+        print('Start bwa sampe...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "sampe",
                                 genome_db,
                                 pe1_output, pe2_output,
                                 pe1_path, pe2_path ], stdout=bwa_file, stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     elapsed = datetime.now() - start
-    print 'Time elapsed for bwa index and aln/sampe:', elapsed
+    print('Time elapsed for bwa index and aln/sampe:', elapsed)
 
-    print
-    print 'Convert SAM to BAM...',
+    print()
+    print('Convert SAM to BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     sam_to_bam(bwa_output, bwa_output + ".bam")
     if clear_tmp:
         os.remove(bwa_output)
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for SAM to BAM conversion:', elapsed
+    print('Done.')
+    print('Time elapsed for SAM to BAM conversion:', elapsed)
 
-    print
-    print 'Sort BAM...',
+    print()
+    print('Sort BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     pysam.sort(bwa_output + ".bam", output_path)
     if clear_tmp:
         os.remove(bwa_output + ".bam")
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for BAM sorting:', elapsed
+    print('Done.')
+    print('Time elapsed for BAM sorting:', elapsed)
 
-    print
-    print 'Index BAM...',
+    print()
+    print('Index BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     pysam.index(output_path + '.bam')
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for BAM indexing:', elapsed
+    print('Done.')
+    print('Time elapsed for BAM indexing:', elapsed)
 
-    print
-    print 'Remove temp files...',
+    print()
+    print('Remove temp files...', end=' ')
     stdout.flush()
     start = datetime.now()
     if bNoRebuildIndex:
-        print 'Keeping genome index files for future use in ' + work_dir ,
+        print('Keeping genome index files for future use in ' + work_dir, end=' ')
         for f in os.listdir(work_dir):
             if not re.search("genome", f):
                 os.remove(os.path.join(work_dir, f))
     else:
         shutil.rmtree(work_dir)
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for temp files removing:', elapsed
+    print('Done.')
+    print('Time elapsed for temp files removing:', elapsed)
     stdout.flush()
 
 
 def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path, tmp_dir, bwa_path, clear_tmp, bNoRebuildIndex):
-    print
-    print 'Aligning with bwa mem.'
+    print()
+    print('Aligning with bwa mem.')
     stdout.flush()
     start = datetime.now()
     work_dir = tempfile.mkdtemp() if tmp_dir == None else tmp_dir
@@ -154,134 +155,134 @@ def bwa_mem(pe1_path, pe2_path, genome_path, threads, output_path, tmp_dir, bwa_
     pe2_output = os.path.join(work_dir, "pe2.sai")
     bwa_output = os.path.join(work_dir, "output.sam")
     stderr_file = open(output_path + '.bwa.1', 'w')
-    print 'Temp directory:', work_dir
-    print 'Output path:   ', output_path
-    print 'Stderr file:   ', output_path + '.bwa.1'
+    print('Temp directory:', work_dir)
+    print('Output path:   ', output_path)
+    print('Stderr file:   ', output_path + '.bwa.1')
     stdout.flush()
 
     if ( bNoRebuildIndex and os.path.isfile(genome_db + ".sa")) :
-        print 'bwa index exists, no need to remake (--norebuildbwaindex specified)',
+        print('bwa index exists, no need to remake (--norebuildbwaindex specified)', end=' ')
     else:
-        print 'Make bwa index...',
+        print('Make bwa index...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "index", "-p", genome_db, genome_path ], stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
     stdout.flush()
 
     with open(bwa_output, "w") as bwa_file:
-        print 'Align with bwa mem...',
+        print('Align with bwa mem...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "mem", "-t", threads, "-w", "0", "-O", "99", # new params found by sebastien/guillaume
                                 genome_db, pe1_path, pe2_path ],
                                 stdout=bwa_file,
                                 stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     elapsed = datetime.now() - start
-    print 'Time elapsed for bwa index and mem: ', elapsed
+    print('Time elapsed for bwa index and mem: ', elapsed)
 
-    print
-    print 'Convert SAM to BAM...',
+    print()
+    print('Convert SAM to BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     sam_to_bam(bwa_output, bwa_output + ".bam")
     if clear_tmp:
         os.remove(bwa_output)
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for SAM to BAM conversion:', elapsed
+    print('Done.')
+    print('Time elapsed for SAM to BAM conversion:', elapsed)
 
-    print
-    print 'Sort BAM...',
+    print()
+    print('Sort BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     pysam.sort(bwa_output + ".bam", output_path)
     if clear_tmp:
         os.remove(bwa_output + ".bam")
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for BAM sorting:', elapsed
+    print('Done.')
+    print('Time elapsed for BAM sorting:', elapsed)
 
-    print
-    print 'Index BAM...',
+    print()
+    print('Index BAM...', end=' ')
     stdout.flush()
     start = datetime.now()
     pysam.index(output_path + '.bam')
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for BAM indexing:', elapsed
+    print('Done.')
+    print('Time elapsed for BAM indexing:', elapsed)
    
-    print
-    print 'Remove temp files...',
+    print()
+    print('Remove temp files...', end=' ')
     stdout.flush()
     start = datetime.now()
     if bNoRebuildIndex:
-        print 'Keeping genome index files for future use in ' + work_dir ,
+        print('Keeping genome index files for future use in ' + work_dir, end=' ')
         for f in os.listdir(work_dir):
             if not re.search("genome", f):
                 os.remove(os.path.join(work_dir, f))
     else:
         shutil.rmtree(work_dir)
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for temp files removing:', elapsed
+    print('Done.')
+    print('Time elapsed for temp files removing:', elapsed)
     stdout.flush()
 
 
 def map_single_reads(pe_path, genome_path, output_path, bwa_path, threads):
-    print
-    print 'Aligning with bwa aln/samse.'
+    print()
+    print('Aligning with bwa aln/samse.')
     stdout.flush()
     start = datetime.now()
     work_dir = tempfile.mkdtemp()
     genome_db = os.path.join(work_dir, "genome")
     pe_output = os.path.join(work_dir, "pe.sai")
     bwa_output = os.path.join(work_dir, "output.sam")
-    print 'Temp directory:', work_dir
-    print 'Output path:   ', output_path
-    print 'Stderr file:    /dev/null'
+    print('Temp directory:', work_dir)
+    print('Output path:   ', output_path)
+    print('Stderr file:    /dev/null')
     stdout.flush()
 
     null = open("/dev/null")
 
     if ( bNoRebuildIndex and os.path.isfile(genome_db + ".sa")) :
-        print 'bwa index exists, no need to remake (--norebuildbwaindex specified)',
+        print('bwa index exists, no need to remake (--norebuildbwaindex specified)', end=' ')
     else:
-        print 'Make bwa index...',
+        print('Make bwa index...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "index", "-p", genome_db, genome_path ], stderr=stderr_file)
-        print 'Done.'
+        print('Done.')
     stdout.flush()
 
     with open(pe_output, "w") as pe_file:
-        print 'Align with bwa aln...',
+        print('Align with bwa aln...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "aln", "-t", threads,  genome_db, pe_path ], stdout=pe_file, stderr=null)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     with open(bwa_output, "w") as bwa_file:
-        print 'Start bwa samse...',
+        print('Start bwa samse...', end=' ')
         stdout.flush()
         subprocess.check_call([ bwa_path, "samse",
                                 "-r", "@RG\tID:ILLUMINA\tSM:48_2\tPL:ILLUMINA\tLB:LIB1",
                                 genome_db,
                                 pe_output,
                                 pe_path ], stdout=bwa_file, stderr=null)
-        print 'Done.'
+        print('Done.')
         stdout.flush()
 
     elapsed = datetime.now() - start
-    print 'Time elapsed for bwa index and aln/samse:', elapsed
+    print('Time elapsed for bwa index and aln/samse:', elapsed)
 
-    print
-    print 'Copy the result to the output directory and remove temp files...',
+    print()
+    print('Copy the result to the output directory and remove temp files...', end=' ')
     stdout.flush()
     start = datetime.now()
     shutil.move(bwa_output, output_path)
     if bNoRebuildIndex:
-        print 'Keeping genome index files for future use in ' + work_dir ,
+        print('Keeping genome index files for future use in ' + work_dir, end=' ')
         for f in os.listdir(work_dir):
             if not re.search("genome", f):
                 os.remove(os.path.join(work_dir, f))
@@ -289,8 +290,8 @@ def map_single_reads(pe_path, genome_path, output_path, bwa_path, threads):
         shutil.rmtree(work_dir)
 
     elapsed = datetime.now() - start
-    print 'Done.'
-    print 'Time elapsed for copying result to the output directory and removing temp files:', elapsed
+    print('Done.')
+    print('Time elapsed for copying result to the output directory and removing temp files:', elapsed)
     stdout.flush()
 
 
@@ -320,36 +321,36 @@ if __name__ == '__main__':
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    print
-    print 'pe1_path:', args.pe1_path
-    print 'pe2_path:', args.pe2_path
-    print 'genome_path:', args.genome_path
-    print 'output_path:', output_path
+    print()
+    print('pe1_path:', args.pe1_path)
+    print('pe2_path:', args.pe2_path)
+    print('genome_path:', args.genome_path)
+    print('output_path:', output_path)
     if tmp_path != None:  
-        print "tmp_path:", tmp_path
-    print 'bwa path:', args.bwa_path
-    print 'number of threads:', args.threads
-    print 'Remove temp SAM and BAM files:',
+        print("tmp_path:", tmp_path)
+    print('bwa path:', args.bwa_path)
+    print('number of threads:', args.threads)
+    print('Remove temp SAM and BAM files:', end=' ')
     if args.clear:
-        print 'Yes'
+        print('Yes')
     else: 
-        print 'No'
-    print 'Use bwa aln and sampe instead of bwa mem:',
+        print('No')
+    print('Use bwa aln and sampe instead of bwa mem:', end=' ')
     if args.nomem:
-        print 'Yes'
+        print('Yes')
     else: 
-        print 'No'
+        print('No')
 
-    print 'Do not rebuild bwa index if already exists in tmp dir:',
+    print('Do not rebuild bwa index if already exists in tmp dir:', end=' ')
     if args.norebuildindex:
-        print 'Yes'
+        print('Yes')
     else: 
-        print 'No'
+        print('No')
 
     stdout.flush()
 
-    print 
-    print 'Start processing.'
+    print() 
+    print('Start processing.')
     stdout.flush()
     if args.pe2_path and args.nomem:
         bwa_sampe(args.pe1_path, args.pe2_path, args.genome_path, output_path, tmp_path, 
@@ -359,8 +360,8 @@ if __name__ == '__main__':
                 tmp_path, args.bwa_path, args.clear, args.norebuildindex)
     else:
         map_single_reads(args.pe1_path, args.genome_path, args.output_path, args.bwa_path, args.norebuildindex, args.threads)
-    print
-    print 'Processing is finished.'
+    print()
+    print('Processing is finished.')
     stdout.flush()
 
 

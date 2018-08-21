@@ -39,7 +39,7 @@ runBESST
 
 to view user instructions.
 
-(This installation will install the two nonstandard python module dependencies: *pysam 0.6*, *networkx-1.6* automatically for you.)
+(This installation will install the two nonstandard python module dependencies: *pysam 0.6*, *networkx (1.6<=version<=1.11)* automatically for you.)
 
 
 
@@ -53,5 +53,9 @@ In the **BESST** folder where *setup.py* is located, run:
 This installation will not include the two modules *networkx* and *pysam*. You need to install them separately. They can be found here:
 
 http://networkx.github.com/documentation/latest/install.html
+Please, be sure to install networkx version between 1.6 and 1.11. Currently BESST does not support networkx 2.x.
 
 http://code.google.com/p/pysam/downloads/list
+
+or installed with pip:
+```pip install  pysam networkx==1.11```
