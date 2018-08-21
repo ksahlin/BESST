@@ -215,7 +215,7 @@ def main(options):
             F = GO.WriteToF(F, Contigs, list_of_contigs)
 
 
-        GO.PrintOutput(F, Information, param.output_directory, param, i + 1)
+        GO.PrintOutput(F, param, i + 1)
 
         if not options.separate_repeats:
             destination = open("{0}/pass{1}/Scaffolds_pass{1}.fa".format(param.output_directory, str(i+1) ), 'wb')
