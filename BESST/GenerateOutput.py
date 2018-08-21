@@ -90,7 +90,7 @@ def WriteToF(F, Contigs, list_of_contigs):
     for cont_obj in list_of_contigs:
         info_list.append((cont_obj.name, cont_obj.direction, cont_obj.position, cont_obj.length, cont_obj.sequence)) #,cont_obj.links
         if cont_obj.position < 0:
-            print 'Write to F: Position is negative!', cont_obj.position, cont_obj.name, cont_obj.direction
+            print('Write to F: Position is negative!', cont_obj.position, cont_obj.name, cont_obj.direction)
         #del Contigs[cont_obj.name]        
     F.append(info_list)
     return(F)
