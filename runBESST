@@ -66,7 +66,7 @@ def ReadInContigseqs(contigfile,contig_filter_length, Information):
 
     if contig_filter_length:
         singled_out = 0
-        for contig in cont_dict.keys():
+        for contig in list(cont_dict.keys()):
             if len(cont_dict[contig]) < contig_filter_length:
                 del cont_dict[contig]
                 singled_out += 1
